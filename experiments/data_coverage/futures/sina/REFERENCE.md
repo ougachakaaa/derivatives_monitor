@@ -1,6 +1,6 @@
 # Sina CFFEX Futures API Reference
 
-本文件从项目收到的 2026-09-02 Market Data Source Probe Reference 中摘取 Sina 股指期货相关内容。它是 Probe 起点，不是本仓库实测结论。
+本文件从项目收到的 2026-09-02 Market Data Source Probe Reference 中摘取 Sina 股指期货相关内容。所有合约、字段和结构信息都只是非规范性的探测线索，不是本仓库实测结论，也不限定实际响应格式。
 
 ## 产品和 quote symbol
 
@@ -44,7 +44,7 @@ Referer: https://vip.stock.finance.sina.com.cn/
 User-Agent: Mozilla/5.0 ...
 ```
 
-历史或当前 wrapper 曾暴露 `name`、`time`、`open`、`high`、`low`、`previous_close`、`bid1`、`ask1`、`last`、`previous_settlement`、`settlement`、`bid_volume1`、`ask_volume1`、`open_interest`、`volume` 等字段。字段位置和实际可用性必须从保存的当前 raw payload 得出。
+作为搜索线索，历史或上游 wrapper 曾映射 `name`、`time`、`open`、`high`、`low`、`previous_close`、`bid1`、`ask1`、`last`、`previous_settlement`、`settlement`、`bid_volume1`、`ask_volume1`、`open_interest`、`volume` 等信息。这些名称和位置不是本 Harness 的格式要求，实际可识别内容只能由当前请求确认。
 
 ## Minute endpoint
 
@@ -65,7 +65,7 @@ Reference 中 AKShare 支持的 interval 值为 `1`、`5`、`15`、`30`、`60`�
 https://stock2.finance.sina.com.cn/futures/api/jsonp.php/=/InnerFuturesNewService.getFewMinLine?symbol=IF2609&type=1
 ```
 
-预期可对应 `datetime`、`open`、`high`、`low`、`close`、`volume`、`hold`，但实际 JSONP 包装、字段名、字段类型和空值必须通过 raw response 确认。
+作为搜索线索，AKShare 上游实现曾把响应映射为 `datetime`、`open`、`high`、`low`、`close`、`volume`、`hold` 等信息。这不要求响应采用 JSONP、固定字段名或任何特定结构，Probe 只记录实际返回。
 
 ## 来源链接
 
@@ -74,4 +74,3 @@ https://stock2.finance.sina.com.cn/futures/api/jsonp.php/=/InnerFuturesNewServic
 - [AKShare futures constants](https://github.com/akfamily/akshare/blob/main/akshare/futures/cons.py)
 - [Sina futures market](https://finance.sina.com.cn/futuremarket/)
 - [Sina futures contract/variety resource](http://vip.stock.finance.sina.com.cn/quotes_service/view/js/qihuohangqing.js)
-

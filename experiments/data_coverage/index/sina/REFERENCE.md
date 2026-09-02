@@ -1,6 +1,6 @@
 # Sina Index API Reference
 
-本文件从项目收到的 2026-09-02 Market Data Source Probe Reference 中摘取 Sina 指数相关内容。它提供 Probe 起点，不代表 endpoint、symbol 或字段已经在本仓库实测确认。
+本文件从项目收到的 2026-09-02 Market Data Source Probe Reference 中摘取 Sina 指数相关内容。所有 symbol、字段和结构信息都只是非规范性的探测线索，不代表已经在本仓库实测确认，也不限定实际响应格式。
 
 ## 候选 symbol
 
@@ -66,7 +66,7 @@ Count endpoint：
 http://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php/Market_Center.getHQNodeStockCountSimple?node=hs_s
 ```
 
-此 endpoint 可用于发现 symbol 或处理 lightweight endpoint 格式变化。AKShare 当前接口预期过 `code`、`name`、`latest`、`change`、`change_percent`、`previous_close`、`open`、`high`、`low`、`volume`、`amount` 等字段；Probe 必须先保存当前 raw payload，再确定实际字段。
+此 endpoint 可用于发现 symbol 或处理 lightweight endpoint 变化。作为搜索线索，AKShare 上游实现曾映射 `code`、`name`、`latest`、`change`、`change_percent`、`previous_close`、`open`、`high`、`low`、`volume`、`amount` 等信息；这些名称不是本 Harness 的字段要求，Probe 只以实际响应为准。
 
 ## 来源链接
 
@@ -80,4 +80,3 @@ http://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php/Market_Cente
 - [Sina 科创50](https://finance.sina.com.cn/realstock/company/sh000688/nc.shtml)
 - [Sina 创业板指](https://finance.sina.com.cn/realstock/company/sz399006/nc.shtml)
 - [CSI 中证2000 official page](https://www.csindex.com.cn/#/indices/family/detail?indexCode=932000)
-

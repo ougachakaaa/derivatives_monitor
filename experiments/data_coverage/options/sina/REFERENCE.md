@@ -1,6 +1,6 @@
 # Sina CFFEX Options API Reference
 
-本文件从项目收到的 2026-09-02 Market Data Source Probe Reference 中摘取 Sina 股指期权相关内容。它是 Probe 起点，不是本仓库实测结论。
+本文件从项目收到的 2026-09-02 Market Data Source Probe Reference 中摘取 Sina 股指期权相关内容。所有月份、字段和结构信息都只是非规范性的探测线索，不是本仓库实测结论，也不限定实际响应格式。
 
 ## 产品参数
 
@@ -24,7 +24,7 @@ CFFEX overview / IO / MO 页面：
 https://stock.finance.sina.com.cn/futures/view/optionsCffexDP.php
 ```
 
-Reference 指出 AKShare 会从这些页面元素解析当前期权月份。Probe 应将 expiry discovery 与 chain retrieval 分开，并保存足以复核月份解析的原始页面或近原始片段。
+Reference 指出 AKShare 会从这些页面解析当前期权月份。Probe 应将 expiry discovery 与 chain retrieval 分开，并按请求实际返回的内容保存足以复核发现结果的样板。
 
 ## Whole-chain endpoint
 
@@ -51,7 +51,7 @@ pinzhong=<product+YYMM>
 
 `2609` 只是示例，不得假定始终挂牌。
 
-## Reference 中的响应结构
+## 上游实现线索
 
 AKShare 当前实现读取：
 
@@ -60,13 +60,13 @@ result.data.up
 result.data.down
 ```
 
-这两侧对应 T 型期权行情表。Reference 预期包含：
+上游实现将这两部分解释为 T 型期权行情表，并曾映射以下信息：
 
 - Call：instrument、bid volume、bid、last、ask、ask volume、open interest、change；
 - Strike；
 - Put：instrument、bid volume、bid、last、ask、ask volume、open interest、change。
 
-Probe 必须先保存完整 raw JSON，再确定 `up`/`down` 的实际方向、字段名/顺序、instrument 编码和缺失值。不得因 wrapper 的命名而预先认定 Call/Put 映射。
+这些节点、名称和组织不是本 Harness 的格式要求。Probe 应先保存请求实际返回的内容，再判断其中能否识别 Call/Put、strike、instrument 等语义；不得因上游 wrapper 的命名预先认定映射。
 
 ## 来源链接
 
@@ -75,4 +75,3 @@ Probe 必须先保存完整 raw JSON，再确定 `up`/`down` 的实际方向、�
 - [Sina CFFEX HO page](https://stock.finance.sina.com.cn/futures/view/optionsCffexDP.php/ho/cffex)
 - [Sina CFFEX options page](https://stock.finance.sina.com.cn/futures/view/optionsCffexDP.php)
 - [Sina CFFEX option-chain endpoint](https://stock.finance.sina.com.cn/futures/api/openapi.php/OptionService.getOptionData)
-
