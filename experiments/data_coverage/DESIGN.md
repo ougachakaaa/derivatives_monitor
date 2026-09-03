@@ -8,7 +8,7 @@
 
 任务通常从“我需要指数、期货或期权数据”开始，再比较能提供它的数据源。因此顶层按数据类型拆分，第二层按来源拆分。局部 `REFERENCE.md` 只保留该组合需要的 endpoint 和资料，使 Probe 可以渐进式读取，也让未来 Sina、EastMoney、Tencent、CTP 等来源并排比较而不相互耦合。
 
-## 为什么 samples 是核心产物
+## 为什么同时保留本地 samples 与提交 templates
 
 公开 Web endpoint 的内容和组织只能由实测确认。原始或近原始样板允许后续工作在不重新调用来源的情况下：
 
@@ -19,9 +19,13 @@
 
 因此先存响应，再做解释；规范化示例不能替代原始证据。
 
+但 timestamped raw run 会快速增长，并且来源编码和二进制完整性不适合作为长期 Git 历史。Probe 已经证明可运行后，run 目录保留在本地并由 Git 忽略；仓库提交的是从成功样本归纳的 versioned response template 及 provenance manifest。这样 clean clone 可以理解已观察到的格式和语义，而持有本地样本的执行者仍能核对 raw hash 并重做解释。
+
+Template 只描述已观察到的 wrapper、结构、类型模式、标的映射和带置信度的语义。普通行情数值和时间变化只形成新验证记录；结构或语义变化才建立不可变的新版本。这既保留历史差异，也避免每次行情更新制造无意义版本。
+
 ## 扩展方式
 
-新增来源时，在每个相关数据类型下增加独立来源目录，只预建局部 `REFERENCE.md`、`coverage.md` 和 `samples/`。Probe Code 与 report 在实际实验中产生。共享的状态语义、sample 原则和 report 大纲只在根 `SPEC.md` 定义；数据类型要求只在各自 `SPEC.md` 定义。
+新增来源时，在每个相关数据类型下增加独立来源目录，只预建局部 `REFERENCE.md`、`coverage.md` 和 `samples/`。Probe Code、report 和首版 template 在实际实验取得成功证据后产生。共享的状态语义、sample/template 原则和 report 大纲只在根 `SPEC.md` 定义；数据类型要求只在各自 `SPEC.md` 定义。
 
 ## 后续工作而非本 Harness 验收项
 

@@ -1,0 +1,146 @@
+{
+  "version": "v1",
+  "source": "sina",
+  "data_type": "index",
+  "capability": "snapshot",
+  "created_at": "2026-09-03",
+  "source_sample": {
+    "run_id": "20260902T232947+0800",
+    "record_file": "01_hq_batch.json",
+    "body_file": "01_hq_batch.body",
+    "body_bytes": 1251,
+    "body_sha256": "8a48586d0dc33b139de621bca248fa5a6ade7dfb32cd02d9c726df833e7696e0",
+    "received_at": "2026-09-02T23:29:47.555+08:00"
+  },
+  "format_fingerprint": {
+    "sha256": "566b70930ef2d5bbeeb5b507e2ae03b862840ac7fb430bd6d870ffeea615e4cb",
+    "details": {
+      "response_media_type": "application/javascript",
+      "declared_charset": "gb18030",
+      "record_wrapper": "var hq_str_<identifier>=\"<payload>\";",
+      "payload_delimiter": ",",
+      "record_shape_variants": [
+        {
+          "logical_field_count": 33,
+          "position_types": [
+            "text",
+            "number",
+            "number",
+            "number",
+            "number",
+            "number",
+            "number",
+            "number",
+            "number",
+            "number",
+            "number",
+            "number",
+            "number",
+            "number",
+            "number",
+            "number",
+            "number",
+            "number",
+            "number",
+            "number",
+            "number",
+            "number",
+            "number",
+            "number",
+            "number",
+            "number",
+            "number",
+            "number",
+            "number",
+            "number",
+            "date",
+            "time",
+            "number"
+          ],
+          "trailing_delimiter": false
+        },
+        {
+          "logical_field_count": 33,
+          "position_types": [
+            "text",
+            "number",
+            "number",
+            "number",
+            "number",
+            "number",
+            "number",
+            "number",
+            "number",
+            "number",
+            "number",
+            "number",
+            "number",
+            "number",
+            "number",
+            "number",
+            "number",
+            "number",
+            "number",
+            "number",
+            "number",
+            "number",
+            "number",
+            "number",
+            "number",
+            "number",
+            "number",
+            "number",
+            "number",
+            "number",
+            "date",
+            "time",
+            "number"
+          ],
+          "trailing_delimiter": true
+        }
+      ]
+    }
+  },
+  "semantic_fingerprint": {
+    "sha256": "459427ea0fdcc3191d121aadd51051b107e6b0fcd1680a3d199ea179d958c618",
+    "details": {
+      "targets": [
+        {
+          "name": "上证50",
+          "official_code": "000016",
+          "source_identifier": "sh000016"
+        },
+        {
+          "name": "沪深300",
+          "official_code": "000300",
+          "source_identifier": "sh000300"
+        },
+        {
+          "name": "科创50",
+          "official_code": "000688",
+          "source_identifier": "sh000688"
+        },
+        {
+          "name": "中证1000",
+          "official_code": "000852",
+          "source_identifier": "sh000852"
+        },
+        {
+          "name": "中证500",
+          "official_code": "000905",
+          "source_identifier": "sh000905"
+        },
+        {
+          "name": "创业板指",
+          "official_code": "399006",
+          "source_identifier": "sz399006"
+        },
+        {
+          "name": "中证2000",
+          "official_code": "932000",
+          "source_identifier": "si932000"
+        }
+      ]
+    }
+  }
+}

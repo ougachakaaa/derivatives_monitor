@@ -1,0 +1,2 @@
+# Raw response bodies must remain byte-for-byte evidence.
+**/*.body -text

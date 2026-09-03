@@ -27,13 +27,27 @@
 
 1. 可重复执行的 Probe Code；
 2. 足以复核请求的 endpoint、非敏感参数、接收时间和结果上下文；
-3. 按实际响应保存的 raw / near-raw sample；
+3. 按实际响应保存在本地的 raw / near-raw sample；
 4. 对实际 identifier、可识别信息和限制的简短说明；
-5. coverage matrix 中的样板路径和备注。
+5. Probe 已成功时，从该 sample 生成并提交的版本化解释性 template 与 provenance manifest；
+6. coverage matrix 中的持久化 template 路径和备注。
 
-样板的内容、文件格式、扩展名和目录内组织由实际响应决定。应尽量保持收到的内容，只在删除秘密或确有必要时保存 near-raw 版本，并说明改动。请求上下文可以与响应一起或分开记录，不要求固定 metadata 文件。失败证据应记录足以理解结果的状态或异常摘要，但不保存秘密。
+样板的内容、文件格式、扩展名和目录内组织由实际响应决定。应尽量保持收到的内容，只在删除秘密或确有必要时保存 near-raw 版本，并说明改动。raw response 必须保留来源字节与编码；如其不是 UTF-8，应根据响应声明的 charset 生成独立 UTF-8 可读副本，并保留两者的关系和哈希。UTF-8 副本不能替代 raw evidence，也不能在 charset 缺失或解码失败时靠猜测生成。请求上下文可以与响应一起或分开记录，不要求固定 metadata 文件。失败证据应记录足以理解结果的状态或异常摘要，但不保存秘密。
 
 Coverage 验收只规定必须证明的业务语义，不规定字段名、字段顺序、响应层级或 schema。Reference 中的格式信息只能作为 Probe 线索。
+
+## Probe 与 Template 验收
+
+Probe 被证明可运行，至少意味着进程成功结束、局部 Spec 要求的目标范围已取得成功证据、report 与 coverage 已更新，并且 raw body 的大小和 hash 与请求 metadata 一致。此后 timestamped sample run 保留为本地证据并由 Git 忽略，不作为 clean clone 的必备文件。
+
+每个已支持的 Data Type → Source capability 应有可提交的 versioned response template。Template 只归纳样本中实测的结构、类型模式、identifier 映射和带置信度的语义；它不是固定返回格式或生产 schema。Manifest 必须记录版本、来源 run、raw hash、格式指纹与语义指纹。
+
+如果本地存在成功 sample，应先与当前 template 比较：
+
+- 结构与语义一致：维持当前版本，只追加 validation 记录；
+- wrapper、分隔方式、逻辑字段结构、位置类型模式或目标 identifier 映射变化：创建下一不可变版本并记录相对上一版的差异；
+- 只有行情数值、日期、时间、body 长度或 raw hash 变化：不升级版本；
+- 本地 sample 缺失：普通审阅返回 `NO_SAMPLE` 且不访问网络；明确的 Probe 或 refresh 任务可以重新请求并生成 sample。
 
 ## 实验报告
 
