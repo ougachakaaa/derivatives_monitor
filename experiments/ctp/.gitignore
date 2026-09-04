@@ -1,12 +1,13 @@
 # Runtime-generated files
 *.log
-cpp/flow/
+market-data-client/flow/
+tmp/
 
 # CMake outputs
-cpp/build/
+market-data-client/build/
 
 # Local credentials and connection settings
-cpp/config.ini
+market-data-client/config.ini
 
 # OS/editor noise
 .DS_Store

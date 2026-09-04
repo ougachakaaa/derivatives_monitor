@@ -1,6 +1,7 @@
 #include "ThostFtdcMdApi.h"
 
 #include <atomic>
+#include <charconv>
 #include <chrono>
 #include <cmath>
 #include <condition_variable>
@@ -11,6 +12,7 @@
 #include <iomanip>
 #include <iostream>
 #include <limits>
+#include <locale>
 #include <map>
 #include <mutex>
 #include <sstream>
@@ -85,6 +87,7 @@ struct Config {
     std::string user_product_info;
     std::vector<std::string> instruments;
     fs::path flow_path;
+    fs::path csv_output_path;
     int connect_timeout_seconds = 20;
     int run_seconds = 0;
 };
@@ -130,6 +133,13 @@ Config LoadConfig(const fs::path& requested_path) {
     config.flow_path = fs::path(flow_value);
     if (config.flow_path.is_relative()) {
         config.flow_path = config_path.parent_path() / config.flow_path;
+    }
+
+    if (!values["CsvOutputPath"].empty()) {
+        config.csv_output_path = fs::path(values["CsvOutputPath"]);
+        if (config.csv_output_path.is_relative()) {
+            config.csv_output_path = config_path.parent_path() / config.csv_output_path;
+        }
     }
 
     if (!values["ConnectTimeoutSeconds"].empty()) {
@@ -195,10 +205,61 @@ std::string Price(double value) {
     return stream.str();
 }
 
+std::string CsvEscape(const std::string& value) {
+    if (value.find_first_of(",\"\r\n") == std::string::npos) {
+        return value;
+    }
+
+    std::string escaped;
+    escaped.reserve(value.size() + 2);
+    escaped.push_back('"');
+    for (const char ch : value) {
+        if (ch == '"') {
+            escaped.push_back('"');
+        }
+        escaped.push_back(ch);
+    }
+    escaped.push_back('"');
+    return escaped;
+}
+
+void AppendCsvCell(std::ostream& output, bool& first, const std::string& value) {
+    if (!first) {
+        output.put(',');
+    }
+    first = false;
+    output << CsvEscape(value);
+}
+
+void AppendCsvCell(std::ostream& output, bool& first, double value) {
+    if (!first) {
+        output.put(',');
+    }
+    first = false;
+    char buffer[128];
+    const auto result = std::to_chars(
+        buffer, buffer + sizeof(buffer), value, std::chars_format::general);
+    if (result.ec == std::errc{}) {
+        output.write(buffer, result.ptr - buffer);
+    } else {
+        output << std::setprecision(std::numeric_limits<double>::max_digits10) << value;
+    }
+}
+
+void AppendCsvCell(std::ostream& output, bool& first, int value) {
+    if (!first) {
+        output.put(',');
+    }
+    first = false;
+    output << value;
+}
+
 class MarketDataSpi final : public CThostFtdcMdSpi {
 public:
     MarketDataSpi(CThostFtdcMdApi* api, Config config)
-        : api_(api), config_(std::move(config)) {}
+        : api_(api), config_(std::move(config)) {
+        OpenCsvOutput();
+    }
 
     void OnFrontConnected() override {
         Log("event=front_connected front=", config_.front);
@@ -287,6 +348,7 @@ public:
             " ask_volume1=", data->AskVolume1,
             " volume=", data->Volume,
             " open_interest=", Price(data->OpenInterest));
+        WriteCsvRow(*data);
     }
 
     bool WaitForLogin(std::chrono::seconds timeout) {
@@ -310,6 +372,109 @@ public:
     }
 
 private:
+    void OpenCsvOutput() {
+        if (config_.csv_output_path.empty()) {
+            return;
+        }
+
+        const fs::path parent = config_.csv_output_path.parent_path();
+        if (!parent.empty()) {
+            fs::create_directories(parent);
+        }
+        csv_output_.open(config_.csv_output_path, std::ios::out | std::ios::trunc);
+        if (!csv_output_) {
+            throw std::runtime_error(
+                "cannot open CSV output: " + config_.csv_output_path.string());
+        }
+        csv_output_.imbue(std::locale::classic());
+        csv_output_
+            << "TradingDay,reserve1,ExchangeID,reserve2,LastPrice,"
+               "PreSettlementPrice,PreClosePrice,PreOpenInterest,OpenPrice,"
+               "HighestPrice,LowestPrice,Volume,Turnover,OpenInterest,ClosePrice,"
+               "SettlementPrice,UpperLimitPrice,LowerLimitPrice,PreDelta,CurrDelta,"
+               "UpdateTime,UpdateMillisec,BidPrice1,BidVolume1,AskPrice1,AskVolume1,"
+               "BidPrice2,BidVolume2,AskPrice2,AskVolume2,BidPrice3,BidVolume3,"
+               "AskPrice3,AskVolume3,BidPrice4,BidVolume4,AskPrice4,AskVolume4,"
+               "BidPrice5,BidVolume5,AskPrice5,AskVolume5,AveragePrice,ActionDay,"
+               "InstrumentID,ExchangeInstID,BandingUpperPrice,BandingLowerPrice\n";
+        if (!csv_output_) {
+            throw std::runtime_error(
+                "cannot write CSV header: " + config_.csv_output_path.string());
+        }
+        Log("event=csv_opened path=", config_.csv_output_path.string());
+    }
+
+    void WriteCsvRow(const CThostFtdcDepthMarketDataField& data) {
+        if (!csv_output_.is_open()) {
+            return;
+        }
+
+        bool report_error = false;
+        {
+            std::lock_guard<std::mutex> lock(csv_mutex_);
+            if (csv_write_failed_) {
+                return;
+            }
+            bool first = true;
+            AppendCsvCell(csv_output_, first, FieldString(data.TradingDay));
+            AppendCsvCell(csv_output_, first, FieldString(data.reserve1));
+            AppendCsvCell(csv_output_, first, FieldString(data.ExchangeID));
+            AppendCsvCell(csv_output_, first, FieldString(data.reserve2));
+            AppendCsvCell(csv_output_, first, data.LastPrice);
+            AppendCsvCell(csv_output_, first, data.PreSettlementPrice);
+            AppendCsvCell(csv_output_, first, data.PreClosePrice);
+            AppendCsvCell(csv_output_, first, data.PreOpenInterest);
+            AppendCsvCell(csv_output_, first, data.OpenPrice);
+            AppendCsvCell(csv_output_, first, data.HighestPrice);
+            AppendCsvCell(csv_output_, first, data.LowestPrice);
+            AppendCsvCell(csv_output_, first, data.Volume);
+            AppendCsvCell(csv_output_, first, data.Turnover);
+            AppendCsvCell(csv_output_, first, data.OpenInterest);
+            AppendCsvCell(csv_output_, first, data.ClosePrice);
+            AppendCsvCell(csv_output_, first, data.SettlementPrice);
+            AppendCsvCell(csv_output_, first, data.UpperLimitPrice);
+            AppendCsvCell(csv_output_, first, data.LowerLimitPrice);
+            AppendCsvCell(csv_output_, first, data.PreDelta);
+            AppendCsvCell(csv_output_, first, data.CurrDelta);
+            AppendCsvCell(csv_output_, first, FieldString(data.UpdateTime));
+            AppendCsvCell(csv_output_, first, data.UpdateMillisec);
+            AppendCsvCell(csv_output_, first, data.BidPrice1);
+            AppendCsvCell(csv_output_, first, data.BidVolume1);
+            AppendCsvCell(csv_output_, first, data.AskPrice1);
+            AppendCsvCell(csv_output_, first, data.AskVolume1);
+            AppendCsvCell(csv_output_, first, data.BidPrice2);
+            AppendCsvCell(csv_output_, first, data.BidVolume2);
+            AppendCsvCell(csv_output_, first, data.AskPrice2);
+            AppendCsvCell(csv_output_, first, data.AskVolume2);
+            AppendCsvCell(csv_output_, first, data.BidPrice3);
+            AppendCsvCell(csv_output_, first, data.BidVolume3);
+            AppendCsvCell(csv_output_, first, data.AskPrice3);
+            AppendCsvCell(csv_output_, first, data.AskVolume3);
+            AppendCsvCell(csv_output_, first, data.BidPrice4);
+            AppendCsvCell(csv_output_, first, data.BidVolume4);
+            AppendCsvCell(csv_output_, first, data.AskPrice4);
+            AppendCsvCell(csv_output_, first, data.AskVolume4);
+            AppendCsvCell(csv_output_, first, data.BidPrice5);
+            AppendCsvCell(csv_output_, first, data.BidVolume5);
+            AppendCsvCell(csv_output_, first, data.AskPrice5);
+            AppendCsvCell(csv_output_, first, data.AskVolume5);
+            AppendCsvCell(csv_output_, first, data.AveragePrice);
+            AppendCsvCell(csv_output_, first, FieldString(data.ActionDay));
+            AppendCsvCell(csv_output_, first, FieldString(data.InstrumentID));
+            AppendCsvCell(csv_output_, first, FieldString(data.ExchangeInstID));
+            AppendCsvCell(csv_output_, first, data.BandingUpperPrice);
+            AppendCsvCell(csv_output_, first, data.BandingLowerPrice);
+            csv_output_.put('\n');
+            if (!csv_output_) {
+                csv_write_failed_ = true;
+                report_error = true;
+            }
+        }
+        if (report_error) {
+            Log("event=csv_write_failed path=", config_.csv_output_path.string());
+        }
+    }
+
     void CompleteLogin(bool succeeded, int error_id, const std::string& message) {
         {
             std::lock_guard<std::mutex> lock(state_mutex_);
@@ -339,6 +504,9 @@ private:
 
     CThostFtdcMdApi* api_;
     Config config_;
+    std::ofstream csv_output_;
+    std::mutex csv_mutex_;
+    bool csv_write_failed_ = false;
     std::atomic<int> request_id_{0};
     mutable std::mutex state_mutex_;
     std::condition_variable state_changed_;
@@ -351,6 +519,7 @@ private:
 struct CommandLine {
     fs::path config_path = "config.example.ini";
     std::vector<std::string> instruments;
+    fs::path csv_output_path;
     int run_seconds = -1;
     bool show_help = false;
 };
@@ -360,6 +529,7 @@ void PrintUsage(const char* executable) {
         << "Usage: " << executable << " [options]\n"
         << "  --config PATH          INI configuration file\n"
         << "  --instrument CODE      Subscribe one instrument; repeatable\n"
+        << "  --csv PATH             Write raw CTP depth-market-data rows to CSV\n"
         << "  --run-seconds N        Exit N seconds after login; 0 waits for a signal\n"
         << "  --help                 Show this help\n";
 }
@@ -379,6 +549,8 @@ CommandLine ParseCommandLine(int argc, char* argv[]) {
             result.config_path = require_value("--config");
         } else if (argument == "--instrument") {
             result.instruments.push_back(require_value("--instrument"));
+        } else if (argument == "--csv") {
+            result.csv_output_path = require_value("--csv");
         } else if (argument == "--run-seconds") {
             result.run_seconds = ParseNonNegativeInt(
                 require_value("--run-seconds"), "--run-seconds");
@@ -417,6 +589,9 @@ int main(int argc, char* argv[]) {
         if (!command_line.instruments.empty()) {
             config.instruments = std::move(command_line.instruments);
         }
+        if (!command_line.csv_output_path.empty()) {
+            config.csv_output_path = fs::absolute(command_line.csv_output_path);
+        }
         if (command_line.run_seconds >= 0) {
             config.run_seconds = command_line.run_seconds;
         }
@@ -434,6 +609,7 @@ int main(int argc, char* argv[]) {
         Log("event=start api_version=\"", CThostFtdcMdApi::GetApiVersion(),
             "\" front=", config.front,
             " flow_path=", flow_path,
+            " csv_path=", config.csv_output_path.string(),
             " instruments=", config.instruments.size());
 
         api = CThostFtdcMdApi::CreateFtdcMdApi(flow_path.c_str(), false, false, true);

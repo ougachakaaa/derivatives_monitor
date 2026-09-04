@@ -8,7 +8,7 @@
 
 ```text
 ctp/
-├── cpp/                              # Linux C++ 工程
+├── market-data-client/               # Linux CTP 行情客户端
 │   ├── CMakeLists.txt
 │   ├── config.example.ini
 │   ├── src/main.cpp
@@ -46,8 +46,8 @@ sdk/v6.7.13_20260225/
 在 `experiments/ctp` 下运行：
 
 ```bash
-./cpp/scripts/build.sh Release
-./cpp/scripts/run.sh --run-seconds 5
+./market-data-client/scripts/build.sh Release
+./market-data-client/scripts/run.sh --run-seconds 5
 ```
 
 成功时会看到类似输出：
@@ -64,8 +64,8 @@ event=stop reason=run_window_complete
 Release 产物位于：
 
 ```text
-cpp/build/Release/bin/ctp_md
-cpp/build/Release/bin/thostmduserapi_se.so
+market-data-client/build/Release/bin/ctp_md
+market-data-client/build/Release/bin/thostmduserapi_se.so
 ```
 
 ELF 的 `RUNPATH` 是 `$ORIGIN`，因此运行时从可执行文件所在目录加载官方 `.so`，不依赖绝对 SDK 路径或手工设置 `LD_LIBRARY_PATH`。
@@ -75,10 +75,10 @@ ELF 的 `RUNPATH` 是 `$ORIGIN`，因此运行时从可执行文件所在目录�
 本机需要修改配置时：
 
 ```bash
-cp cpp/config.example.ini cpp/config.ini
+cp market-data-client/config.example.ini market-data-client/config.ini
 ```
 
-`cpp/config.ini` 已被 Git 忽略。配置项：
+`market-data-client/config.ini` 已被 Git 忽略。配置项：
 
 | 字段 | 说明 |
 |---|---|
@@ -88,16 +88,18 @@ cp cpp/config.example.ini cpp/config.ini
 | `UserProductInfo` | CTP 用户端产品标识，必须适配 CTP 固定字段长度。 |
 | `Instruments` | 手工订阅的精确合约代码，使用冒号或逗号分隔；留空只验证登录。 |
 | `FlowPath` | CTP flow 目录，相对路径以配置文件所在目录为基准。 |
+| `CsvOutputPath` | 原始深度行情 CSV 输出路径；留空不写 CSV，启动时会覆盖同名文件。 |
 | `ConnectTimeoutSeconds` | 等待连接和登录的超时时间。 |
 | `RunSeconds` | 登录后运行时间；`0` 表示持续运行到 `SIGINT`/`SIGTERM`。 |
 
-`run.sh` 优先读取 `cpp/config.ini`，不存在时使用示例配置。
+`run.sh` 优先读取 `market-data-client/config.ini`，不存在时使用示例配置。
 
 ## 运行选项
 
 ```text
 --config PATH
 --instrument CODE      # 可重复传入，并覆盖配置中的 Instruments
+--csv PATH             # 将 CTP 原始深度行情写入 CSV
 --run-seconds N        # 覆盖 RunSeconds；0 表示持续运行
 --help
 ```
@@ -105,13 +107,40 @@ cp cpp/config.example.ini cpp/config.ini
 例如，使用你已确认的合约运行到按下 `Ctrl+C`：
 
 ```bash
-./cpp/scripts/run.sh \
+./market-data-client/scripts/run.sh \
   --instrument FUTURES_CONTRACT_CODE \
   --instrument OPTION_CONTRACT_CODE \
+  --csv ../tmp/market-data.csv \
   --run-seconds 0
 ```
 
 程序不自动发现或猜测合约。订阅成功后，每个 `event=tick` 行包含合约、交易所、更新时间、最新价、买一/卖一、成交量和持仓量。
+
+### CSV 行情输出
+
+CSV 表头和列顺序与 SDK 的 `CThostFtdcDepthMarketDataField` 保持一致，共48 列，包含交易日、合约、交易所、价格、成交量、成交额、持仓量、五档买卖盘、结算价、涨跌停价和上下带价等字段。
+完整字段名、CTP 类型和中文语义见 [`docs/ctp-depth-market-data-fields.csv`](docs/ctp-depth-market-data-fields.csv)。
+
+- 列名保留 SDK 原始字段名，包括 `reserve1` 和 `reserve2`。
+- 浮点数使用 C++17 最短往返表示，兼顾可读性与精确读回；不把 CTP 的无效极大值擅自转换为空值。
+- 文本列按 CSV 规则转义逗号、引号和换行。
+- CSV 仅包含 CTP 回调提供的原始字段；接收时间、行号等派生信息不混入原始表。
+
+## SDK 链接模式
+
+构建脚本支持 `AUTO`、`STATIC` 和 `SHARED` 三种模式：
+
+```bash
+./market-data-client/scripts/build.sh Release AUTO
+./market-data-client/scripts/build.sh Release STATIC
+./market-data-client/scripts/build.sh Release SHARED
+```
+
+- `AUTO` 是默认值：如果 SDK 目录中有 `thostmduserapi_se.a` 或 `libthostmduserapi_se.a`，优先静态链接；否则回退到 `.so`。
+- `STATIC` 强制使用厂商静态库，缺失时构建立即失败，不会悄然改用动态库。
+- `SHARED` 强制使用 `.so`，并将它复制到可执行文件目录，通过 `$ORIGIN` RUNPATH 加载，便于整目录发布。
+
+当前官方 SDK 只提供 `thostmduserapi_se.so`，因此 `AUTO` 实际使用 `SHARED`。只有未来取得匹配版本的官方 `.a` 后，才能静态链接 CTP SDK；不应将现有 `.so` 转换或重打包成伪静态库。
 
 ## 已验证与已知现象
 

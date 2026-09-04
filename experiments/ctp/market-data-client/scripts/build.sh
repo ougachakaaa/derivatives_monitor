@@ -3,11 +3,14 @@
 set -euo pipefail
 
 usage() {
-    echo "Usage: $0 [Debug|Release]" >&2
+    echo "Usage: $0 [Debug|Release] [AUTO|STATIC|SHARED]" >&2
 }
 
 build_type="${1:-Release}"
-if [[ $# -gt 1 ]] || [[ "$build_type" != "Debug" && "$build_type" != "Release" ]]; then
+link_mode="${2:-AUTO}"
+if [[ $# -gt 2 ]] \
+    || [[ "$build_type" != "Debug" && "$build_type" != "Release" ]] \
+    || [[ "$link_mode" != "AUTO" && "$link_mode" != "STATIC" && "$link_mode" != "SHARED" ]]; then
     usage
     exit 2
 fi
@@ -24,7 +27,9 @@ readonly source_dir="$(cd -- "$script_dir/.." && pwd)"
 readonly build_dir="$source_dir/build/$build_type"
 readonly executable="$build_dir/bin/ctp_md"
 
-cmake -S "$source_dir" -B "$build_dir" -DCMAKE_BUILD_TYPE="$build_type"
+cmake -S "$source_dir" -B "$build_dir" \
+    -DCMAKE_BUILD_TYPE="$build_type" \
+    -DCTP_LINK_MODE="$link_mode"
 cmake --build "$build_dir" --parallel "$(nproc)"
 
 if [[ ! -x "$executable" ]]; then
