@@ -5,4 +5,4 @@
 ## Experiments
 
 - [Market Data Coverage Harness](experiments/data_coverage/README.md)：按“数据类型 → 数据源”验证行情覆盖并保存原始证据。
-- [CTP 行情 Demo](experiments/ctp/README.md)：整理中信建投期货 CTP C++ Demo，验证 Visual Studio 构建、行情前置连接与手工合约订阅。
+- [CTP Linux C++ 行情客户端](experiments/ctp/README.md)：使用官方 Linux x64 SDK 原生构建、连接行情前置并手工订阅合约。

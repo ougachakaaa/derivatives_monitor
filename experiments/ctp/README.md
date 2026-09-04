@@ -1,43 +1,123 @@
-# DerivativeMonitor CTP 行情 Demo
+# CTP Linux C++ 行情客户端
 
-这是中信建投期货提供的 CTP C++ Demo 的可运行整理版。当前目标是让 Visual Studio 2022 能稳定构建和启动行情连接，用于验证 CTP 行情链路；暂不包含自动获取全部合约、行情落库、分钟线、基差或 IV 计算。
+该目录使用官方 `v6.7.13_20260225` Linux x86-64 Market Data SDK，构建和运行原生 Linux C++ 行情客户端。构建所需的最小 SDK 已置于仓库中，不需要再解压完整官方包。
 
-## 已确认的问题
+券商提供的前置地址、行情范围、频率和接入边界见 [中信建投期货 CTP 行情接入信息](docs/csc-futures-ctp-market-data-access.md)。
 
-- 项目只能使用 `x64`。随附的 CTP DLL 和 LIB 都是 64 位，选择 Win32 会导致架构不匹配。
-- 原始 `config.ini` 的行情地址是 `127.0.0.1:41213`，它要求本机另有代理服务监听；没有代理时，程序会在 `Init()` 后无限等待，看起来像“没有反应”。
-- 生成的 EXE 依赖 `thostmduserapi_se.dll`、`thosttraderapi_se.dll` 和 `WinDataCollect.dll`。直接从空的输出目录启动会以 `0xC0000135` 退出。
-- CTP 要求 flow 目录在 API 初始化之前存在。
+## 目录结构
 
-项目文件已经在构建后把上述 DLL 和本机配置复制到输出目录，并创建 `flow` 目录。Visual Studio 调试工作目录也固定为输出目录。
-
-## 首次配置
-
-1. 将 `demo/config.example.ini` 复制为 `demo/config.ini`。
-2. 行情 MVP 可以保留模板中的 `BrokerID=9080` 和已验证可连接的行情前置地址。
-3. 如期货公司给出了专属地址或凭据，以其最新通知为准。
-4. `demo/config.ini` 包含 Password、AuthCode、AppID 等敏感项，已被 Git 忽略，不要提交。
-
-## Visual Studio 启动
-
-1. 用 Visual Studio 2022 打开 `demo_program.sln`。
-2. 选择 `Debug | x64`，确认 `testProgram` 为启动项目。
-3. 按 `F5` 启动，控制台出现菜单后输入 `2` 连接行情。
-4. 看到 `OnFrontConnected` 和 `OnRspUserLogin` 后，输入当前有效的合约代码；多个合约使用英文冒号分隔，例如 `IF2609:IH2609`。合约月份会变化，示例仅用于说明格式。
-5. 看到 `OnRspSubMarketData` 且 `ErrorID [0]` 表示订阅请求成功；交易时段内随后会收到 `OnRtnDepthMarketData`。
-
-命令行构建也可使用：
-
-```powershell
-& 'C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe' demo_program.sln /m /t:Build /p:Configuration=Debug /p:Platform=x64
+```text
+ctp/
+├── cpp/                              # Linux C++ 工程
+│   ├── CMakeLists.txt
+│   ├── config.example.ini
+│   ├── src/main.cpp
+│   └── scripts/
+│       ├── build.sh
+│       └── run.sh
+├── docs/                             # 券商接入信息和项目边界
+└── sdk/v6.7.13_20260225/             # Linux 行情 SDK 最小构建集
 ```
 
-## 当前 Demo 的边界
+保留的 SDK 文件为：
 
-- 行情前置只接受明确的合约代码；空数组不能表示订阅全市场。
-- 当前代码由用户手工输入合约，不会自动发现 IF、IH、IC、IM、IO、HO、MO 的全部当月合约。
-- 程序的连接等待没有超时。若停在行情地址输出后没有 `OnFrontConnected`，优先检查 `config.ini`、网络和期货公司前置状态。
-- 交易入口仍使用原始本地占位地址，未提供真实交易前置前不要选择菜单 `1`。
+```text
+sdk/v6.7.13_20260225/
+├── MANIFEST.txt
+└── linux64/mdapi/
+    ├── ThostFtdcMdApi.h
+    ├── ThostFtdcUserApiDataType.h
+    ├── ThostFtdcUserApiStruct.h
+    └── thostmduserapi_se.so
+```
 
-后续行情 MVP 应新增合约发现、按产品过滤、分批订阅、断线重连、结构化落库以及分钟线/基差/IV 计算，而不是继续扩展这个交互式 Demo 的菜单。
+`MANIFEST.txt` 保留官方原包文件名、SHA-256、SDK 版本和平台信息。三份厂商头文件的中文原为 GB18030 编码，且仅出现在注释中；仓库版已转为 UTF-8，转码前后的哈希均记录在清单中。未保留 Windows DLL/LIB、Trader API、中间压缩包和不参与当前客户端构建或运行的错误码 XML。
 
+## 环境要求
+
+- Linux x86-64；
+- GCC/G++ 支持 C++17；
+- CMake 3.16 或更高版本。
+
+当前环境已用 Ubuntu 22.04、G++ 11.4、CMake 3.22 验证。官方 `.so` 是 ELF x86-64，所需 GLIBC/GLIBCXX 符号不高于当前系统提供的版本。
+
+## 快速开始
+
+在 `experiments/ctp` 下运行：
+
+```bash
+./cpp/scripts/build.sh Release
+./cpp/scripts/run.sh --run-seconds 5
+```
+
+成功时会看到类似输出：
+
+```text
+event=start api_version="v6.7.13_20260225 ..."
+event=front_connected ...
+event=login_request result=0
+event=login_response ... error_id=0 ...
+event=ready instruments=0 message="login verified; no instruments configured"
+event=stop reason=run_window_complete
+```
+
+Release 产物位于：
+
+```text
+cpp/build/Release/bin/ctp_md
+cpp/build/Release/bin/thostmduserapi_se.so
+```
+
+ELF 的 `RUNPATH` 是 `$ORIGIN`，因此运行时从可执行文件所在目录加载官方 `.so`，不依赖绝对 SDK 路径或手工设置 `LD_LIBRARY_PATH`。
+
+## 配置
+
+本机需要修改配置时：
+
+```bash
+cp cpp/config.example.ini cpp/config.ini
+```
+
+`cpp/config.ini` 已被 Git 忽略。配置项：
+
+| 字段 | 说明 |
+|---|---|
+| `FrontMdAddr` | CTP 行情前置，必填。 |
+| `BrokerID` | 经纪公司代码。 |
+| `UserID` / `Password` | 行情前置需要账号时填写；不要提交真实凭据。 |
+| `UserProductInfo` | CTP 用户端产品标识，必须适配 CTP 固定字段长度。 |
+| `Instruments` | 手工订阅的精确合约代码，使用冒号或逗号分隔；留空只验证登录。 |
+| `FlowPath` | CTP flow 目录，相对路径以配置文件所在目录为基准。 |
+| `ConnectTimeoutSeconds` | 等待连接和登录的超时时间。 |
+| `RunSeconds` | 登录后运行时间；`0` 表示持续运行到 `SIGINT`/`SIGTERM`。 |
+
+`run.sh` 优先读取 `cpp/config.ini`，不存在时使用示例配置。
+
+## 运行选项
+
+```text
+--config PATH
+--instrument CODE      # 可重复传入，并覆盖配置中的 Instruments
+--run-seconds N        # 覆盖 RunSeconds；0 表示持续运行
+--help
+```
+
+例如，使用你已确认的合约运行到按下 `Ctrl+C`：
+
+```bash
+./cpp/scripts/run.sh \
+  --instrument FUTURES_CONTRACT_CODE \
+  --instrument OPTION_CONTRACT_CODE \
+  --run-seconds 0
+```
+
+程序不自动发现或猜测合约。订阅成功后，每个 `event=tick` 行包含合约、交易所、更新时间、最新价、买一/卖一、成交量和持仓量。
+
+## 已验证与已知现象
+
+- Debug 和 Release 都可通过 CMake 构建。
+- `ctp_md` 为 Linux ELF 64-bit x86-64 可执行文件。
+- API 报告版本 `v6.7.13_20260225 14:16:30.12079`。
+- 示例行情前置已验证 `front_connected` 及 `login_response error_id=0`。
+- SDK 初始化可能在某些容器/WSL 网卡上输出类似 `docker0: Resource temporarily unavailable` 的诊断；若之后仍出现 `front_connected` 和成功登录，该行不影响行情连接。
+- 当前工程仅包含行情 API，不会登录交易前置或发送交易请求。

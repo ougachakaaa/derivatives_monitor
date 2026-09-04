@@ -1,30 +1,13 @@
-# Visual Studio state
-.vs/
-*.suo
-*.user
-*.VC.db
-*.VC.VC.opendb
-
-# Build outputs
-x64/
-demo/x64/
-**/Debug/
-**/Release/
-*.obj
-*.pdb
-*.ilk
-*.tlog
-*.recipe
-
 # Runtime-generated files
 *.log
-demo/syslog.txt
-demo/flow/*.con
+cpp/flow/
+
+# CMake outputs
+cpp/build/
 
 # Local credentials and connection settings
-demo/config.ini
+cpp/config.ini
 
 # OS/editor noise
 .DS_Store
 Thumbs.db
-
