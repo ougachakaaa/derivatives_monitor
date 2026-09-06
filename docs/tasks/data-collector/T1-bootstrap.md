@@ -5,4 +5,4 @@
 - 范围：提取复用 INI/字段校验/日志与 SDK CMake；新增 `collector/` 配置、入口及 CMake/CTest；路径相对配置文件；凭据/数据/build 忽略规则。
 - 非目标：此步不宣称已接收行情，不引入持久化。
 - 验证：demo 和 Collector 构建；`--help`、有效/非法配置、过长字段、重复合约、参数覆盖；缺少合约明确失败。
-- 完成记录：待执行。
+- 完成记录：Debug Collector/demo 均构建成功；CTest config 通过；CLI help、重复参数去重/覆盖、空 universe 非零退出、配置相对路径和字段超长验证通过。共享 SDK 仍以 `$ORIGIN` 加载仓库动态库。
