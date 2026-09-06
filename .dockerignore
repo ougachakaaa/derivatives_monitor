@@ -1,0 +1,24 @@
+# Allow only the source inputs needed by the Collector build.
+**
+!collector/
+!collector/Dockerfile
+!collector/CMakeLists.txt
+!collector/config.example.ini
+!collector/src/
+!collector/src/**
+!collector/tests/
+!collector/tests/*.cpp
+!collector/tests/*.hpp
+!collector/scripts/
+!collector/scripts/verify.sh
+!experiments/
+!experiments/ctp/
+!experiments/ctp/common/
+!experiments/ctp/common/*.hpp
+!experiments/ctp/common/*.cmake
+!experiments/ctp/sdk/
+!experiments/ctp/sdk/v6.7.13_20260225/
+!experiments/ctp/sdk/v6.7.13_20260225/linux64/
+!experiments/ctp/sdk/v6.7.13_20260225/linux64/mdapi/
+!experiments/ctp/sdk/v6.7.13_20260225/linux64/mdapi/*.h
+!experiments/ctp/sdk/v6.7.13_20260225/linux64/mdapi/thostmduserapi_se.so
