@@ -96,18 +96,20 @@ check_config() {
     ' "$config_path"
 }
 
-container_id() { compose ps --all --quiet collector; }
 check_existing_checkout() {
-    local cid mounted
-    cid=$(container_id)
-    [[ -n "$cid" ]] || return 0
-    mounted=$(docker inspect --format '{{range .Mounts}}{{if eq .Destination "/app/config.ini"}}{{.Source}}{{end}}{{end}}' "$cid")
+    local cid mounted service project_files
     # Docker Desktop can represent WSL mounts with an internal path. Use the Compose
     # project config label to identify the checkout instead of comparing mount sources.
-    local project_files
-    project_files=$(docker inspect --format '{{index .Config.Labels "com.docker.compose.project.config_files"}}' "$cid")
-    [[ "$project_files" == "$COLLECTOR_DIR/compose.yaml" ]] || die '同名部署属于另一 checkout；请从原目录管理，未替换容器。'
-    [[ -n "$mounted" ]] || die '已有容器缺少预期配置挂载，未替换容器。'
+    for service in collector query dashboard; do
+        cid=$(compose ps --all --quiet "$service")
+        [[ -n "$cid" ]] || continue
+        project_files=$(docker inspect --format '{{index .Config.Labels "com.docker.compose.project.config_files"}}' "$cid")
+        [[ "$project_files" == "$COLLECTOR_DIR/compose.yaml" ]] || die '同名部署属于另一 checkout；请从原目录管理，未替换容器。'
+        if [[ "$service" == collector ]]; then
+            mounted=$(docker inspect --format '{{range .Mounts}}{{if eq .Destination "/app/config.ini"}}{{.Source}}{{end}}{{end}}' "$cid")
+            [[ -n "$mounted" ]] || die '已有容器缺少预期配置挂载，未替换容器。'
+        fi
+    done
 }
 
 preflight() {
@@ -128,13 +130,22 @@ preflight() {
                 fi
             done
         '
+    docker run --rm --network none --read-only --user "$COLLECTOR_UID:$COLLECTOR_GID" \
+        --mount "type=bind,src=$COLLECTOR_DIR/data,dst=/data,readonly" \
+        --entrypoint python derivatives-monitor-query:local -c \
+        'from storage import Store; s=Store("/data"); s.check_directory(); s.days(); print("Query shared directory readable")'
+    docker run --rm --network none --read-only --tmpfs /tmp:mode=1777 \
+        --user "$COLLECTOR_UID:$COLLECTOR_GID" --entrypoint nginx derivatives-monitor-dashboard:local -t
 }
 
 status() {
-    local cid
-    cid=$(container_id)
-    if [[ -z "$cid" ]]; then printf '尚未部署 Collector。\n'; return 0; fi
-    docker inspect --format 'status={{.State.Status}} restart_count={{.RestartCount}} last_exit_code={{.State.ExitCode}}' "$cid"
+    local cid service
+    for service in collector query dashboard; do
+        cid=$(compose ps --all --quiet "$service")
+        if [[ -z "$cid" ]]; then printf '%s: 尚未部署。\n' "$service"; continue; fi
+        printf '%s: ' "$service"
+        docker inspect --format 'status={{.State.Status}} health={{if .State.Health}}{{.State.Health.Status}}{{else}}unknown{{end}} restart_count={{.RestartCount}} last_exit_code={{.State.ExitCode}}' "$cid"
+    done
     compose logs --no-color --tail 100 collector | awk '/event=(health|persistence_failed|collector_failed|fatal)/ {print}'
 }
 
@@ -155,18 +166,18 @@ case "$command_name" in
         check_existing_checkout
         create_config
         check_config
-        compose build collector
+        compose build collector query dashboard
         preflight
-        compose up --detach --no-build --pull never collector
-        printf '已部署 Collector（不代表已收到真实行情）。\n日志：%s logs\n状态：%s status\n停止：%s stop\n' "$0" "$0" "$0"
+        compose up --detach --no-build --pull never collector query dashboard
+        printf '已部署 Collector、FastAPI 和 React 看板（不代表已收到真实行情）。\n看板：http://localhost:%s\nAPI：http://localhost:%s/docs\n日志：%s logs\n状态：%s status\n停止：%s stop\n' "${DASHBOARD_PORT:-8080}" "${QUERY_PORT:-8000}" "$0" "$0" "$0"
         status
         ;;
-    logs) compose logs --follow --tail 100 collector ;;
+    logs) compose logs --follow --tail 100 collector query dashboard ;;
     status) status ;;
     stop)
         check_existing_checkout
-        compose stop --timeout 60 collector
-        printf 'Collector 已停止；配置、数据和 flow 保留。\n'
+        compose stop --timeout 60 collector query dashboard
+        printf '三个服务已停止；配置、数据和 flow 保留。\n'
         ;;
     verify)
         [[ -f "$COLLECTOR_DIR/data/$1.sqlite" ]] || die "找不到日文件：collector/data/$1.sqlite（不会创建空库）。"

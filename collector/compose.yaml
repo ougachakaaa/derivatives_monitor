@@ -11,6 +11,12 @@ services:
     restart: unless-stopped
     stop_signal: SIGTERM
     stop_grace_period: 60s
+    healthcheck:
+      test: ["CMD", "/bin/sh", "/opt/collector/healthcheck.sh"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
     volumes:
       - type: bind
         source: "${COLLECTOR_DIR:?Run scripts/deploy.sh}/config.ini"
@@ -28,6 +34,63 @@ services:
         target: /app/flow
         bind:
           create_host_path: false
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+  query:
+    image: derivatives-monitor-query:local
+    platform: linux/amd64
+    build:
+      context: ..
+      dockerfile: query/Dockerfile
+      target: runtime
+    user: "${COLLECTOR_UID:?Run scripts/deploy.sh}:${COLLECTOR_GID:?Run scripts/deploy.sh}"
+    restart: unless-stopped
+    read_only: true
+    environment:
+      DATA_DIR: /data
+    ports:
+      - "127.0.0.1:${QUERY_PORT:-8000}:8000"
+    volumes:
+      - type: bind
+        source: "${COLLECTOR_DIR:?Run scripts/deploy.sh}/data"
+        target: /data
+        read_only: true
+        bind:
+          create_host_path: false
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz',timeout=2).read()"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+  dashboard:
+    image: derivatives-monitor-dashboard:local
+    platform: linux/amd64
+    build:
+      context: ..
+      dockerfile: dashboard/Dockerfile
+      target: runtime
+    user: "${COLLECTOR_UID:?Run scripts/deploy.sh}:${COLLECTOR_GID:?Run scripts/deploy.sh}"
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:mode=1777
+    ports:
+      - "127.0.0.1:${DASHBOARD_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
     logging:
       driver: json-file
       options:

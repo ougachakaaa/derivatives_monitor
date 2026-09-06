@@ -39,7 +39,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-echo 'Building production image; its build stage runs all five CTests.'
+echo 'Building production image; its build stage runs all six CTests.'
 docker build --file "$repo_dir/collector/Dockerfile" --target runtime --tag "$runtime_image" "$repo_dir"
 docker build --file "$repo_dir/collector/Dockerfile" --target build --tag "$build_image" "$repo_dir"
 docker run --rm --network none --entrypoint /bin/sh "$runtime_image" -ec '

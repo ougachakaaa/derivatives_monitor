@@ -32,7 +32,10 @@ elif a[0]=='inspect':
  if 'project.config_files' in a[2]: print(os.environ.get('MOCK_CONFIG_FILES',os.environ['COLLECTOR_DIR']+'/compose.yaml'))
  elif '.Mounts' in a[2]: print(os.environ['COLLECTOR_DIR']+'/config.ini')
  else: print('status=running restart_count=0 last_exit_code=0')
-elif a[0]=='run' and os.environ.get('MOCK_PREFLIGHT_FAIL'): sys.exit(1)
+elif a[0]=='run':
+ if os.environ.get('MOCK_PREFLIGHT_FAIL'): sys.exit(1)
+ if os.environ.get('MOCK_QUERY_FAIL') and 'derivatives-monitor-query:local' in a: sys.exit(1)
+ if os.environ.get('MOCK_DASHBOARD_FAIL') and 'derivatives-monitor-dashboard:local' in a: sys.exit(1)
 '''
 
 
@@ -139,11 +142,18 @@ class DeployTest(unittest.TestCase):
         preflight = next(i for i, a in enumerate(calls) if a[0]=='run')
         up = next(i for i, a in enumerate(calls) if a[0]=='compose' and len(a)>5 and a[5]=='up')
         self.assertLess(build, preflight); self.assertLess(preflight, up)
+        self.assertEqual(calls[build][-3:], ['collector', 'query', 'dashboard'])
+        self.assertEqual(calls[up][-3:], ['collector', 'query', 'dashboard'])
+        checks = [a for a in calls[preflight:up] if a[0] == 'run']
+        self.assertEqual(len(checks), 3)
+        self.assertIn('derivatives-monitor-query:local', checks[1])
+        self.assertIn(f'type=bind,src={self.collector}/data,dst=/data,readonly', checks[1])
+        self.assertIn('derivatives-monitor-dashboard:local', checks[2])
         self.assertIn(f'type=bind,src={path},dst=/app/config.ini,readonly', calls[preflight])
 
     def test_build_and_permission_failures_preserve_existing_service(self):
         self.config(); self.log.with_suffix('.state').write_text('running')
-        for variable in ('MOCK_BUILD_FAIL', 'MOCK_PREFLIGHT_FAIL'):
+        for variable in ('MOCK_BUILD_FAIL', 'MOCK_PREFLIGHT_FAIL', 'MOCK_QUERY_FAIL', 'MOCK_DASHBOARD_FAIL'):
             result = self.run_script('up', **{variable: '1'})
             self.assertNotEqual(result.returncode, 0); self.assert_no_up()
             self.assertEqual(self.log.with_suffix('.state').read_text(), 'running')

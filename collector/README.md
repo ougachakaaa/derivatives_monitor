@@ -6,7 +6,7 @@
 
 ## Docker / WSL 一条命令部署
 
-另一台机器只需 Git、Bash、可用的 Linux x86-64 Docker Engine 和 Compose v2。无需在宿主安装 CMake、G++、SQLite 或 Python。将代码放到 WSL 的 Linux 用户目录，例如 `~/repo/derivatives_monitor`，确认 Docker Desktop 已启动且启用该 WSL 的集成；容器无法在 Windows 睡眠或 WSL 停止时继续采集。
+另一台机器只需 Git、Bash、可用的 Linux x86-64 Docker Engine 和 Compose v2。无需在宿主安装 CMake、G++、SQLite、Python、Poetry 或 Node。将代码放到 WSL 的 Linux 用户目录，例如 `~/repo/derivatives_monitor`，确认 Docker Desktop 已启动且启用该 WSL 的集成；容器无法在 Windows 睡眠或 WSL 停止时继续采集。
 
 拉取包含 Docker 部署实现的代码后，在仓库根目录执行：
 
@@ -16,7 +16,7 @@
 
 首次运行依次询问前置、BrokerID、UserID、隐藏输入的密码和精确合约代码。账号按前置要求填写，可留空；合约必填，先选一个已确认的期货和一个活跃期权。连接地址的示例默认值不代表现场一定可用。
 
-脚本以 0600 权限保存 `collector/config.ini`，然后构建镜像、运行五项 CTest、校验配置及目录权限，最后后台启动。首次拉取基础镜像及安装编译依赖需要联网，建议开盘前提前完成。首次非交互运行必须预先准备 INI，脚本不会猜测合约。
+脚本以 0600 权限保存 `collector/config.ini`，然后构建镜像、运行六项 CTest、后端与前端测试，校验配置、目录权限及 Nginx 配置，最后后台启动三个独立服务。首次拉取基础镜像及安装编译依赖需要联网，建议开盘前提前完成。首次非交互运行必须预先准备 INI，脚本不会猜测合约。
 
 已有配置原样复用，不再次询问或覆盖。Docker 入口要求以下值（省略时沿用相同默认值）：
 
@@ -35,6 +35,18 @@ RunSeconds=0
 | `./collector/scripts/deploy.sh status` | 查看容器状态、重启次数、最近退出码和采集健康日志 |
 | `./collector/scripts/deploy.sh stop` | 发送 SIGTERM，最多等待 60 秒完成尾部提交；保留全部数据 |
 | `./collector/scripts/deploy.sh verify 20260907` | 在临时容器中只读验收指定交易日，日期按实际文件修改 |
+
+看板打开 **http://localhost:8080**；FastAPI 文档 **http://localhost:8000/docs**。React 页面由独立 Nginx 容器提供，Python 不托管 JS。`QUERY_PORT` / `DASHBOARD_PORT` 环境变量可调整对应宿主端口（后续命令沿用相同值）；默认只监听 127.0.0.1。
+
+SQLite 并未迁移：宿主 `collector/data/` 是持久 bind mount，Collector `/app/data` 可写，query `/data` 只读；两者使用相同 UID/GID。前端不挂载数据。Collector 不等待 Python 或前端启动。`logs/status/stop` 现在管理三个服务，`status` 增加各自 Docker healthcheck 状态；`verify` 仍只读检查日 SQLite。
+
+若需保留看板/API 而仅停止采集，可以执行：
+
+```bash
+docker stop --time 60 "$(docker ps -q --filter label=com.docker.compose.project=derivatives-monitor --filter label=com.docker.compose.service=collector)"
+```
+
+随后查询历史日；恢复采集执行 `./collector/scripts/deploy.sh up`。详情见 [后端](../query/README.md)、[看板](../dashboard/README.md) 和 [读路径验收](../docs/Read_Path_Acceptance_CN.md)。
 
 构建或预检失败不会先停止原容器；新配置验证通过后才更新服务。每个 Docker Engine 使用固定 Compose 项目名 `derivatives-monitor`，只管理一个 Collector；另一 checkout 不能通过 `up/stop` 替换或停止原 checkout 的实例。需要迁移时先从原目录正常停止并移除原 Compose 容器，再安排数据目录迁移。不要同时运行原生 Collector 和 Docker Collector 写同一目录。
 
@@ -69,7 +81,7 @@ ctest --test-dir collector/build/Release --output-on-failure
 
 没有管理员权限时，可以将开发包解压到用户目录，再显式指定 `-DSQLite3_INCLUDE_DIR=/path/to/include -DSQLite3_LIBRARY=/path/to/libsqlite3.so`。不自动下载编译依赖。部署仅需 `bin/data_collector`、同目录的 `thostmduserapi_se.so`、系统 SQLite 运行库和配置；测试程序/`libfake_md.so` 不属于部署产物。CTP 动态库通过 `$ORIGIN` 加载，可用 `ldd` 确认无缺失依赖。
 
-CTest 五项：config、state、storage、runtime、process。全部离线；process 仅对子进程通过 `LD_PRELOAD` 注入合成 SDK，执行真实 Collector CLI，日志明确 `TEST DOUBLE`。官方 SHARED 模式下启用该进程测试；STATIC 需要另备官方静态库，当前仓库没有。正式采集时不要加载测试库。
+CTest 六项：config、state、storage、runtime、health、process。全部离线；process 仅对子进程通过 `LD_PRELOAD` 注入合成 SDK，执行真实 Collector CLI，日志明确 `TEST DOUBLE`。官方 SHARED 模式下启用该进程测试；STATIC 需要另备官方静态库，当前仓库没有。正式采集时不要加载测试库。
 
 ## 配置与启动
 

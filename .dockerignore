@@ -31,6 +31,17 @@
 !query/storage.py
 !query/tests/
 !query/tests/test_api.py
+!dashboard/
+!dashboard/Dockerfile
+!dashboard/package.json
+!dashboard/package-lock.json
+!dashboard/index.html
+!dashboard/vite.config.js
+!dashboard/nginx.conf
+!dashboard/src/
+!dashboard/src/**
+!dashboard/tests/
+!dashboard/tests/**
 # Keep local secrets/runtime outputs excluded even if placed inside source trees.
 **/.env
 **/.env.*
