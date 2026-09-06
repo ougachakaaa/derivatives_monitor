@@ -22,3 +22,13 @@ T0–T5 不改动无关 `experiments/data_coverage`，不添加 Docker/后端。
 | [T6](T6-docker.md) | 源码 → 多阶段镜像与单服务 Compose | `build(collector): add Docker image and persistent Compose service` |
 | [T7](T7-deploy.md) | 首次配置 → 构建预检 → 启动/运维 | `feat(collector): add one-command Docker deployment` |
 | [T8](T8-docker-acceptance.md) | 隔离验收 → WSL 部署手册 | `test(collector): verify Docker deployment and document WSL operations` |
+
+## 最小只读层与 JS 看板（用户已授权）
+
+先提交 [读路径约束](../../Read_Path_Constraints_CN.md) 和 Specs；不改变 C++ 唯一 writer 边界。
+
+| Task | 小闭环 | 预期 commit |
+|---|---|---|
+| [T9](T9-heartbeat.md) | C++ 主循环 → 可只读观察的心跳 | `feat(collector): publish independent runtime heartbeat` |
+| [T10](T10-query.md) | 已有日文件 → Python 只读 HTTP | `feat(query): serve read-only daily market data over HTTP` |
+| [T11](T11-dashboard.md) | 双容器 → 浏览器状态和数量看板 | `feat(monitor): add minimal dashboard and shared-volume deployment` |
