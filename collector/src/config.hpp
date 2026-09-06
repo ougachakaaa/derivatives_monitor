@@ -34,6 +34,8 @@ inline Config LoadConfig(const std::filesystem::path& path) {
 
 inline void ValidateConfig(Config& config) {
     ctp::ValidateConfig(config);
+    if (config.connect_timeout_seconds <= 0 || config.connect_timeout_seconds > 3600)
+        throw std::runtime_error("ConnectTimeoutSeconds must be in 1..3600");
     if (config.instruments.empty()) throw std::runtime_error("Instruments must not be empty");
     for (const auto& id : config.instruments) {
         if (id.empty() || !std::all_of(id.begin(), id.end(), [](unsigned char c) {

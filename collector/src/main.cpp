@@ -1,4 +1,9 @@
-#include "config.hpp"
+#include "runtime.hpp"
+
+namespace {
+volatile std::sig_atomic_t stop_requested = 0;
+void HandleSignal(int) { stop_requested = 1; }
+}
 
 int main(int argc, char** argv) {
     try {
@@ -30,7 +35,9 @@ int main(int argc, char** argv) {
             ctp::Log("event=config_valid instruments=", config.instruments.size(), " data_directory=", config.data_directory.string());
             return 0;
         }
-        throw std::runtime_error("collection runtime is not implemented yet; use --check-config");
+        std::signal(SIGINT, HandleSignal);
+        std::signal(SIGTERM, HandleSignal);
+        return collector::RunCollector(config, stop_requested);
     } catch (const std::exception& e) {
         std::cerr << "event=fatal message=\"" << e.what() << "\"\n";
         return 1;
