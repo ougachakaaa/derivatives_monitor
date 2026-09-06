@@ -22,3 +22,16 @@
 !experiments/ctp/sdk/v6.7.13_20260225/linux64/mdapi/
 !experiments/ctp/sdk/v6.7.13_20260225/linux64/mdapi/*.h
 !experiments/ctp/sdk/v6.7.13_20260225/linux64/mdapi/thostmduserapi_se.so
+# Keep local secrets/runtime outputs excluded even if placed inside source trees.
+**/.env
+**/.env.*
+**/config.ini
+**/credentials.*
+**/secrets.*
+**/*.key
+**/*.pem
+**/*.p12
+**/*.pfx
+**/*.sqlite*
+**/*.db
+**/*.log

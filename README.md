@@ -13,6 +13,14 @@ CTP → C++ Data Collector → YYYYMMDD.sqlite
 - [分步 Task Specs 与验证记录](docs/tasks/data-collector/README.md)
 - [第一阶段验收结果](docs/Data_Collector_Acceptance_CN.md)：离线闭环已验证；本次真实前置连接被拒，实盘持续行情仍待交易时段复验。
 
+另一台 Linux x86-64 / WSL 机器已有 Docker Engine + Compose v2 时，可直接部署：
+
+```bash
+./collector/scripts/deploy.sh up
+```
+
+首次交互填写前置、必要账号和精确合约，随后自动构建、测试并后台启动；后续复用本地配置。数据保存在宿主 `collector/data/`，重建容器不会清除。查看日志用 `./collector/scripts/deploy.sh logs`，正常停止用 `./collector/scripts/deploy.sh stop`。详见 [Docker / WSL 手册](collector/README.md#docker--wsl-一条命令部署) 和 [Docker 验证边界](docs/Data_Collector_Docker_Acceptance_CN.md)。
+
 在仓库根目录构建（需要 CMake、G++、SQLite 开发包）：
 
 ```bash

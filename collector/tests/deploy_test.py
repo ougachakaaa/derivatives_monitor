@@ -98,7 +98,9 @@ class DeployTest(unittest.TestCase):
                     if select.select([master], [], [], .1)[0]: transcript += os.read(master, 65536)
                 # Wait for the full prompt/read setup before typing into the terminal.
                 time.sleep(.03); os.write(master, answer + b'\n')
+            deadline = time.monotonic() + 10
             while process.poll() is None:
+                self.assertLess(time.monotonic(), deadline, 'deployment test subprocess hung')
                 if select.select([master], [], [], .1)[0]:
                     try: transcript += os.read(master, 65536)
                     except OSError: break

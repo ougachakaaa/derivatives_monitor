@@ -4,6 +4,57 @@
 
 [设计约束](../docs/Data_Collector_Constraints_CN.md) · [Task Specs](../docs/tasks/data-collector/README.md) · [验收记录](../docs/Data_Collector_Acceptance_CN.md)
 
+## Docker / WSL 一条命令部署
+
+另一台机器只需 Git、Bash、可用的 Linux x86-64 Docker Engine 和 Compose v2。无需在宿主安装 CMake、G++、SQLite 或 Python。将代码放到 WSL 的 Linux 用户目录，例如 `~/repo/derivatives_monitor`，确认 Docker Desktop 已启动且启用该 WSL 的集成；容器无法在 Windows 睡眠或 WSL 停止时继续采集。
+
+拉取包含 Docker 部署实现的代码后，在仓库根目录执行：
+
+```bash
+./collector/scripts/deploy.sh up
+```
+
+首次运行依次询问前置、BrokerID、UserID、隐藏输入的密码和精确合约代码。账号按前置要求填写，可留空；合约必填，先选一个已确认的期货和一个活跃期权。连接地址的示例默认值不代表现场一定可用。
+
+脚本以 0600 权限保存 `collector/config.ini`，然后构建镜像、运行五项 CTest、校验配置及目录权限，最后后台启动。首次拉取基础镜像及安装编译依赖需要联网，建议开盘前提前完成。首次非交互运行必须预先准备 INI，脚本不会猜测合约。
+
+已有配置原样复用，不再次询问或覆盖。Docker 入口要求以下值（省略时沿用相同默认值）：
+
+```ini
+DataDirectory=data
+FlowPath=flow
+RunSeconds=0
+```
+
+如果之前手工设置了绝对目录或定时退出，请自行调整以上三项。首次生成的 Docker 配置使用 `ConnectTimeoutSeconds=120`、`SnapshotIntervalMs=1000`、`StatusIntervalSeconds=10`；已有配置中的其他有效参数保持原值。数据与 flow 保留在宿主对应目录，配置只读挂载，文件按调用用户 UID/GID 写入；通常不要用 sudo 执行部署脚本。
+
+| 命令 | 用途 |
+|---|---|
+| `./collector/scripts/deploy.sh up` | 首次配置、构建及后台启动；更新代码后也运行此命令 |
+| `./collector/scripts/deploy.sh logs` | 跟随最近 100 行日志；Ctrl+C 只结束日志查看 |
+| `./collector/scripts/deploy.sh status` | 查看容器状态、重启次数、最近退出码和采集健康日志 |
+| `./collector/scripts/deploy.sh stop` | 发送 SIGTERM，最多等待 60 秒完成尾部提交；保留全部数据 |
+| `./collector/scripts/deploy.sh verify 20260907` | 在临时容器中只读验收指定交易日，日期按实际文件修改 |
+
+构建或预检失败不会先停止原容器；新配置验证通过后才更新服务。每个 Docker Engine 使用固定 Compose 项目名 `derivatives-monitor`，只管理一个 Collector；另一 checkout 不能通过 `up/stop` 替换或停止原 checkout 的实例。需要迁移时先从原目录正常停止并移除原 Compose 容器，再安排数据目录迁移。不要同时运行原生 Collector 和 Docker Collector 写同一目录。
+
+容器采用 `unless-stopped`：8:50 前置未就绪时，连接/登录超时退出后由 Docker 自动重新启动；已登录后的断线恢复仍由 SDK 处理。显式 `stop` 后保持停止，下一次 `up` 恢复。持久化或登录持续失败也可能反复重启，需观察 `restart_count` 和错误日志，不能把 `running` 当成行情健康。首次退出过快时 Docker 的重启策略也有启动监控条件，详见 [Docker 官方重启说明](https://docs.docker.com/engine/containers/start-containers-automatically/)。
+
+日志保存在 Docker，由 `json-file` 驱动轮转（每份 10MB、保留三份）。更新容器可能丢弃旧容器日志，重要验收证据可在更新前导出：
+
+```bash
+mkdir -p collector/logs
+docker logs "$(docker ps -aq --filter label=com.docker.compose.project=derivatives-monitor --filter label=com.docker.compose.service=collector)" > collector/logs/docker-acceptance.log 2>&1
+```
+
+`verify` 检查 schema 版本、交易日身份、非空 snapshot、外键与 `integrity_check`，输出各合约行数、最近接收时间和 run 来源。它只证明当时文件有效；开盘后要间隔执行两次，并结合 `logs` 确认行情和写入推进。
+
+验收器的目录挂载与 SQLite 连接都只读。对于正常停机且没有 WAL 的库，验收器在持有 Collector 目录共享锁期间使用 `immutable`，避免 SQLite 尝试创建 sidecar；该模式不会用于正在写入的数据。若正在采集其他交易日，而所查历史日缺少 sidecar，请正常 `stop` 后再验收。异常结束留下的 WAL 不得删除；必要时先正常启动 Collector 完成 SQLite 恢复再查询。
+
+Docker 未就绪、配置错误、构建失败、目录不可写、日文件不存在或验收失败均返回非零退出码。`up` 的“已部署”不表示已通过真实 CTP 验收。周一仍需确认登录、逐合约订阅、持续接收和 `snapshot_commit`，见 [实盘验收步骤](../docs/Data_Collector_Acceptance_CN.md)。
+
+部署实现与验证边界见 [Docker 验收记录](../docs/Data_Collector_Docker_Acceptance_CN.md)。
+
 ## 构建与测试
 
 Linux x86-64，CMake ≥ 3.16，C++17 编译器，SQLite ≥ 3.24 开发包。Ubuntu/Debian 可用 `build-essential cmake libsqlite3-dev`（`sqlite3` 命令行工具可选）。使用仓库内官方 v6.7.13 SDK，CMake 共享原 demo 的 SDK 查找/链接规则。

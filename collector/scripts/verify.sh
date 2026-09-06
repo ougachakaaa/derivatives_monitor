@@ -41,7 +41,11 @@ SELECT InstrumentID, COUNT(*) AS rows,
 SELECT run_id, source, started_us, stopped_us FROM runs ORDER BY started_us;
 COMMIT;
 SQL
-) || { echo 'Daily SQLite query failed; verification did not pass.' >&2; exit 1; }
+) || {
+    echo 'Daily SQLite query failed; verification did not pass.' >&2
+    echo 'If this is a closed historical WAL file without sidecars while another day is being collected, stop the Collector normally and retry. Do not delete WAL files.' >&2
+    exit 1
+}
 
 checks=$(printf '%s\n' "$result" | head -n 4)
 expected=$(printf 'schema_ok\ndataset_ok\nsnapshots_ok\nok')
