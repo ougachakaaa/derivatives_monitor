@@ -1,5 +1,6 @@
 #include "runtime.hpp"
 #include "storage.hpp"
+#include "health.hpp"
 #include <thread>
 
 namespace collector {
@@ -60,15 +61,24 @@ int RunCollector(const Config& config, const volatile std::sig_atomic_t& stop, A
             throw;
         }
     };
+    const auto publish = [&](ProcessState state) {
+        PublishHealth(config.data_directory, session.Status(), market.Stats(), store, state);
+    };
     try {
+        publish(ProcessState::Starting);
         api->RegisterSpi(&session); api->RegisterFront(front.data()); api->Init();
         auto next_snapshot_ms = started_ms + config.snapshot_interval_ms;
         auto next_status_ms = started_ms;
+        auto next_heartbeat_ms = started_ms;
         std::int64_t logged_in_ms = -1;
         while (!stop) {
             const auto now_ms = SteadyMs();
             session.Pump(now_ms);
             if (logged_in_ms < 0 && session.HasLoggedIn()) logged_in_ms = now_ms;
+            if (now_ms >= next_heartbeat_ms) {
+                publish(logged_in_ms < 0 ? ProcessState::Starting : ProcessState::Running);
+                next_heartbeat_ms = now_ms + 2000;
+            }
             if (now_ms >= next_snapshot_ms) {
                 flush(); next_snapshot_ms = SteadyMs() + config.snapshot_interval_ms;
             }
@@ -87,11 +97,13 @@ int RunCollector(const Config& config, const volatile std::sig_atomic_t& stop, A
             ctp::Log("utc_us=", NowUs(), " event=persistence_failed run_id=", store.RunId(), " message=\"", error.what(), "\"");
             throw;
         }
+        publish(ProcessState::Stopped);
         ctp::Log("utc_us=", NowUs(), " event=stop run_id=", store.RunId(), " reason=", stop ? "signal" : "run_window_complete",
             " written=", store.Written());
         return 0;
     } catch (...) {
         release();
+        publish(ProcessState::Failed);
         ctp::Log("utc_us=", NowUs(), " event=collector_failed run_id=", store.RunId(), " written=", store.Written());
         throw;
     }

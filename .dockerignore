@@ -11,6 +11,7 @@
 !collector/tests/*.hpp
 !collector/scripts/
 !collector/scripts/verify.sh
+!collector/scripts/healthcheck.sh
 !experiments/
 !experiments/ctp/
 !experiments/ctp/common/

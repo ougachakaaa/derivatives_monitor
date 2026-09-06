@@ -61,6 +61,9 @@ int main() {
         volatile std::sig_atomic_t stop = 0;
         CHECK(RunCollector(config, stop, ApiPtr(fake)) == 0);
         CHECK(released);
+        std::ifstream health(config.data_directory / ".collector-status.json");
+        const std::string health_json((std::istreambuf_iterator<char>(health)), {});
+        CHECK(health_json.find("\"process_state\": \"stopped\"") != std::string::npos);
         TestDb db(config.data_directory / "20260904.sqlite");
         CHECK(db.Scalar("SELECT count(*) FROM snapshots") == "2");
         CHECK(db.Scalar("SELECT Volume FROM snapshots ORDER BY id DESC LIMIT 1") == "99");
@@ -76,5 +79,8 @@ int main() {
         volatile std::sig_atomic_t stop = 0;
         Throws([&] { RunCollector(config, stop, ApiPtr(fake)); });
         CHECK(released);
+        std::ifstream health(config.data_directory / ".collector-status.json");
+        const std::string health_json((std::istreambuf_iterator<char>(health)), {});
+        CHECK(health_json.find("\"process_state\": \"failed\"") != std::string::npos);
     }
 }

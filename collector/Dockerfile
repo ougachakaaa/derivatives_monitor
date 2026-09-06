@@ -23,6 +23,7 @@ RUN apt-get update \
 
 COPY --from=build /build/bin/data_collector /build/bin/thostmduserapi_se.so /opt/collector/
 COPY collector/scripts/verify.sh /opt/collector/verify.sh
+COPY collector/scripts/healthcheck.sh /opt/collector/healthcheck.sh
 RUN ldd /opt/collector/data_collector > /tmp/collector-ldd \
     && cat /tmp/collector-ldd \
     && ! grep -q 'not found' /tmp/collector-ldd
