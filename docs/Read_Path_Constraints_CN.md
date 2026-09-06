@@ -4,10 +4,10 @@
 
 ## 边界
 
-- 两个服务容器：C++ `collector` 采集和唯一写入；Python `query` 只读查询并提供最小静态 JS 页面。JS 不需要独立容器或 Node 构建工具。
+- 三个独立项目和容器：C++ `collector` 采集和唯一写入；Python `query` 使用 FastAPI/Uvicorn 提供只读 HTTP，Poetry 管理依赖并提交 lock；React `dashboard` 使用 Vite 构建，Nginx 提供静态资源并反向代理 `/api/` 至 query。Python 不提供 JS。
 - Python 对同一宿主 `collector/data/` 挂载为 `/data:ro`，SQLite 用 URI `mode=ro`、`query_only=ON`、短事务及参数绑定；不建立第二份行情库、不修改现有 schema。
 - Collector 不依赖 Python 启动、请求或健康。Compose 不给 Collector 添加 query 依赖。没有 Docker socket、CTP 凭据或 flow 文件挂入 Python。
-- HTTP 仅发布至宿主 `127.0.0.1:8000`；本地观察用 Python 标准库服务，不引入认证、外网部署、交易、分析、图表框架或 WebSocket。
+- 前端 HTTP 仅发布至宿主 `127.0.0.1:8080`，后端直接访问仅发布至 `127.0.0.1:8000`；浏览器通过前端同源 `/api/` 查询，无需宽泛 CORS；开发时 Vite 使用相同代理。服务用于本地观察，不引入认证、外网部署、交易、分析、图表框架或 WebSocket。
 
 ## 最小接口与页面
 
@@ -25,7 +25,7 @@
 - 心跳来自主循环，独立于行情；超过 10 秒、时钟明显倒退、内容损坏或缺失时不能判定存活。SIGKILL 后历史文件不能继续证明健康。
 - 进程存活、CTP 已连接、行情最近更新是三个不同事实。休市无新行情不等于进程停止；只有采集连接/登录或已知错误才影响相应指标。
 - 状态输出失败记录日志并继续采集；Python/浏览器的失败不会进入采集控制路径。该 JSON 是运行诊断，不是新增行情 Source of Truth。
-- Docker healthcheck 检查 Collector 主循环新鲜心跳及 Python `/healthz`；页面显示的是应用健康证据，不声称通过 Docker 管理 API 查询容器状态。
+- Docker healthcheck 分别检查 Collector 主循环新鲜心跳、Python `/healthz` 与前端静态服务 `/healthz`；页面显示的是应用健康证据，不声称通过 Docker 管理 API 查询容器状态。
 
 ## SQLite 只读限制
 
@@ -33,4 +33,6 @@
 
 ## 实施与验收
 
-先提交本文和 T9–T11 Specs，再逐 Task 完成验证和独立提交。覆盖真实 SQLite/HTTP、并发写入只读消费、Collector 停止而 Python 仍可读、Python 停止而 Collector 仍采集、心跳过期、空库/坏参数/损坏库、浏览器错误与恢复、Compose 双服务读写挂载。Docker Engine 不可用时不能把宿主进程测试当成真实容器实测。
+先提交本文和 T9–T11 Specs，再逐 Task 完成验证和独立提交。覆盖真实 SQLite/HTTP、并发写入只读消费、Collector 停止而 Python 仍可读、Python 停止而 Collector 仍采集、心跳过期、空库/坏参数/损坏库、浏览器错误与恢复、Compose 三服务隔离及读写挂载。Docker Engine 不可用时不能把宿主进程测试当成真实容器实测。
+
+技术选型依据：[FastAPI 容器部署](https://fastapi.tiangolo.com/deployment/docker/)、[Poetry 锁定依赖](https://python-poetry.org/docs/basic-usage/)、[Vite 项目构建](https://vite.dev/guide/)。以上为用户最新要求的调整；T9 心跳契约保持不变。

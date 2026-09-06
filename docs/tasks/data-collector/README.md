@@ -31,4 +31,4 @@ T0–T5 不改动无关 `experiments/data_coverage`，不添加 Docker/后端。
 |---|---|---|
 | [T9](T9-heartbeat.md) | C++ 主循环 → 可只读观察的心跳 | `feat(collector): publish independent runtime heartbeat` |
 | [T10](T10-query.md) | 已有日文件 → Python 只读 HTTP | `feat(query): serve read-only daily market data over HTTP` |
-| [T11](T11-dashboard.md) | 双容器 → 浏览器状态和数量看板 | `feat(monitor): add minimal dashboard and shared-volume deployment` |
+| [T11](T11-dashboard.md) | React/FastAPI 三容器 → 浏览器状态和数量看板 | `feat(monitor): add minimal dashboard and shared-volume deployment` |
