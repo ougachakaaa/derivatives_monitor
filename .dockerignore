@@ -23,6 +23,14 @@
 !experiments/ctp/sdk/v6.7.13_20260225/linux64/mdapi/
 !experiments/ctp/sdk/v6.7.13_20260225/linux64/mdapi/*.h
 !experiments/ctp/sdk/v6.7.13_20260225/linux64/mdapi/thostmduserapi_se.so
+!query/
+!query/Dockerfile
+!query/pyproject.toml
+!query/poetry.lock
+!query/app.py
+!query/storage.py
+!query/tests/
+!query/tests/test_api.py
 # Keep local secrets/runtime outputs excluded even if placed inside source trees.
 **/.env
 **/.env.*
