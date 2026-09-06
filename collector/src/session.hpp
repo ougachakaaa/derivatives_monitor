@@ -46,6 +46,7 @@ public:
     void OnRtnDepthMarketData(CThostFtdcDepthMarketDataField*) override;
     void Pump(std::int64_t now_ms = SteadyMs());
     SessionStatus Status() const { std::lock_guard<std::mutex> lock(mutex_); return status_; }
+    bool HasLoggedIn() const { std::lock_guard<std::mutex> lock(mutex_); return status_.ever_logged_in; }
     void CheckFailure() const {
         if (failed_) { std::lock_guard<std::mutex> lock(mutex_); throw std::runtime_error("CTP callback failed: " + failure_); }
     }

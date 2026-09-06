@@ -11,9 +11,9 @@ int main() {
     a.facts.LastPrice = -10.5; a.facts.BidPrice1 = 4000; a.facts.AskVolume5 = 12;
     std::string first_run;
     {
-        DailyStore store(temp.path, 1000, {"IF2609", "IO2609-C-4000"});
+        DailyStore store(temp.path, 1000, {"IF2609", "IO2609-C-4000"}, "TEST DOUBLE - storage fixture");
         first_run = store.RunId();
-        Throws([&] { DailyStore second(temp.path, 1000, {"IF2609"}); });
+        Throws([&] { DailyStore second(temp.path, 1000, {"IF2609"}, "TEST DOUBLE - storage fixture"); });
         CHECK(store.Write({a, b}) == 2);
         CHECK(store.Write({a, b}) == 0);
         CHECK(store.Written() == 2 && store.LastCommitUs() > 0);
@@ -56,7 +56,7 @@ int main() {
         CHECK(reader.Scalar("SELECT stopped_us IS NOT NULL FROM runs") == "1");
     }
     {
-        DailyStore restart(temp.path, 500, {"IF2609"});
+        DailyStore restart(temp.path, 500, {"IF2609"}, "TEST DOUBLE - storage fixture");
         CHECK(restart.RunId() != first_run);
         CHECK(restart.Write({a}) == 1);
         restart.Finish();
@@ -71,7 +71,7 @@ int main() {
     }
     {
         TestDb injection(path, false); injection.Exec("PRAGMA user_version=99");
-        DailyStore store(temp.path, 1000, {"IF2609"});
+        DailyStore store(temp.path, 1000, {"IF2609"}, "TEST DOUBLE - storage fixture");
         Throws([&] { store.Write({a}); });
         injection.Exec("PRAGMA user_version=1; UPDATE dataset SET trading_day='20260908'");
         Throws([&] { store.Write({a}); });

@@ -51,8 +51,8 @@ std::string NewRunId() {
 }
 } // namespace
 
-DailyStore::DailyStore(std::filesystem::path directory, int interval_ms, const std::vector<std::string>& instruments)
-    : directory_(std::move(directory)), run_id_(NewRunId()), interval_ms_(interval_ms) {
+DailyStore::DailyStore(std::filesystem::path directory, int interval_ms, const std::vector<std::string>& instruments, std::string source)
+    : directory_(std::move(directory)), run_id_(NewRunId()), source_(std::move(source)), interval_ms_(interval_ms) {
     for (const auto& id : instruments) { if (!instruments_.empty()) instruments_ += ','; instruments_ += id; }
     std::filesystem::create_directories(directory_);
     lock_fd_ = ::open((directory_ / ".collector.lock").c_str(), O_CREAT | O_RDWR | O_CLOEXEC, 0600);
@@ -106,7 +106,7 @@ void DailyStore::Open(const std::string& day) {
         }
         Statement run(db_, "INSERT INTO runs(run_id,started_us,snapshot_interval_ms,instruments,source) VALUES(?,?,?,?,?) ON CONFLICT(run_id) DO NOTHING");
         run.Bind(1, run_id_); run.Bind(2, started_us_); run.Bind(3, interval_ms_); run.Bind(4, instruments_);
-        run.Bind(5, std::string("CTP v6.7.13_20260225")); run.Run();
+        run.Bind(5, source_); run.Run();
         Exec(db_, "COMMIT");
         day_ = day;
         touched_days_.insert(day);

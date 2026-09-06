@@ -5,7 +5,7 @@
 namespace collector {
 class DailyStore {
 public:
-    DailyStore(std::filesystem::path directory, int interval_ms, const std::vector<std::string>& instruments);
+    DailyStore(std::filesystem::path directory, int interval_ms, const std::vector<std::string>& instruments, std::string source);
     ~DailyStore();
     DailyStore(const DailyStore&) = delete;
     DailyStore& operator=(const DailyStore&) = delete;
@@ -20,7 +20,7 @@ private:
     std::filesystem::path directory_;
     int lock_fd_ = -1;
     sqlite3* db_ = nullptr;
-    std::string day_, run_id_, instruments_;
+    std::string day_, run_id_, instruments_, source_;
     int interval_ms_;
     const std::int64_t started_us_ = NowUs();
     std::set<std::string> touched_days_;

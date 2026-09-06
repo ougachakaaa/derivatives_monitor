@@ -31,7 +31,8 @@ void Report(const CtpSession& session, const MarketState& state, const DailyStor
 } // namespace
 
 int RunCollector(const Config& config, const volatile std::sig_atomic_t& stop, ApiPtr api) {
-    DailyStore store(config.data_directory, config.snapshot_interval_ms, config.instruments);
+    const std::string source = api ? "TEST DOUBLE - injected API" : std::string("CTP ") + CThostFtdcMdApi::GetApiVersion();
+    DailyStore store(config.data_directory, config.snapshot_interval_ms, config.instruments, source);
     MarketState market(config.instruments);
     std::filesystem::create_directories(config.flow_path);
     std::string flow_path = config.flow_path.string();
@@ -42,7 +43,7 @@ int RunCollector(const Config& config, const volatile std::sig_atomic_t& stop, A
     std::string front = config.front;
     const auto started_ms = SteadyMs();
     ctp::Log("utc_us=", NowUs(), " event=start run_id=", store.RunId(),
-        " api_version=\"", CThostFtdcMdApi::GetApiVersion(), "\" sqlite_version=", sqlite3_libversion(),
+        " source=\"", source, "\" sqlite_version=", sqlite3_libversion(),
         " front=", front, " data_directory=", config.data_directory.string(), " snapshot_interval_ms=", config.snapshot_interval_ms);
     const auto release = [&] {
         if (api) { api->RegisterSpi(nullptr); api.reset(); }
@@ -67,8 +68,7 @@ int RunCollector(const Config& config, const volatile std::sig_atomic_t& stop, A
         while (!stop) {
             const auto now_ms = SteadyMs();
             session.Pump(now_ms);
-            const auto status = session.Status();
-            if (status.ever_logged_in && logged_in_ms < 0) logged_in_ms = now_ms;
+            if (logged_in_ms < 0 && session.HasLoggedIn()) logged_in_ms = now_ms;
             if (now_ms >= next_snapshot_ms) {
                 flush(); next_snapshot_ms = SteadyMs() + config.snapshot_interval_ms;
             }
@@ -81,7 +81,12 @@ int RunCollector(const Config& config, const volatile std::sig_atomic_t& stop, A
             std::this_thread::sleep_for(std::chrono::milliseconds(20));
         }
         // The SPI and MarketState outlive Release, including any callbacks already in flight.
-        release(); session.CheckFailure(); flush(); Report(session, market, store); store.Finish();
+        release(); session.CheckFailure(); flush(); Report(session, market, store);
+        try { store.Finish(); }
+        catch (const std::exception& error) {
+            ctp::Log("utc_us=", NowUs(), " event=persistence_failed run_id=", store.RunId(), " message=\"", error.what(), "\"");
+            throw;
+        }
         ctp::Log("utc_us=", NowUs(), " event=stop run_id=", store.RunId(), " reason=", stop ? "signal" : "run_window_complete",
             " written=", store.Written());
         return 0;
