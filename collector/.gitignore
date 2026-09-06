@@ -2,3 +2,5 @@
 /config.ini
 /data/
 /flow/
+/.deploy.lock
+/.config-*

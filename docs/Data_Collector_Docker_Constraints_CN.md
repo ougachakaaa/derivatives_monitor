@@ -14,3 +14,5 @@
 - 不更改 Docker Desktop/WSL 设置，不自动推送提交，不增加 Python/JS 服务。当前 WSL Docker 不可用时，区分静态/脚本测试和未完成的容器实测。
 
 执行顺序：先提交本文与 T6–T8 Specs，再逐 Task 验证、单独提交。详细计划见 [任务目录](tasks/data-collector/README.md)。
+
+只读 WAL 实现补充：停机且无 sidecar 的库在只读目录上不能直接创建 SQLite 共享内存。验收器只在获得 Collector 目录锁且无非空 WAL 时使用 immutable；运行中的数据不使用 immutable。锁不可用且该日无 sidecar 时不绕过安全条件，提示正常停止后复验。

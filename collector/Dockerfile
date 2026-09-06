@@ -18,10 +18,11 @@ RUN cmake -S collector -B /build -DCMAKE_BUILD_TYPE=Release \
 
 FROM ubuntu:24.04 AS runtime
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends libstdc++6 libsqlite3-0 sqlite3 \
+    && apt-get install -y --no-install-recommends libstdc++6 libsqlite3-0 sqlite3 util-linux \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=build /build/bin/data_collector /build/bin/thostmduserapi_se.so /opt/collector/
+COPY collector/scripts/verify.sh /opt/collector/verify.sh
 RUN ldd /opt/collector/data_collector > /tmp/collector-ldd \
     && cat /tmp/collector-ldd \
     && ! grep -q 'not found' /tmp/collector-ldd
