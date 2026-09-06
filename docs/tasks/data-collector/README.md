@@ -11,4 +11,14 @@
 | [T4](T4-runtime.md) | CTP 生命周期 → 状态采样 → 持久化与停机 | `feat(collector): integrate resilient CTP collection runtime` |
 | [T5](T5-acceptance.md) | 完整回归、现场探测、运行与查询手册 | `test(collector): verify standalone collection and document operations` |
 
-不改动无关 `experiments/data_coverage`，不添加 Docker/后端。上游设计文档原样纳入 T0，便于所有约束链接随 commit 独立审查。
+T0–T5 不改动无关 `experiments/data_coverage`，不添加 Docker/后端。上游设计文档原样纳入 T0，便于所有约束链接随 commit 独立审查。
+
+## 后续 Docker 部署（用户已授权）
+
+先提交 [部署约束](../../Data_Collector_Docker_Constraints_CN.md) 与以下 Specs，再按顺序逐项提交；不增加后端或改变采集链路。
+
+| Task | 小闭环 | 预期 commit |
+|---|---|---|
+| [T6](T6-docker.md) | 源码 → 多阶段镜像与单服务 Compose | `build(collector): add Docker image and persistent Compose service` |
+| [T7](T7-deploy.md) | 首次配置 → 构建预检 → 启动/运维 | `feat(collector): add one-command Docker deployment` |
+| [T8](T8-docker-acceptance.md) | 隔离验收 → WSL 部署手册 | `test(collector): verify Docker deployment and document WSL operations` |
