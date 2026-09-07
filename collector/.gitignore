@@ -1,0 +1,8 @@
+/build/
+/config.ini
+/data/
+/flow/
+/.deploy.lock
+/.config-*
+
+__pycache__/
