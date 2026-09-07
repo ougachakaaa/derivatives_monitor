@@ -3,9 +3,9 @@
 依据已确认的 Docker 一键部署计划，扩展 [采集约束](Data_Collector_Constraints_CN.md)。本轮只封装部署，不改变 CTP、采样、schema 或 Python 只读边界。
 
 - 用户入口：`./collector/scripts/deploy.sh up`。首次交互填写连接信息和精确合约，隐藏密码并以 0600 保存本地 INI；后续复用，不覆盖。
-- 目标 Linux x86-64 / WSL、Docker Engine + Compose v2；宿主无需 C++、SQLite、Python。镜像使用 Ubuntu 24.04 多阶段构建、仓库 SDK 和既有五项 CTest。
+- 目标 Linux x86-64 / WSL、Docker Engine + Compose v2；宿主无需 C++、SQLite、Python。镜像使用 Ubuntu 24.04 多阶段构建、仓库 SDK 和当前七项 CTest（含约 33 秒的默认采样间隔验证）。
 - 配置只读挂载；`collector/data/`、`collector/flow/` 留在宿主，分别挂载到配置相对目录。容器使用调用用户 UID/GID。不可把本地配置、凭据、数据库、flow 或日志加入构建上下文/最终镜像。
-- Docker 配置固定 `DataDirectory=data`、`FlowPath=flow`、`RunSeconds=0`；首次默认连接超时 120 秒、采样 1000ms、状态 10 秒。已有不兼容配置明确拒绝，不悄悄改写。
+- Docker 配置固定 `DataDirectory=data`、`FlowPath=flow`、`RunSeconds=0`；首次默认连接超时 120 秒、采样 15000ms、状态 10 秒。已有不兼容配置明确拒绝，不悄悄改写。
 - 构建、配置及写权限预检均在更新原容器之前。`up` 幂等；后台单服务、默认桥接网络、无端口映射。
 - Collector 直接接收 SIGTERM，60 秒停止宽限。采用用户选择的 `unless-stopped`，允许前置未就绪时进程超时后自动恢复；显式 stop 不重新启动。持久故障也可能反复重启，必须暴露日志/退出码/重启计数。
 - Docker 日志每份 10MB、保留三份。`up` 只报告已部署，不宣称有真实行情。查看日志退出不停止采集。

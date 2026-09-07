@@ -62,7 +62,7 @@ create_config() {
     {
         printf '[config]\nFrontMdAddr=%s\nBrokerID=%s\nUserID=%s\nPassword=%s\n' "${front:-$default_front}" "${broker:-$default_broker}" "$user" "$password"
         printf 'UserProductInfo=DM-Linux\nInstruments=%s\n' "$instruments"
-        printf 'DataDirectory=data\nFlowPath=flow\nSnapshotIntervalMs=1000\nStatusIntervalSeconds=10\nConnectTimeoutSeconds=120\nRetryIntervalSeconds=5\nSubscriptionBatchSize=100\nRunSeconds=0\n'
+        printf 'DataDirectory=data\nFlowPath=flow\nSnapshotIntervalMs=15000\nStatusIntervalSeconds=10\nConnectTimeoutSeconds=120\nRetryIntervalSeconds=5\nSubscriptionBatchSize=100\nRunSeconds=0\n'
     } > "$temp_config"
     unset password
     ln -T -- "$temp_config" "$config_path" || die '配置已存在，未覆盖；请检查后重新运行。'

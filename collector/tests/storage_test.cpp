@@ -56,7 +56,7 @@ int main() {
         CHECK(reader.Scalar("SELECT stopped_us IS NOT NULL FROM runs") == "1");
     }
     {
-        DailyStore restart(temp.path, 500, {"IF2609"}, "TEST DOUBLE - storage fixture");
+        DailyStore restart(temp.path, 15000, {"IF2609"}, "TEST DOUBLE - storage fixture");
         CHECK(restart.RunId() != first_run);
         CHECK(restart.Write({a}) == 1);
         restart.Finish();
@@ -65,6 +65,12 @@ int main() {
         TestDb reader(path);
         CHECK(reader.Scalar("PRAGMA integrity_check") == "ok");
         CHECK(reader.Scalar("SELECT count(*) FROM runs") == "2");
+        CHECK(reader.Scalar("SELECT count(*) FROM runs WHERE snapshot_interval_ms=1000") == "1");
+        CHECK(reader.Scalar("SELECT count(*) FROM runs WHERE snapshot_interval_ms=15000") == "1");
+        CHECK(reader.Scalar("PRAGMA user_version") == "1");
+        CHECK(reader.Scalar("SELECT schema_version FROM dataset") == "1");
+        CHECK(reader.Scalar("SELECT count(*) FROM snapshots WHERE received_us=10 AND snapshot_us=20") == "4");
+        CHECK(reader.Scalar("SELECT count(*) FROM snapshots WHERE ActionDay='20260903' AND UpdateTime='09:31:01' AND UpdateMillisec=500") == "4");
         CHECK(reader.Scalar("SELECT count(*) FROM snapshots") == "4");
         TestDb day2(temp.path / "20260907.sqlite");
         CHECK(day2.Scalar("SELECT count(*) FROM snapshots WHERE TradingDay='20260907'") == "1");

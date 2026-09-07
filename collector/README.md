@@ -50,7 +50,7 @@
 
 首次运行依次询问前置、BrokerID、UserID、隐藏输入的密码和精确合约代码。账号按前置要求填写，可留空；合约必填，先选一个已确认的期货和一个活跃期权。连接地址的示例默认值不代表现场一定可用。
 
-脚本以 0600 权限保存 `collector/config.ini`，然后构建镜像、运行六项 CTest、后端与前端测试，校验配置、目录权限及 Nginx 配置，最后后台启动三个独立服务。首次拉取基础镜像及安装编译依赖需要联网，建议开盘前提前完成。首次非交互运行必须预先准备 INI，脚本不会猜测合约。
+脚本以 0600 权限保存 `collector/config.ini`，然后构建镜像、运行七项 CTest、后端与前端测试，校验配置、目录权限及 Nginx 配置，最后后台启动三个独立服务。首次拉取基础镜像及安装编译依赖需要联网，建议开盘前提前完成。首次非交互运行必须预先准备 INI，脚本不会猜测合约。
 
 已有配置原样复用，不再次询问或覆盖。Docker 入口要求以下值（省略时沿用相同默认值）：
 
@@ -60,7 +60,7 @@ FlowPath=flow
 RunSeconds=0
 ```
 
-如果之前手工设置了绝对目录或定时退出，请自行调整以上三项。首次生成的 Docker 配置使用 `ConnectTimeoutSeconds=120`、`SnapshotIntervalMs=1000`、`StatusIntervalSeconds=10`；已有配置中的其他有效参数保持原值。数据与 flow 保留在宿主对应目录，配置只读挂载，文件按调用用户 UID/GID 写入；通常不要用 sudo 执行部署脚本。
+如果之前手工设置了绝对目录或定时退出，请自行调整以上三项。首次生成的 Docker 配置使用 `ConnectTimeoutSeconds=120`、`SnapshotIntervalMs=15000`、`StatusIntervalSeconds=10`；已有配置中的其他有效参数保持原值。数据与 flow 保留在宿主对应目录，配置只读挂载，文件按调用用户 UID/GID 写入；通常不要用 sudo 执行部署脚本。
 
 | 命令 | 用途 |
 |---|---|
@@ -128,7 +128,7 @@ ctest --test-dir collector/build/Release --output-on-failure
 
 没有管理员权限时，可以将开发包解压到用户目录，再显式指定 `-DSQLite3_INCLUDE_DIR=/path/to/include -DSQLite3_LIBRARY=/path/to/libsqlite3.so`。不自动下载编译依赖。部署仅需 `bin/data_collector`、同目录的 `thostmduserapi_se.so`、系统 SQLite 运行库和配置；测试程序/`libfake_md.so` 不属于部署产物。CTP 动态库通过 `$ORIGIN` 加载，可用 `ldd` 确认无缺失依赖。
 
-CTest 六项：config、state、storage、runtime、health、process。全部离线；process 仅对子进程通过 `LD_PRELOAD` 注入合成 SDK，执行真实 Collector CLI，日志明确 `TEST DOUBLE`。官方 SHARED 模式下启用该进程测试；STATIC 需要另备官方静态库，当前仓库没有。正式采集时不要加载测试库。
+CTest 七项：config、state、storage、runtime、snapshot_interval、health、process。snapshot_interval 使用测试 API 实际运行约 33 秒，覆盖默认 15 秒调度、空窗口及停机尾部。全部离线；process 仅对子进程通过 `LD_PRELOAD` 注入合成 SDK，执行真实 Collector CLI，日志明确 `TEST DOUBLE`。官方 SHARED 模式下启用该进程测试；STATIC 需要另备官方静态库，当前仓库没有。正式采集时不要加载测试库。
 
 ## 配置与启动
 
@@ -149,7 +149,7 @@ collector/build/Release/bin/data_collector --config collector/config.ini
 | `InstrumentsFile` | 可选逐行精确代码文件；CLI 覆盖文件，文件覆盖 `Instruments` |
 | `DataDirectory` | `data`，所有每日数据及 `.collector.lock` 所在目录 |
 | `FlowPath` | `flow`，SDK 会话文件；每个运行实例使用独立目录 |
-| `SnapshotIntervalMs` | `1000`，1–60000ms；控制物化间隔，不保证硬实时 |
+| `SnapshotIntervalMs` | `15000`，1–60000ms；控制物化间隔，不保证硬实时 |
 | `StatusIntervalSeconds` | `10`，1–3600 秒 |
 | `ConnectTimeoutSeconds` | `20`，1–3600 秒；启动连接/登录总窗口，也是单次登录/订阅响应超时 |
 | `RetryIntervalSeconds` | `5`，1–300 秒；登录及本地订阅请求拒绝后的重试间隔 |
@@ -160,9 +160,17 @@ INI 相对路径均以配置文件所在目录为基准。持久目录应放在�
 
 CLI：`--config PATH`、可重复 `--instrument CODE`（整体覆盖配置 universe）、`--run-seconds N`、`--check-config`、`--help`。可在任意工作目录启动，但请明确传入配置路径。
 
+## 从 1 秒默认值升级
+
+已有配置不会被部署脚本改写：在实际部署的 `config.ini` 中显式设置 `SnapshotIntervalMs=15000`，正常停止旧 Collector 后更新启动，沿用原数据目录。同日旧 1 秒 run 与新 15 秒 run 可以共存，不需要 schema 迁移；启动日志及新 `runs.snapshot_interval_ms` 应为 `15000`。省略此配置才会采用新版默认值，显式 `1000` 仍表示 1 秒。
+
+实盘接收及数据库增长对比步骤见 [15 秒 Snapshot 验收记录](../docs/Collector_15s_Snapshot_Acceptance_CN.md)。
+
 ## 采样和交易日
 
-- callback 复制 SDK 行情到 `(TradingDay, InstrumentID)` 最新状态，记录本地 UTC epoch 微秒接收时间。主循环用单调时钟定期物化，再写 SQLite，SQLite 不进入 callback。
+- callback 复制 SDK 行情到 `(TradingDay, InstrumentID)` 最新状态，记录本地 UTC epoch 微秒接收时间。主循环用单调时钟定期物化，再写 SQLite，SQLite 不进入 callback。15 秒只控制 durable snapshot 物化，不降低 callback 接收或内存更新频率，不做价格平均。
+- 首次截止时间为启动单调时间加配置间隔；每次物化与写入完成后再等待约 15 秒，不对齐自然时钟、不追补错过的窗口。每窗口最多一条以 `(TradingDay, InstrumentID)` 为单位，跨交易日分别保存。
+- 源 `TradingDay/ActionDay/UpdateTime/UpdateMillisec` 原样保留；`received_us` 属于被选中的最后一次 callback，`snapshot_us` 是物化时采集的本地 UTC epoch 微秒时间，不是源时间或 commit 时间。
 - 每窗口每合约保存最后收到的一次更新；相同内容的新 callback 也算更新；没有新 callback 不重复写。这是 sampled snapshot，不是逐笔成交，也不承诺保存所有 CTP 回调。
 - 同日更新以本地接收顺序为准，不以源时间强制排序/去重。`sequence` 表示 run 内接收次序，允许间断。系统时钟校正可能导致 epoch 时间回退，不能仅据此推断丢包。
 - 每条 snapshot 只写入其源 `TradingDay` 对应的 `YYYYMMDD.sqlite`。合法性校验包含年月日及闰年，**不拿本地自然日、登录日或 ActionDay 兜底**；非法/空日拒收并计数。登录日仅用于日志。
@@ -191,7 +199,7 @@ CLI：`--config PATH`、可重复 `--instrument CODE`（整体覆盖配置 unive
 
 逐日事务、prepared statements、WAL、`synchronous=FULL`、1000ms busy timeout。提交成功后才增加 `written`。持久化出错记录 `persistence_failed` 并非零退出；跨日批次不承诺跨文件原子性，先前成功提交的日文件保持有效。
 
-Ctrl+C/SIGTERM 和定时结束会先停止 SDK 回调并 Release，再提交尾部更新，标记正常停止。SIGKILL/崩溃可能丢失尚在内存或未提交的窗口，已提交事务通过 SQLite 恢复。磁盘很慢时多次 callback 会合并进后续 snapshot；不建设额外无界队列。SQLite 事务 durability 仍取决于操作系统与磁盘正确落实同步。
+Ctrl+C/SIGTERM 和定时结束会先停止 SDK 回调并 Release，再提交尾部更新，标记正常停止。正常停止会提前提交不足 15 秒的尾部窗口，因此相邻 snapshot 的间隔可能不足 15 秒。SIGKILL/崩溃可能丢失尚在内存或未提交的窗口；默认窗口延长后，潜在未持久化时间相应增加，慢写入时还可能更长；已提交事务通过 SQLite 恢复。磁盘很慢时多次 callback 会合并进后续 snapshot；不建设额外无界队列。SQLite 事务 durability 仍取决于操作系统与磁盘正确落实同步。
 
 SDK 自动重连；重连后重新登录、重新订阅。初次连接/登录超时退出；首次登录后的断线保持进程运行，等待 SDK 恢复，登录失败有间隔地重试。本地订阅调用拒绝会重试；前置明确订阅失败或响应超时标记 `failed`，此 session 不盲目重试无效合约，配置修正后重启或下次连接重新订阅。CTP 不提供本程序所需的断线历史回补。
 

@@ -2,6 +2,7 @@
 #include "test.hpp"
 #include <atomic>
 #include <thread>
+#include <type_traits>
 int main() {
     using namespace collector;
     CHECK(ValidTradingDay("20240229"));
@@ -10,6 +11,42 @@ int main() {
     CHECK(!ValidNumber(std::numeric_limits<double>::quiet_NaN()));
     CHECK(!ValidNumber(std::numeric_limits<double>::infinity()));
     CHECK(ValidNumber(0)); CHECK(ValidNumber(-3));
+    // Logical 15-second windows: received order wins, including older source time.
+    {
+        MarketState windows({"IF2609", "IO2609-C-4000"});
+        auto first = Tick();
+        CHECK(windows.Receive(first, 1000000));
+        auto latest = first;
+        ctp::CopyField(latest.UpdateTime, "09:30:59");
+        latest.UpdateMillisec = 250;
+        latest.LastPrice = 4020; latest.BidPrice1 = 4019; latest.AskPrice1 = 4021;
+        latest.Volume = 100; latest.OpenInterest = 12000;
+        CHECK(windows.Receive(latest, 14900000));
+        const auto option = Tick("20260904", "IO2609-C-4000");
+        CHECK(windows.Receive(option, 14950000));
+        auto batch = windows.Materialize(15000000);
+        CHECK(batch.size() == 2);
+        const auto& row = batch[0];
+        CHECK(row.sequence == 2 && row.received_us == 14900000 && row.snapshot_us == 15000000);
+        // Compare every source field, not only LastPrice.
+        std::vector<std::string> expected, actual;
+        const auto stringify = [](const auto& value) {
+            using T = std::decay_t<decltype(value)>;
+            if constexpr (std::is_arithmetic_v<T>) return std::to_string(value);
+            else return ctp::FieldString(value);
+        };
+        VisitFacts(latest, [&](const char*, const auto& value) { expected.push_back(stringify(value)); });
+        VisitFacts(row.facts, [&](const char*, const auto& value) { actual.push_back(stringify(value)); });
+        CHECK(actual == expected);
+        CHECK(batch[1].received_us == 14950000 && batch[1].snapshot_us == 15000000);
+        CHECK(windows.Materialize(30000000).empty());
+        CHECK(windows.Materialize(45000000).empty());
+        CHECK(windows.Receive(latest, 46000000)); // Identical callback is still a new fact.
+        batch = windows.Materialize(60000000);
+        CHECK(batch.size() == 1 && batch[0].sequence == 4);
+        CHECK(batch[0].received_us == 46000000 && batch[0].snapshot_us == 60000000);
+        CHECK(windows.Stats().accepted == 4);
+    }
     MarketState state({"IF2609", "IO2609-C-4000"});
     auto tick = Tick();
     CHECK(state.Receive(tick, 10));

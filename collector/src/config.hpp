@@ -6,7 +6,7 @@
 namespace collector {
 struct Config : ctp::Config {
     std::filesystem::path data_directory;
-    int snapshot_interval_ms = 1000;
+    int snapshot_interval_ms = 15000;
     int status_interval_seconds = 10;
     int retry_interval_seconds = 5;
     int subscription_batch_size = 100;
