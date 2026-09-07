@@ -9,6 +9,10 @@ const health = { query: { status: 'healthy' }, data: { readable: true }, collect
   heartbeat: { connected: true, logged_in: true, expected: 1, subscribed: 1, accepted: 10, written: 5, last_received_us: 0 },
 }};
 function fixture(path) {
+  if (path === '/api/sessions') return { as_of: '2026-09-07T23:00:00+08:00', markets: [
+    { exchange: 'CFFEX', product: 'IF', trading_day: '20260908', market_state: 'CLOSED', session: null, phase: null },
+    { exchange: 'SHFE', product: 'AU', trading_day: '20260908', market_state: 'OPEN', session: 'NIGHT', phase: 'CONTINUOUS' },
+  ] };
   if (path === '/api/coverage') return { complete: false, collector_current: true, groups: [{ product: 'IO', month: '2609', discovered: 2, listed: 2, target: 2, subscribed: 1, pending: 0, failed: 1, received: 0, no_push: 1, verified: true }], instruments: [], update: {} };
   if (path === '/api/health') return health;
   if (path === '/api/days') return { days: [{ day: '20260904' }, { day: '20260903' }] };
@@ -80,4 +84,35 @@ test('coverage distinguishes missing pushes from failed subscriptions and clears
   broken = true;
   await screen.findByText(/coverage unavailable/);
   expect(screen.queryByText('IO')).toBeNull();
+});
+
+
+test('market sessions distinguish simultaneous markets without changing service health', async () => {
+  let broken = false;
+  vi.stubGlobal('fetch', vi.fn(async path => {
+    if (path === '/api/sessions' && broken) throw new Error('calendar unavailable');
+    return response(fixture(path));
+  }));
+  render(<App pollMs={30} />);
+  await screen.findByTestId('market-SHFE-AU');
+  expect(screen.getByTestId('market-SHFE-AU').textContent).toContain('开市 (OPEN)');
+  expect(screen.getByTestId('market-SHFE-AU').textContent).toContain('夜盘');
+  expect(screen.getByTestId('market-CFFEX-IF').textContent).toContain('休市 (CLOSED)');
+  expect(screen.getAllByText('运行正常')).toHaveLength(2);
+  broken = true;
+  await screen.findByText(/calendar unavailable/);
+  expect(screen.queryByTestId('market-SHFE-AU')).toBeNull();
+  expect(screen.getAllByText('运行正常')).toHaveLength(2);
+  broken = false;
+  await screen.findByTestId('market-SHFE-AU');
+});
+
+test('unknown calendar does not display an open market', async () => {
+  vi.stubGlobal('fetch', vi.fn(async path => response(path === '/api/sessions'
+    ? { markets: [{ exchange: 'SHFE', product: 'AG', market_state: 'UNKNOWN', reason: 'calendar missing', trading_day: null }] }
+    : fixture(path))));
+  render(<App />);
+  const row = await screen.findByTestId('market-SHFE-AG');
+  expect(row.textContent).toContain('未知 (UNKNOWN)');
+  expect(row.textContent).not.toContain('开市');
 });

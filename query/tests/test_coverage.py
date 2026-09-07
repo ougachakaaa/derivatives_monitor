@@ -4,6 +4,7 @@ from pathlib import Path
 import tempfile
 import time
 import unittest
+from unittest.mock import patch
 from zoneinfo import ZoneInfo
 from fastapi.testclient import TestClient
 from app import create_app
@@ -66,6 +67,35 @@ class CoverageTest(unittest.TestCase):
         self.assertEqual(self.client.get('/api/coverage').status_code, 503)
         (self.directory / '.collector-coverage.json').unlink()
         self.assertFalse(self.get()['collector_current'])
+
+    def test_shfe_night_target_date_and_market_health_separation(self):
+        now = datetime.fromisoformat('2026-09-07T23:00:00+08:00')
+        extra = [dict(id='au2610', subscription='subscribed', error_id=0, received=0, last_received_us=0),
+                 dict(id='ag2610', subscription='failed', error_id=31, received=0, last_received_us=0)]
+        self.hb['expected'] = 5
+        self.write('.collector-status.json', self.hb)
+        self.write('.collector-coverage.json',dict(schema_version=1,run_id='a'*32,updated_us=self.now,instruments=self.items+extra))
+        manifest=json.loads((self.directory/'universe/current/manifest.json').read_text())
+        for product,code in [('AU','au2610'),('AG','ag2610')]:
+            manifest['products'][product]=dict(exchange='SHFE',requested_day='20260908',data_date='20260908',
+                instruments=[dict(id=code,month='2610')],discovered_ids=[code],verified=True,stale=False,source='https://www.shfe.com.cn/')
+        self.write('universe/current/manifest.json',manifest)
+        with patch('contract_coverage.datetime') as clock:
+            clock.now.return_value=now
+            result=self.get()
+        au=next(r for r in result['groups'] if r['product']=='AU')
+        ag=next(r for r in result['groups'] if r['product']=='AG')
+        self.assertEqual((au['exchange'],au['target'],au['no_push']),('SHFE',1,1))
+        self.assertEqual(ag['failed'],1)
+        self.assertTrue(au['verified']);self.assertFalse(au['stale'])
+        self.assertEqual(result['requested_days']['SHFE'],'20260908')
+        self.assertFalse(result['complete'])
+        self.assertEqual(next(r for r in result['instruments'] if r['id']=='au2610')['subscription'],'subscribed')
+        with TestClient(create_app(self.directory, self.directory/'missing')) as client:
+            result=client.get('/api/coverage').json()
+        au=next(r for r in result['groups'] if r['product']=='AU')
+        self.assertFalse(au['verified']);self.assertTrue(au['stale'])
+        self.assertEqual(au['subscribed'],1) # Calendar failure cannot erase CTP facts.
 
 
 if __name__ == '__main__': unittest.main()

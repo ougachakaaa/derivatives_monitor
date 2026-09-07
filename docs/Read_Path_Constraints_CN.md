@@ -36,3 +36,7 @@
 先提交本文和 T9–T11 Specs，再逐 Task 完成验证和独立提交。覆盖真实 SQLite/HTTP、并发写入只读消费、Collector 停止而 Python 仍可读、Python 停止而 Collector 仍采集、心跳过期、空库/坏参数/损坏库、浏览器错误与恢复、Compose 三服务隔离及读写挂载。Docker Engine 不可用时不能把宿主进程测试当成真实容器实测。
 
 技术选型依据：[FastAPI 容器部署](https://fastapi.tiangolo.com/deployment/docker/)、[Poetry 锁定依赖](https://python-poetry.org/docs/basic-usage/)、[Vite 项目构建](https://vite.dev/guide/)。以上为用户最新要求的调整；T9 心跳契约保持不变。
+
+## Market Session 演进（2026-09-07）
+
+`/api/sessions` 独立读取审核后的交易日历，按 exchange/product 回答交易日、时段与连续交易状态，不读取/改写行情，也不控制采集进程。日历未知必须明确UNKNOWN。覆盖统计支持原有CFFEX与SHFE AU/AG期货，按各自来源目标交易日核对清单；市场休市/休息、行情无推送、订阅失败与进程健康分别表达。新增Query文件及参考年历随Docker镜像发布，Collector没有新增依赖。

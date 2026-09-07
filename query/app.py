@@ -6,11 +6,13 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from storage import QueryError, Store
 from contract_coverage import coverage
+from market_calendar import sessions, DEFAULT_DIRECTORY
 
 
-def create_app(directory=None):
+def create_app(directory=None, calendar_directory=None):
     app = FastAPI(title="Derivatives Monitor read API", version="0.1.0")
     store = Store(directory or os.environ.get("DATA_DIR", "/data"))
+    calendar_directory = calendar_directory or os.environ.get("MARKET_CALENDAR_DIR", DEFAULT_DIRECTORY)
 
     @app.exception_handler(QueryError)
     async def query_error(request, error):
@@ -48,11 +50,20 @@ def create_app(directory=None):
             data = {"readable": False, "error": error.message}
         return {"query": {"status": "healthy"}, "data": data, "collector": store.heartbeat()}
 
+    @app.get("/api/sessions")
+    def market_sessions(request: Request, exchange: str | None = None,
+                        product: str | None = None, at: str | None = None):
+        parameters(request, ("exchange", "product", "at"))
+        try:
+            return sessions(at, exchange, product, calendar_directory)
+        except (ValueError, OverflowError):
+            raise QueryError(400, "Invalid exchange/product or at (timezone required)") from None
+
     @app.get("/api/coverage")
     def contract_coverage(request: Request):
         parameters(request, ())
         try:
-            return coverage(store)
+            return coverage(store, calendar_directory)
         except (ValueError, TypeError, KeyError, AttributeError):
             raise QueryError(503, "Coverage files unavailable or invalid") from None
 

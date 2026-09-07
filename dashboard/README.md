@@ -29,3 +29,5 @@ python3 tests/read_path_smoke.py --browser
 此测试启动临时合成 Collector、真实 FastAPI、Vite 与 Chromium，验证页面、断线恢复和独立停启。使用临时数据，不读取真实账号或修改 `collector/data/`；它不等价于 Docker 或真实 CTP 验收。容器验收执行 `bash tests/read_path_docker_smoke.sh`。
 
 无需真实 CTP 配置即可查看合成闭环：仓库根目录执行 `KEEP_RUNNING=1 bash tests/read_path_docker_smoke.sh`。通过验收后保留三容器，输出随机 localhost 端口及停止脚本；数据和镜像均隔离，来源明确 TEST DOUBLE。
+
+市场时段表独立请求 `/api/sessions`，按交易所/品种显示逻辑交易日、开市/休息/休市/未知、日夜盘与连续交易/集合竞价，以及最近和下一连续时段。可同时显示 CFFEX 休市与 SHFE AU/AG 夜盘开市；时段接口失败清空旧表，保留单独的服务健康结果。市场时段不用于自动启停或告警。覆盖表增加交易所及SHFE清单目标日期，原订阅/接收/缺口诊断保留。

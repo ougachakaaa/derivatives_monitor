@@ -2,6 +2,10 @@ import React, { useEffect, useState } from 'react';
 
 const number = value => value == null ? '—' : Number(value).toLocaleString('zh-CN');
 const timestamp = value => value ? new Date(value / 1000).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false }) : '暂无';
+const marketLabels = { OPEN: '开市', BREAK: '盘中休息', CLOSED: '休市', UNKNOWN: '未知' };
+const sessionLabels = { DAY: '日盘', NIGHT: '夜盘' };
+const phaseLabels = { CONTINUOUS: '连续交易', AUCTION: '集合竞价' };
+const period = value => value ? `${value.trading_day} · ${sessionLabels[value.session]} · ${value.start} → ${value.end}` : '暂无已知时段';
 const labels = { healthy: '运行正常', degraded: '连接或订阅异常', starting: '启动中', stopped: '已停止', failed: '运行失败', stale: '心跳已过期', unknown: '状态未知' };
 
 async function get(path, signal) {
@@ -24,6 +28,8 @@ export default function App({ pollMs = 5000 }) {
   const [updated, setUpdated] = useState(null);
   const [coverage, setCoverage] = useState(null);
   const [coverageError, setCoverageError] = useState('');
+  const [sessions, setSessions] = useState(null);
+  const [sessionsError, setSessionsError] = useState('');
 
   useEffect(() => {
     let cancelled = false;
@@ -42,6 +48,7 @@ export default function App({ pollMs = 5000 }) {
       };
       try {
         await Promise.all([
+          update(get('/api/sessions', controller.signal), value => { setSessions(value); setSessionsError(''); }, error => { setSessions(null); setSessionsError(error); }),
           update(get('/api/coverage', controller.signal), value => { setCoverage(value); setCoverageError(''); }, error => { setCoverage(null); setCoverageError(error); }),
           update(get('/api/health', controller.signal), value => { setHealth(value); setHealthError(''); }, error => { setHealth(null); setHealthError(error); }),
           update(get('/api/days', controller.signal), value => {
@@ -73,16 +80,30 @@ export default function App({ pollMs = 5000 }) {
       <article><h2>C++ Collector</h2><strong className={collector?.status === 'healthy' ? 'good' : 'warn'}>{labels[collector?.status] || '状态未知'}</strong><p>主循环：{collector?.process_alive ? '心跳有效' : '未确认存活'} · CTP：{ctp}</p><p>订阅 {freshHeartbeat ? `${number(heartbeat.subscribed)} / ${number(heartbeat.expected)}` : '—'}</p></article>
     </section>
     <p className="muted">应用状态来自 API 与 Collector 心跳；休市无新行情不等于进程停止。</p>
-    <section className="panel" aria-label="CFFEX 覆盖统计">
-      <h2>CFFEX 覆盖统计</h2>
+    <section className="panel" aria-label="市场交易时段">
+      <h2>市场交易时段</h2>
+      <p className="muted">按交易所与品种判断，独立于连接和订阅健康。休市、盘中休息或集合竞价不要求连续行情；连续交易也不保证每个合约活跃。</p>
+      {sessionsError && <p role="alert">市场时段读取失败：{sessionsError}。当前时段未知，未显示旧状态。</p>}
+      {sessions && <><p className="muted">判断时刻：{sessions.as_of} · 休市时交易日指下一已知时段归属，不替代行情自身 TradingDay。</p>
+        <div className="table-wrap"><table><thead><tr><th>交易所</th><th>品种</th><th>逻辑交易日</th><th>市场状态</th><th>日 / 夜盘</th><th>交易阶段</th><th>最近连续时段</th><th>下一连续时段</th></tr></thead>
+          <tbody>{sessions.markets?.map(row => <tr key={`${row.exchange}-${row.product}`} data-testid={`market-${row.exchange}-${row.product}`}>
+            <td>{row.exchange}</td><td>{row.product}</td><td>{row.trading_day || '未知'}</td>
+            <td>{marketLabels[row.market_state] || '未知'} ({row.market_state}){row.reason && <div>{row.reason}</div>}</td>
+            <td>{sessionLabels[row.session] || '—'}</td><td>{phaseLabels[row.phase] || '—'}</td>
+            <td>{period(row.latest_session)}</td><td>{period(row.next_session)}</td>
+          </tr>)}</tbody></table></div></>}
+    </section>
+    <section className="panel" aria-label="多市场覆盖统计">
+      <h2>多市场覆盖统计</h2>
       {coverageError && <p role="alert">覆盖统计读取失败：{coverageError}。未显示旧数据。</p>}
       {coverage && <>
-        <p className={coverage.complete ? 'good' : 'warn'}>{coverage.complete ? '当日官方清单已核对，全部目标订阅成功' : '覆盖尚未完整确认，请查看清单与订阅缺口'}</p>
-        <p className="muted">清单日期：{coverage.requested_day || '未知'} · 更新：{timestamp(coverage.updated_us)} · 当前采集状态：{coverage.collector_current ? '有效' : '未知或已过期'}</p>
+        <p className={coverage.complete ? 'good' : 'warn'}>{coverage.complete ? '各市场目标日期清单已核对，全部目标订阅成功' : '覆盖尚未完整确认，请查看清单与订阅缺口'}</p>
+        <p className="muted">CFFEX 清单目标日期：{coverage.requested_days?.CFFEX || coverage.requested_day || '未知'} · SHFE：{coverage.requested_days?.SHFE || '未知'} · 更新：{timestamp(coverage.updated_us)} · 当前采集状态：{coverage.collector_current ? '有效' : '未知或已过期'}</p>
+        {Boolean(coverage.unclassified_targets?.length) && <p role="alert">未分类目标合约：{coverage.unclassified_targets.join(', ')}</p>}
         {coverage.update?.error && <p role="alert">清单更新失败：{coverage.update.error}</p>}
         <p className="muted">发现 / 清单 / 目标分别表示本次来源返回、含保留合约的清单、当前会话订阅目标；已订阅暂无推送不等于订阅失败。</p>
-        <div className="table-wrap"><table><thead><tr><th>品种</th><th>月份</th><th>发现 / 清单 / 目标</th><th>已订阅</th><th>等待</th><th>失败</th><th>已接收合约</th><th>已订阅暂无推送</th><th>清单与缺口</th></tr></thead>
-          <tbody>{coverage.groups?.map(row => <tr key={`${row.product}-${row.month}`}><td>{row.product}</td><td>{row.month}</td><td>{number(row.discovered)} / {number(row.listed)} / {number(row.target)}</td><td>{number(row.subscribed)}</td><td>{number(row.pending)}</td><td className={row.failed ? 'warn' : ''}>{number(row.failed)}</td><td>{number(row.received)}</td><td>{number(row.no_push)}</td><td>{row.verified ? '官方已核对' : row.stale ? '清单缺失或过期' : '公开链条待核对'} · {row.data_date || '来源日期未知'}{row.source && <> · <a href={row.source} target="_blank" rel="noreferrer">来源</a></>}{row.error && <div>{row.error}</div>}{Boolean(row.missing_targets?.length) && <div>未纳入当前目标：{row.missing_targets.join(', ')}</div>}{Boolean(row.extra_targets?.length) && <div>清单外目标：{row.extra_targets.join(', ')}</div>}</td></tr>)}</tbody></table></div>
+        <div className="table-wrap"><table><thead><tr><th>交易所</th><th>品种</th><th>月份</th><th>发现 / 清单 / 目标</th><th>已订阅</th><th>等待</th><th>失败</th><th>已接收合约</th><th>已订阅暂无推送</th><th>清单与缺口</th></tr></thead>
+          <tbody>{coverage.groups?.map(row => <tr key={`${row.exchange}-${row.product}-${row.month}`}><td>{row.exchange || 'CFFEX'}</td><td>{row.product}</td><td>{row.month}</td><td>{number(row.discovered)} / {number(row.listed)} / {number(row.target)}</td><td>{number(row.subscribed)}</td><td>{number(row.pending)}</td><td className={row.failed ? 'warn' : ''}>{number(row.failed)}</td><td>{number(row.received)}</td><td>{number(row.no_push)}</td><td>{row.verified ? '官方已核对' : row.stale ? '清单缺失或过期' : '公开链条待核对'} · {row.data_date || '来源日期未知'}{row.source && <> · <a href={row.source} target="_blank" rel="noreferrer">来源</a></>}{row.error && <div>{row.error}</div>}{Boolean(row.missing_targets?.length) && <div>未纳入当前目标：{row.missing_targets.join(', ')}</div>}{Boolean(row.extra_targets?.length) && <div>清单外目标：{row.extra_targets.join(', ')}</div>}</td></tr>)}</tbody></table></div>
         <details><summary>未确认订阅或尚未接收的合约</summary><div className="table-wrap"><table><thead><tr><th>合约</th><th>订阅状态</th><th>错误码</th><th>本次接收</th></tr></thead><tbody>{coverage.instruments?.filter(row => row.subscription !== 'subscribed' || !row.received).map(row => <tr key={row.id}><td>{row.id}</td><td>{({subscribed:'已订阅暂无推送',failed:'订阅失败',pending:'等待确认',not_sent:'等待发送',unknown:'状态未知'})[row.subscription]}</td><td>{number(row.error_id)}</td><td>{number(row.received)}</td></tr>)}</tbody></table></div></details>
       </>}
     </section>
