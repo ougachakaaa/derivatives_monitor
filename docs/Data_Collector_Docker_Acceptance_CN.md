@@ -1,5 +1,7 @@
 # Docker 部署实现与验收记录
 
+**2026-09-07 更新：** T12 已恢复 Docker Desktop/WSL 集成，并实际通过 Collector 容器生命周期验收和三容器读路径验收。当前结果见 [T12 实机证据](Read_Path_Acceptance_CN.md)。以下 T6–T8 的静态验证与 NOT RUN 是初始阶段历史记录，不再代表当前 Docker 状态。
+
 依据 [部署约束](Data_Collector_Docker_Constraints_CN.md) 和 [T6–T8 Specs](tasks/data-collector/README.md)。本轮保持既有 C++ 采集与 SQLite schema，不增加 Python/Browser 运行依赖。
 
 ## 已实现与已验证
@@ -40,7 +42,7 @@ exit_code=1
 ./collector/tests/docker_smoke.sh
 ```
 
-只需 Docker + Compose v2 和宿主 Bash/常用 Linux 工具。它构建独立测试镜像，构建阶段跑五项 CTest；随后在临时目录中使用合成 SDK 测试：
+只需 Docker + Compose v2 和宿主 Bash/常用 Linux 工具。它构建独立测试镜像，构建阶段跑当前六项 CTest；随后在临时目录中使用合成 SDK 测试：
 
 1. 持续接收、两日分区、断线恢复与只读查询。
 2. 同一 Compose 配置重复启动不增加实例。

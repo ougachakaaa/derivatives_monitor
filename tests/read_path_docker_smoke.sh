@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Isolated real three-container acceptance. Never touches production data/config.
 set -euo pipefail
+case "${KEEP_RUNNING:-0}" in 0|1) ;; *) echo 'KEEP_RUNNING must be 0 or 1' >&2; exit 2 ;; esac
 repo_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
 if ! docker version >/dev/null 2>&1 || ! docker compose version >/dev/null 2>&1; then
     echo 'Docker Engine + Compose v2 required; three-container test NOT RUN.' >&2; exit 1
@@ -16,6 +17,12 @@ cleanup() {
     local result=$?
     trap - EXIT
     compose logs --no-color > "$work/services.log" 2>&1 || true
+    if [[ $result -eq 0 && ${KEEP_RUNNING:-0} == 1 ]]; then
+        printf 'Synthetic demo retained (TEST DOUBLE, no real CTP).\nProject: %s\nData: %s/data\n' "$project" "$COLLECTOR_DIR"
+        printf 'Dashboard: http://%s\nAPI: http://%s/docs\n' "$(compose port dashboard 8080)" "$(compose port query 8000)"
+        printf 'Stop and remove demo containers (data retained): bash %q\n' "$work/stop.sh"
+        exit 0
+    fi
     compose down --timeout 60 >/dev/null 2>&1 || true
     docker rm -f "$project-extract" >/dev/null 2>&1 || true
     docker image rm "$project:collector" "$project:query" "$project:dashboard" "$project:build" >/dev/null 2>&1 || true
@@ -23,6 +30,13 @@ cleanup() {
     exit "$result"
 }
 trap cleanup EXIT
+# A standalone cleanup command remains usable from any working directory.
+{
+    printf '#!/usr/bin/env bash\nset -euo pipefail\n'
+    printf 'export COLLECTOR_DIR=%q COLLECTOR_UID=%q COLLECTOR_GID=%q QUERY_PORT=0 DASHBOARD_PORT=0\n' "$COLLECTOR_DIR" "$COLLECTOR_UID" "$COLLECTOR_GID"
+    printf 'docker compose -p %q -f %q -f %q down --timeout 60\n' "$project" "$repo_dir/collector/compose.yaml" "$work/override.yaml"
+    printf 'docker image rm %q %q %q %q\n' "$project:collector" "$project:query" "$project:dashboard" "$project:build"
+} > "$work/stop.sh"
 cat > "$COLLECTOR_DIR/config.ini" <<'INI'
 [config]
 FrontMdAddr=tcp://127.0.0.1:1

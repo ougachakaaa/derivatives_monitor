@@ -6,4 +6,4 @@
 - 步骤：诊断并恢复 Desktop/集成 → 执行三容器及 Collector 生命周期 smoke → 修复实测问题并针对性回归 → 更新验收证据和启动说明。
 - 验证：Linux Docker CLI/Compose 可访问 Engine；实际镜像构建测试、三服务健康、Nginx HTTP 数据增长、只读挂载、独立停启和数据保留通过。真实前置不可用时记录实际结果。
 - 预期 commit：`test(monitor): validate the container read path on WSL`（必要修复随该闭环提交）。
-- 完成记录：执行中。
+- 完成记录：Docker Desktop 启动及 WSL 集成重试后恢复 Engine 29.7.2 / Compose v5.5.0。三镜像真实构建、三服务与 Collector 生命周期两项 Docker smoke、容器 Nginx 生产页 Chromium 验证、Windows localhost HTTP 访问全部通过。新增 KEEP_RUNNING=1 可保留隔离演示，默认仍清理；用户明确本轮仅验收合成数据，真实 CTP 后续配置。完整证据见 [读路径验收](../../Read_Path_Acceptance_CN.md)。

@@ -67,6 +67,19 @@ Docker 未就绪、配置错误、构建失败、目录不可写、日文件不�
 
 部署实现与验证边界见 [Docker 验收记录](../docs/Data_Collector_Docker_Acceptance_CN.md)。
 
+## WSL 提示找不到 docker 时
+
+先在 Windows 启动 Docker Desktop，等待 Engine 就绪，再回到 WSL 执行 `docker version` 与 `docker compose version`。需要同时看到 Client 和 Linux Server；仅 CLI 可用不代表 Engine 可用。也可从 WSL 调用已安装的 Desktop CLI：
+
+```bash
+'/mnt/c/Program Files/Docker/Docker/resources/bin/docker.exe' desktop start
+docker version
+```
+
+若 Windows CLI 能连接 Server、WSL 却没有 `/var/run/docker.sock`，检查 Desktop → Settings → Resources → WSL Integration 中当前发行版是否启用。若弹出 `setup groups / whoami / Wsl/Service/0x8007274c`，先确认 `wsl.exe -d Ubuntu-24.04 -e whoami` 正常返回，再在 Desktop 错误窗口选择 **Restart the WSL integration**。本机实际遇到的就是 Desktop 未运行及随后集成启动超时；重试集成后已恢复，无需重装或清空数据。
+
+恢复后可先执行 `bash tests/read_path_docker_smoke.sh` 验证隔离三容器链路，再用 `deploy.sh up` 部署真实配置。官方说明：[WSL 集成](https://docs.docker.com/desktop/features/wsl/)、[Desktop CLI](https://docs.docker.com/reference/cli/docker/desktop/)。
+
 ## 构建与测试
 
 Linux x86-64，CMake ≥ 3.16，C++17 编译器，SQLite ≥ 3.24 开发包。Ubuntu/Debian 可用 `build-essential cmake libsqlite3-dev`（`sqlite3` 命令行工具可选）。使用仓库内官方 v6.7.13 SDK，CMake 共享原 demo 的 SDK 查找/链接规则。

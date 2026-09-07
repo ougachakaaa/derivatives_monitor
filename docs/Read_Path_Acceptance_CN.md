@@ -30,9 +30,19 @@ CTP → collector (C++) → 宿主 collector/data/YYYYMMDD.sqlite
 
 Python 测试应从 `query/` 执行 `poetry run python -m unittest discover -s tests -v`。Chromium 本机缺失的运行库只解压至临时工具目录用于验证；没有修改 Docker Desktop、WSL 或系统包配置。原生与浏览器集成测试使用临时目录，并清理各自子进程。
 
-## 未完成的容器验收
+## 2026-09-07 Docker 实机补充验收（T12）
 
-当前 WSL 的 `docker version` 仍提示没有启用集成；Windows Docker CLI 能运行，但 `dockerDesktopLinuxEngine` 管道不存在。**真实三容器构建、运行时 RO bind mount、Nginx 容器代理和 Docker healthcheck 尚未实测。** `tests/read_path_docker_smoke.sh` 已实际调用并明确返回 `NOT RUN`，未把静态检查记为容器通过。
+此前的 `NOT RUN` 限制已解除。用户授权修复 Docker 后，启动了 Windows Docker Desktop；原有 WSL 2 配置与 Ubuntu-24.04 集成均已启用，启动时遇到 `setup groups / whoami / 0x8007274c` 超时。在确认 WSL 命令恢复后，重试 Desktop 的 **Restart the WSL integration** 操作，WSL 的 Docker socket 与 Engine 访问恢复。没有重装、清理 Docker 数据或更改发行版配置。
+
+实际环境：Docker Desktop 4.89.0、Engine 29.7.2（Linux amd64）、Compose v5.5.0。新增证据：
+
+- 三个正式 runtime 镜像实际构建成功；镜像内 CTest 6/6、FastAPI 8/8、React 4/4 与 Vite 生产构建通过。
+- `tests/read_path_docker_smoke.sh` **PASS**：三服务 Docker healthcheck 全 healthy；Nginx 返回构建后的 React 页面并转发 API；HTTP 行数持续增长；同目录 RW/RO、SQLite 写拒绝、同 UID、重复部署、独立停止和重建追加通过。
+- `collector/tests/docker_smoke.sh` **PASS**：两日数据、连接恢复、SIGTERM/正常停机、Docker 自动重启与手动停止、数据保留；正式镜像无测试 SDK/编译器/Python、动态依赖齐全；官方 SDK 在 network none 下超时并重启。
+- 非 root、只读 rootfs 下实际执行 Nginx `-t` 和 Python 数据目录预检通过。
+- Chromium 对 **容器 Nginx 提供的生产 React 页面** 实测通过：实际 HTTP 数据、断网清除与恢复、移动布局、无 pageerror。Windows PowerShell 直接访问宿主 localhost 的 Nginx API，看到 API/Collector 均 healthy、日行数 572（仍持续增加）、来源明确 TEST DOUBLE。
+
+本次按用户确认仅验收合成行情。真实 CTP 前置、账号和精确合约待后续配置；未向实盘发起本轮采集。
 
 目标 Linux x86-64 / WSL 机器上启动 Docker Engine 后，在仓库根目录执行：
 
@@ -54,3 +64,13 @@ bash collector/tests/docker_smoke.sh
 打开 **http://localhost:8080**，应看到 Python API 与 Collector 应用状态；看板健康不代表真实行情验收。交易时段要确认 CTP 登录/订阅，间隔观察日行数、最近接收时间和 `snapshot_commit`，再执行 `./collector/scripts/deploy.sh verify YYYYMMDD`。API 文档在 **http://localhost:8000/docs**。
 
 已知 WAL 限制保持不变：采集另一天时，缺 sidecar 的历史日可能返回 503。要通过 HTTP 查询该日，应仅正常停止 Collector（参见 [操作手册](../collector/README.md)），保留 Python 和前端运行；不要删除 WAL 或放宽后端挂载权限。
+
+## 保留一套可查看的合成演示
+
+```bash
+KEEP_RUNNING=1 bash tests/read_path_docker_smoke.sh
+```
+
+全部验收通过后保留隔离项目、镜像与临时数据，输出实际看板/API 地址和 `stop.sh` 路径。默认不设置该变量则验收后自动清理；两种模式均已实际通过完整 smoke，默认模式的容器和专用镜像已清理。演示数据位于 `/tmp/dm-read-docker.*/collector/data/`，不写真实 `collector/data/`；这是临时合成演示，长期真实采集仍用 `deploy.sh up`。
+
+本次保留项目 `dm-read-dm-read-docker-ees6qv`：看板 `http://localhost:32770`，API `http://localhost:32772/docs`；停止并移除演示容器与专用镜像可执行 `bash /tmp/dm-read-docker.EES6Qv/stop.sh`，数据保留。端口和路径仅对应本次运行；下次以脚本输出为准。
