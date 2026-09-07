@@ -4,7 +4,7 @@
 
 [设计约束](../docs/Data_Collector_Constraints_CN.md) · [Task Specs](../docs/tasks/data-collector/README.md) · [验收记录](../docs/Data_Collector_Acceptance_CN.md)
 
-## 原生 WSL / CFFEX 全量采集
+## 原生 WSL / CFFEX 与 SHFE AU、AG 采集
 
 当前部署使用原生 Collector、独立 FastAPI、Vite 看板。Windows 浏览器访问 **http://localhost:8101**，API 为 **http://localhost:8000/docs**。仅绑定回环地址，通过 WSL localhost 转发访问，不需要局域网端口开放。实际 Windows Edge 验收见 [CFFEX 验收记录](../docs/CFFEX_Coverage_Acceptance_CN.md)。
 
@@ -22,9 +22,14 @@
 
 `up` 先检查依赖、生成并验证服务、刷新清单和校验配置，再迁移本仓库已记录的旧后台进程。配置备份在 `collector/tmp/native-backups/`；管理器将 `InstrumentsFile` 设置为 `data/universe/current/instruments.txt`。三个服务为 `derivatives-monitor-{collector,query,dashboard}.service`；清单服务及定时器为 `derivatives-monitor-universe.{service,timer}`，均由 `systemctl --user` 管理。异常退出间隔 10 秒重启；正常停止允许 60 秒提交尾部，未正常结束会显示异常状态。
 
-启动时执行当天尚未尝试的刷新；每天北京时间 08:45 更新，若未取得当天完整官方清单则在 09:00、09:15 重试。定时器持久化，WSL 恢复后补执行错过的触发。更新成功且清单未变化不会重启采集器；清单变化后仅正常重启 Collector，API 和页面继续运行。`update` 可在重试窗口外手工刷新。`stop` 停止三个服务及更新定时器；用户管理器下次启动时启用的服务会再次启动，长期禁用请另执行 `systemctl --user disable derivatives-monitor-{collector,query,dashboard}.service derivatives-monitor-universe.timer`。WSL 关闭、Windows 睡眠期间无法继续采集。
+启动时执行目标日期尚未尝试的刷新；每天北京时间 08:45 更新，09:00、09:15 重试；为夜盘增加 20:40 更新及 21:00、21:15 重试。CFFEX 按当前自然日期核对来源，SHFE 根据日历选择当前/下一逻辑交易日；目标日期发生变化会重新刷新。定时器仅更新 universe，不根据市场开休市自动启停 Collector。定时器持久化，WSL 恢复后补执行错过的触发。更新成功且清单未变化不会重启采集器；清单变化后仅正常重启 Collector，API 和页面继续运行。`update` 可在重试窗口外手工刷新。`stop` 停止三个服务及更新定时器；用户管理器下次启动时启用的服务会再次启动，长期禁用请另执行 `systemctl --user disable derivatives-monitor-{collector,query,dashboard}.service derivatives-monitor-universe.timer`。WSL 关闭、Windows 睡眠期间无法继续采集。
 
 合约发现程序 `collector/scripts/universe.py` 使用 Python 标准库，独立于 CTP 回调和只读 API：
+
+- 在原有 11 个 CFFEX 产品之外，只新增 SHFE AU/AG 期货。官方 ContractBaseInfo 日期文件提供精确小写 `au`/`ag` 代码、交易所、源交易日、上市日和到期日；不生成月份候选，不订阅黄金/白银期权。
+- SHFE 夜盘开始前可以发布下一逻辑交易日清单；刷新时使用纯标准库 `query/market_calendar.py` 及已审核日历（不启动 API）。`--date YYYYMMDD` 显式指定两个交易所的来源目标日期。日历未知时保留旧 SHFE 清单并报未完整确认，不猜测夜盘日期。
+- manifest 保持 v1 与现有 products 键，增加产品 `exchange`、`requested_day` 及顶层 `requested_days`；仍保留来源日期、URL、有效期、核对/过期状态。SHFE 缺失不会抹去 CFFEX；来源部分缺失保留未到期旧合约，全部为空拒绝发布。官方清单核对成功只证明公开上市信息，不证明账户的 SHFE CTP 行情权限。
+
 
 - 官方来源为中金所交易参数页面所使用的 `http://www.cffex.com.cn/sj/jycs/YYYYMM/DD/index.xml`，按明确返回的代码、品种、月份、上市日和最后交易日解析全部 11 个品种。IO/HO/MO 检查各月份各行权价的 Call/Put 成对数据。
 - 当日官方数据缺失时最多回查 10 个自然日，旧日记录仅作为过期清单；期权可补充新浪实际公布的月份和精确合约，补充结果不会被标记为官方全量。

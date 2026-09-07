@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Public contract discovery only. Prices from these responses are never ingested.
 
-CFFEX's jycs.js publishes /sj/jycs/YYYYMM/DD/index.xml. Sina fallback uses
+SHFE ContractBaseInfo supplies AU/AG futures. CFFEX jycs.js supplies dated XML.
+Sina fallback uses
 its expiry selector and OptionService.getOptionData; no generated contracts.
 """
 import argparse
@@ -21,23 +22,33 @@ import uuid
 import xml.etree.ElementTree as ET
 from zoneinfo import ZoneInfo
 
+# Reference calendar is a pure stdlib module; this helper does not start Query.
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'query'))
+from market_calendar import sessions
+
 ZONE = ZoneInfo('Asia/Shanghai')
-PRODUCTS = ('IF', 'IH', 'IC', 'IM', 'TS', 'TF', 'T', 'TL', 'IO', 'HO', 'MO')
+CFFEX_PRODUCTS = ('IF', 'IH', 'IC', 'IM', 'TS', 'TF', 'T', 'TL', 'IO', 'HO', 'MO')
+SHFE_PRODUCTS = ('AU', 'AG')
+PRODUCTS = CFFEX_PRODUCTS + SHFE_PRODUCTS
 OPTIONS = ('IO', 'HO', 'MO')
-CONTRACT = re.compile(r'^(IF|IH|IC|IM|TS|TF|TL|T|IO|HO|MO)(\d{2}(?:0[1-9]|1[0-2]))(?:-([CP])-(\d+(?:\.\d+)?))?$')
+CONTRACT = re.compile(r'^(IF|IH|IC|IM|TS|TF|TL|T|IO|HO|MO|au|ag)(\d{2}(?:0[1-9]|1[0-2]))(?:-([CP])-(\d+(?:\.\d+)?))?$')
 
 
 def contract(code, expiry=None):
     match = CONTRACT.fullmatch(code)
     if not match:
-        raise ValueError('invalid CFFEX contract: ' + code)
+        raise ValueError('invalid supported contract: ' + code)
     product, month, side, strike = match.groups()
+    product = product.upper()
     if (product in OPTIONS) != bool(side):
         raise ValueError('contract type mismatch: ' + code)
-    return dict(id=code, product=product, month=month, side=side, strike=strike, expiry=expiry)
+    return dict(id=code, exchange='SHFE' if product in SHFE_PRODUCTS else 'CFFEX',
+                product=product, month=month, side=side, strike=strike, expiry=expiry)
 
 
 def day(value):
+    if not isinstance(value, str) or not re.fullmatch(r'\d{8}', value):
+        raise ValueError('date must be YYYYMMDD')
     return datetime.strptime(value, '%Y%m%d').date()
 
 
@@ -55,7 +66,7 @@ def check_chain(rows):
 
 def parse_cffex(raw, requested_day):
     root = ET.fromstring(raw)
-    groups = {p: [] for p in PRODUCTS}
+    groups = {p: [] for p in CFFEX_PRODUCTS}
     errors = {}
     for node in root.findall('INDEX'):
         product = (node.findtext('PRODUCT_ID') or '').strip()
@@ -83,6 +94,54 @@ def parse_cffex(raw, requested_day):
         except ValueError as error:
             errors[product] = str(error)
     return result, errors
+
+
+def parse_shfe(raw, requested_day):
+    payload = json.loads(raw)
+    records = payload['ContractBaseInfo']
+    if not isinstance(records, list):
+        raise ValueError('invalid SHFE contract list')
+    groups, errors = {p: [] for p in SHFE_PRODUCTS}, {}
+    for node in records:
+        product = str(node.get('COMMODITYID', '')).strip().upper()
+        if product not in groups:
+            continue
+        try:
+            value = lambda key: str(node[key]).strip()
+            if value('EXCHANGEID') != 'SHFE' or value('TRADINGDAY') != requested_day:
+                raise ValueError('wrong SHFE exchange/source date')
+            row = contract(value('INSTRUMENTID'), value('EXPIREDATE'))
+            if row['exchange'] != 'SHFE' or row['product'] != product:
+                raise ValueError('SHFE product/code mismatch')
+            opened, expiry = day(value('OPENDATE')), day(row['expiry'])
+            if opened > expiry:
+                raise ValueError('invalid listing lifetime')
+            if not opened <= day(requested_day) <= expiry:
+                continue
+            row['listed_on'] = value('OPENDATE')
+            if any(old['id'] == row['id'] and old != row for old in groups[product]):
+                raise ValueError('conflicting duplicate contract')
+            groups[product].append(row)
+        except (ValueError, KeyError, TypeError) as error:
+            errors[product] = str(error)
+    result = {}
+    for product, rows in groups.items():
+        try:
+            if product in errors:
+                raise ValueError(errors[product])
+            result[product] = check_chain(rows)
+        except ValueError as error:
+            errors[product] = str(error)
+    return result, errors
+
+
+def requested_dates(explicit=None, now=None):
+    if explicit is not None:
+        day(explicit)
+        return dict(CFFEX=explicit, SHFE=explicit)
+    now = now or datetime.now(ZONE)
+    interpreted = sessions(now, 'SHFE', 'AU')['markets'][0]
+    return dict(CFFEX=now.astimezone(ZONE).strftime('%Y%m%d'), SHFE=interpreted['trading_day'])
 
 
 def parse_expiries(raw, product):
@@ -152,7 +211,7 @@ class Fetcher:
             atomic_json(self.directory / 'requests.json', self.requests)
 
 
-def discover(fetch, requested_day):
+def discover(fetch, requested_day, shfe_day=True):
     found, failures = {}, {}
     # A dated older official file remains useful, but never counts as current.
     for offset in range(10):
@@ -192,12 +251,36 @@ def discover(fetch, requested_day):
                 error='public chain only; not verified against current official listing')
         except Exception as error:
             failures[product] = str(error)
+    # Independently fail SHFE products without erasing the CFFEX result.
+    shfe_day = requested_day if shfe_day is True else shfe_day
+    if shfe_day is None:
+        failures['SHFE'] = 'calendar unavailable; night-session trading day is unknown'
+    else:
+        for offset in range(10):
+            source_day = (day(shfe_day) - timedelta(days=offset)).strftime('%Y%m%d')
+            url = f'https://www.shfe.com.cn/data/busiparamdata/future/ContractBaseInfo{source_day}.dat'
+            try:
+                products, errors = parse_shfe(fetch(url), source_day)
+                failures.update(errors)
+                for product, rows in products.items():
+                    rows = [r for r in rows if r['expiry'] >= shfe_day]
+                    if rows:
+                        found[product] = dict(instruments=rows, source=url, data_date=source_day,
+                            verified=source_day == shfe_day, stale=source_day != shfe_day,
+                            error='' if source_day == shfe_day else 'using older official publication')
+                if products:
+                    break
+            except Exception as error:
+                failures['SHFE'] = str(error)
     return found, failures
 
 
-def merge(previous, found, failures, requested_day):
+def merge(previous, found, failures, requested_day, dates=None):
+    dates = dates or dict(CFFEX=requested_day, SHFE=requested_day)
     result = {}
     for product in PRODUCTS:
+        exchange = 'SHFE' if product in SHFE_PRODUCTS else 'CFFEX'
+        target_day = dates[exchange]
         old = previous.get('products', {}).get(product, {})
         candidate = found.get(product)
         if candidate:
@@ -205,7 +288,7 @@ def merge(previous, found, failures, requested_day):
             rows = {r['id']: r for r in candidate['instruments']}
             # Do not silently delete still-live contracts after truncated source responses.
             retained = [r for r in old.get('instruments', []) if r['id'] not in rows
-                and (not r.get('expiry') or r['expiry'] >= requested_day)]
+                and (not target_day or not r.get('expiry') or r['expiry'] >= target_day)]
             if retained:
                 rows.update({r['id']: r for r in retained})
                 candidate.update(verified=False, stale=True, error='retained previously discovered unexpired contracts missing from source')
@@ -216,9 +299,10 @@ def merge(previous, found, failures, requested_day):
         else:
             result[product] = dict(old, instruments=old.get('instruments', []),
                 discovered_count=0, discovered_ids=[], verified=False, stale=True,
-                error=failures.get(product, failures.get('CFFEX', 'no product listing available')))
+                error=failures.get(product, failures.get(exchange, 'no product listing available')))
+        result[product].update(exchange=exchange, requested_day=target_day)
     return dict(schema_version=1, updated_us=time.time_ns() // 1000, requested_day=requested_day,
-        complete=all(p.get('verified') and not p.get('stale') for p in result.values()), products=result)
+        requested_days=dates, complete=all(p.get('verified') and not p.get('stale') for p in result.values()), products=result)
 
 
 def publish(directory, manifest, restart=None, run=subprocess.run):
@@ -258,12 +342,13 @@ def publish(directory, manifest, restart=None, run=subprocess.run):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--data-dir', type=Path, required=True)
-    parser.add_argument('--date', default=datetime.now(ZONE).strftime('%Y%m%d'))
+    parser.add_argument('--date', help='explicit publication trading day for both exchanges (YYYYMMDD)')
     parser.add_argument('--restart-service')
     parser.add_argument('--scheduled', action='store_true', help='skip retries after a complete refresh today')
     parser.add_argument('--if-needed', action='store_true', help='skip an already attempted startup refresh today')
     args = parser.parse_args()
-    day(args.date)
+    dates = requested_dates(args.date)
+    args.date = dates['CFFEX']
     args.data_dir.mkdir(parents=True, exist_ok=True)
     with (args.data_dir / '.universe.lock').open('a') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
@@ -271,22 +356,22 @@ def main():
         previous_path = args.data_dir / 'universe/current/manifest.json'
         previous = json.loads(previous_path.read_text()) if previous_path.exists() else {}
         status = json.loads(status_path.read_text()) if status_path.exists() else {}
-        if (args.if_needed or (args.scheduled and status.get('complete'))) and status.get('requested_day') == args.date and previous:
+        if (args.if_needed or (args.scheduled and status.get('complete'))) and status.get('requested_days') == dates and previous:
             return 0
         attempt = datetime.now(ZONE).strftime('%Y%m%d-%H%M%S-') + uuid.uuid4().hex[:8]
         fetch = Fetcher(args.data_dir / 'universe/raw' / attempt)
         try:
-            found, failures = discover(fetch, args.date)
-            manifest = merge(previous, found, failures, args.date)
+            found, failures = discover(fetch, args.date, dates['SHFE'])
+            manifest = merge(previous, found, failures, args.date, dates)
             manifest['evidence'] = str(fetch.directory.relative_to(args.data_dir))
             changed, count = publish(args.data_dir, manifest, args.restart_service)
-            status = dict(requested_day=args.date, updated_us=time.time_ns() // 1000,
+            status = dict(requested_day=args.date, requested_days=dates, updated_us=time.time_ns() // 1000,
                 complete=manifest['complete'], changed=changed, count=count, error='', evidence=manifest['evidence'])
             print(json.dumps(status, ensure_ascii=False), flush=True)
             atomic_json(status_path, status)
             return 0 if manifest['complete'] else 2
         except Exception as error:
-            atomic_json(status_path, dict(requested_day=args.date, updated_us=time.time_ns() // 1000,
+            atomic_json(status_path, dict(requested_day=args.date, requested_days=dates, updated_us=time.time_ns() // 1000,
                 complete=False, error=str(error), evidence=str(fetch.directory.relative_to(args.data_dir))))
             print('universe update failed: ' + str(error), file=sys.stderr)
             return 1

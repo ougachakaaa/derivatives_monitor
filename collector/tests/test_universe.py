@@ -1,3 +1,4 @@
+from datetime import datetime
 import importlib.util
 import json
 from pathlib import Path
@@ -25,12 +26,12 @@ def found(codes):
 
 class UniverseTest(unittest.TestCase):
     def test_official_all_products_months_pairs_deduplicate(self):
-        codes = [p + '2609' for p in u.PRODUCTS if p not in u.OPTIONS]
+        codes = [p + '2609' for p in u.CFFEX_PRODUCTS if p not in u.OPTIONS]
         codes += [p + month + '-' + side + '-' + strike for p in u.OPTIONS
                   for month in ('2609', '2612') for side in ('C', 'P') for strike in ('3000', '3500')]
         result, errors = u.parse_cffex(xml(codes + codes[:1]), '20260907')
         self.assertFalse(errors)
-        self.assertEqual(set(result), set(u.PRODUCTS))
+        self.assertEqual(set(result), set(u.CFFEX_PRODUCTS))
         self.assertEqual(len(result['IF']), 1)
         self.assertEqual(len(result['MO']), 8)
         wrong, _ = u.parse_cffex(xml(codes), '20260908')
@@ -111,6 +112,80 @@ class UniverseTest(unittest.TestCase):
                 with patch('sys.argv', ['universe.py', '--data-dir', folder, '--date', '20260908', '--if-needed']):
                     u.main()
                 self.assertEqual(fetch.call_count, 3)
+
+    def test_shfe_exact_official_codes_and_lifetime(self):
+        def payload(code, commodity, **extra):
+            return dict(INSTRUMENTID=code, COMMODITYID=commodity, EXCHANGEID='SHFE',
+                        TRADINGDAY='20260908', OPENDATE='20260101', EXPIREDATE='20260915', **extra)
+        au, ag = payload('au2610', 'au'), payload('ag2609', 'ag')
+        body = dict(ContractBaseInfo=[au, ag, au, payload('cu2609', 'cu')])
+        result, errors = u.parse_shfe(json.dumps(body).encode(), '20260908')
+        self.assertFalse(errors)
+        self.assertEqual(set(result), {'AU', 'AG'})
+        self.assertEqual(result['AU'][0]['id'], 'au2610')
+        self.assertEqual(result['AU'][0]['exchange'], 'SHFE')
+        self.assertEqual(result['AU'][0]['listed_on'], '20260101')
+        self.assertNotIn('BASISPRICE', result['AU'][0])
+        for key, value in [('TRADINGDAY','20260907'),('EXCHANGEID','INE'),
+                           ('INSTRUMENTID','AU2610'),('INSTRUMENTID','au2610C800'),
+                           ('INSTRUMENTID','ag2610'),('EXPIREDATE','bad')]:
+            bad = dict(au); bad[key] = value
+            result, errors = u.parse_shfe(json.dumps(dict(ContractBaseInfo=[bad, ag])).encode(), '20260908')
+            self.assertNotIn('AU', result)
+            self.assertIn('AU', errors)
+            self.assertIn('AG', result)
+        for changes in ({'OPENDATE':'20260909'}, {'EXPIREDATE':'20260907'}):
+            result, _ = u.parse_shfe(json.dumps(dict(ContractBaseInfo=[dict(au, **changes), ag])).encode(), '20260908')
+            self.assertNotIn('AU', result)
+        self.assertEqual(u.parse_shfe(b'{"ContractBaseInfo":[]}', '20260908')[0], {})
+        with self.assertRaises(ValueError): u.parse_shfe(b'{', '20260908')
+        for code in ('au2610-C-800','AG2609','cu2609','ag2613'):
+            with self.assertRaises(ValueError): u.contract(code)
+
+    def test_shfe_failure_and_partial_retention_atomic(self):
+        metal = {'AU': dict(instruments=[u.contract(c, '20261015') for c in ('au2609','au2610')],
+                    verified=True, stale=False, source='official', data_date='20260908')}
+        old = u.merge({}, dict(found(['IF2609']), **metal), {}, '20260908')
+        failed = u.merge(old, found(['IF2609']), {'SHFE':'timeout'}, '20260909')
+        self.assertEqual(failed['products']['AU']['instruments'], old['products']['AU']['instruments'])
+        self.assertIn('timeout', failed['products']['AU']['error'])
+        self.assertFalse(failed['complete'])
+        metal['AU']['instruments'] = metal['AU']['instruments'][:1]
+        partial = u.merge(old, metal, {}, '20260909')
+        self.assertEqual(len(partial['products']['AU']['instruments']), 2)
+        self.assertTrue(partial['products']['AU']['stale'])
+        with tempfile.TemporaryDirectory() as folder:
+            folder = Path(folder)
+            u.publish(folder, old)
+            content = (folder/'universe/current/instruments.txt').read_text()
+            u.publish(folder, failed)
+            self.assertEqual((folder/'universe/current/instruments.txt').read_text(),content)
+            self.assertIn('IF2609', content); self.assertIn('au2610', content)
+
+    def test_shfe_discovery_calendar_date_and_unavailable_calendar(self):
+        calls=[]
+        def fetch(url):
+            calls.append(url)
+            if 'index.xml' in url: return xml(['IF2609'])
+            if 'ContractBaseInfo20260908' in url:
+                return json.dumps(dict(ContractBaseInfo=[dict(INSTRUMENTID=p+'2610',COMMODITYID=p,
+                    TRADINGDAY='20260908',EXCHANGEID='SHFE',OPENDATE='20260101',EXPIREDATE='20261015')
+                    for p in ('au','ag')])).encode()
+            raise OSError('source unavailable')
+        result, _ = u.discover(fetch, '20260907', '20260908')
+        self.assertEqual(result['AU']['data_date'], '20260908')
+        self.assertTrue(result['AU']['verified'])
+        self.assertIn('IF',result)
+        calls.clear(); result, errors = u.discover(fetch, '20260907', None)
+        self.assertFalse(any('ContractBaseInfo' in url for url in calls))
+        self.assertNotIn('AU',result); self.assertIn('calendar',errors['SHFE'])
+        self.assertEqual(u.requested_dates(now=datetime.fromisoformat('2026-09-07T23:00:00+08:00')),
+                         dict(CFFEX='20260907',SHFE='20260908'))
+        self.assertEqual(u.requested_dates(now=datetime.fromisoformat('2026-09-04T23:00:00+08:00'))['SHFE'],'20260907')
+        self.assertEqual(u.requested_dates('20260907'),dict(CFFEX='20260907',SHFE='20260907'))
+        self.assertIsNone(u.requested_dates(now=datetime.fromisoformat('2027-01-04T21:00:00+08:00'))['SHFE'])
+        for value in ('202691','20260230'):
+            with self.assertRaises(ValueError): u.requested_dates(value)
 
 
 if __name__ == '__main__': unittest.main()

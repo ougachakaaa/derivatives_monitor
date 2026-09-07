@@ -65,13 +65,14 @@ def install():
         for k in ('HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy', 'NO_PROXY', 'no_proxy') if k in os.environ)
     # Startup discovery also needs the same public-network settings.
     definitions[SERVICES[0]] += proxies
-    definitions[PREFIX + 'universe.service'] = ('[Unit]\nDescription=Refresh CFFEX public contract universe\n'
+    definitions[PREFIX + 'universe.service'] = ('[Unit]\nDescription=Refresh CFFEX and SHFE AU/AG public contract universe\n'
         '[Service]\nType=oneshot\nTimeoutStartSec=600\nSuccessExitStatus=2\n' + proxies
         + f'ExecStart={updater} --scheduled --restart-service {SERVICES[0]}\n')
     for name in SERVICES:
         definitions[name] += '\n[Install]\nWantedBy=default.target\n'
-    definitions[TIMER] = ('[Unit]\nDescription=CFFEX daily discovery and bounded retries\n[Timer]\n'
+    definitions[TIMER] = ('[Unit]\nDescription=Multi-market daily discovery and bounded retries\n[Timer]\n'
         'OnCalendar=*-*-* 08:45:00 Asia/Shanghai\nOnCalendar=*-*-* 09:00,15:00 Asia/Shanghai\n'
+        'OnCalendar=*-*-* 20:40:00 Asia/Shanghai\nOnCalendar=*-*-* 21:00,15:00 Asia/Shanghai\n'
         'Persistent=true\nAccuracySec=1s\nUnit=' + PREFIX + 'universe.service\n'
         '[Install]\nWantedBy=timers.target\n')
     # Reject silently taking over another checkout's native units.
