@@ -50,3 +50,5 @@ collector/build/Release/bin/data_collector --config collector/config.ini
 
 - [Market Data Coverage Harness](experiments/data_coverage/README.md)：按“数据类型 → 数据源”验证行情覆盖并保存原始证据。
 - [CTP Linux C++ 行情客户端](experiments/ctp/README.md)：使用官方 Linux x64 SDK 原生构建、连接行情前置并手工订阅合约。
+
+Market Calendar / Session 与 SHFE AU、AG 已支持：按交易所/品种查询逻辑交易日、日夜盘及连续交易状态，Collector仍按源TradingDay写入15秒snapshot。[设计与任务](docs/Market_Calendar_Session_Design_CN.md) · [验收结果与实盘待验边界](docs/Market_Session_SHFE_Acceptance_CN.md)。

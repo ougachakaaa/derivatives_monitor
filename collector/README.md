@@ -249,3 +249,11 @@ with sqlite3.connect(path.as_uri() + "?mode=ro", uri=True, timeout=1) as db:
 实时查询使用短事务；长读事务会固定旧视图并阻止 WAL 完全 checkpoint。活跃数据库不要设置 `immutable=1`，不要只拷贝主 `.sqlite` 而遗漏 WAL。正常停机且所有读连接关闭后可复制每日文件；需要在线备份时使用 SQLite backup。只读 WAL 的使用条件参见 [SQLite 官方说明](https://www.sqlite.org/wal.html#read_only_databases)，URI 只读语义见 [SQLite URI](https://www.sqlite.org/uri.html)。
 
 跨日查询由下游选择多个文件完成。Collector 不补现货指数、合约到期/行权信息或利率；后续基差、IV 等计算需要额外来源。
+
+## AU / AG 与夜盘验收
+
+多市场设计、参考年历与任务见 [Market Session 设计](../docs/Market_Calendar_Session_Design_CN.md)。`python3 query/market_calendar.py --exchange SHFE --product AU --at '2026-09-07T23:30:00+08:00'` 可在仓库根目录独立查询，日历不进入 C++ callback 或物化链路。
+
+跨自然日离线回归：构建Collector后，在仓库根目录执行 `query/.venv/bin/python tests/night_session_smoke.py`。该测试只对临时子进程加载合成SDK，覆盖AU/AG夜盘、00:00、日盘、下一TradingDay、CFFEX共存、重连、正常停止及同日追加；源时间压缩，显式100ms测试间隔不改变生产默认15秒。正式采集禁止设置测试SDK的 `LD_PRELOAD` 或 `DM_TEST_SCENARIO`。
+
+实盘结果及仍需补验的跨零点连续运行见 [本次验收记录](../docs/Market_Session_SHFE_Acceptance_CN.md)。官方清单完整、订阅成功、真实callback、持续写入及跨日正确是不同证据，不应相互替代。
