@@ -1,0 +1,1964 @@
+{
+  "schema_version": 1,
+  "version": "2026-reviewed-20260907",
+  "reviewed_on": "20260907",
+  "valid_from": "20260101",
+  "valid_through": "20261231",
+  "exchanges": {
+    "CFFEX": {
+      "sources": [
+        "https://www.cffex.com.cn/en_new/Notices/20251217/46426.html",
+        "https://www.cffex.com.cn/hs300/",
+        "https://www.cffex.com.cn/30tl/",
+        "https://www.cffex.com.cn/ssxz/20221214/43100.html"
+      ],
+      "days": [
+        {
+          "trading_day": "20260105",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260106",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260107",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260108",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260109",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260112",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260113",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260114",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260115",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260116",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260119",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260120",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260121",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260122",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260123",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260126",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260127",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260128",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260129",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260130",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260202",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260203",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260204",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260205",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260206",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260209",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260210",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260211",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260212",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260213",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260224",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260225",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260226",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260227",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260302",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260303",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260304",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260305",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260306",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260309",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260310",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260311",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260312",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260313",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260316",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260317",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260318",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260319",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260320",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260323",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260324",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260325",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260326",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260327",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260330",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260331",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260401",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260402",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260403",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260407",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260408",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260409",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260410",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260413",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260414",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260415",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260416",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260417",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260420",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260421",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260422",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260423",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260424",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260427",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260428",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260429",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260430",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260506",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260507",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260508",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260511",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260512",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260513",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260514",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260515",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260518",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260519",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260520",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260521",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260522",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260525",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260526",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260527",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260528",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260529",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260601",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260602",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260603",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260604",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260605",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260608",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260609",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260610",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260611",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260612",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260615",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260616",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260617",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260618",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260622",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260623",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260624",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260625",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260626",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260629",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260630",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260701",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260702",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260703",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260706",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260707",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260708",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260709",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260710",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260713",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260714",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260715",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260716",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260717",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260720",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260721",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260722",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260723",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260724",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260727",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260728",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260729",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260730",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260731",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260803",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260804",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260805",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260806",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260807",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260810",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260811",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260812",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260813",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260814",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260817",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260818",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260819",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260820",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260821",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260824",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260825",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260826",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260827",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260828",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260831",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260901",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260902",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260903",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260904",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260907",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260908",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260909",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260910",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260911",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260914",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260915",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260916",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260917",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260918",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260921",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260922",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260923",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260924",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260928",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260929",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260930",
+          "night_start": null
+        },
+        {
+          "trading_day": "20261008",
+          "night_start": null
+        },
+        {
+          "trading_day": "20261009",
+          "night_start": null
+        },
+        {
+          "trading_day": "20261012",
+          "night_start": null
+        },
+        {
+          "trading_day": "20261013",
+          "night_start": null
+        },
+        {
+          "trading_day": "20261014",
+          "night_start": null
+        },
+        {
+          "trading_day": "20261015",
+          "night_start": null
+        },
+        {
+          "trading_day": "20261016",
+          "night_start": null
+        },
+        {
+          "trading_day": "20261019",
+          "night_start": null
+        },
+        {
+          "trading_day": "20261020",
+          "night_start": null
+        },
+        {
+          "trading_day": "20261021",
+          "night_start": null
+        },
+        {
+          "trading_day": "20261022",
+          "night_start": null
+        },
+        {
+          "trading_day": "20261023",
+          "night_start": null
+        },
+        {
+          "trading_day": "20261026",
+          "night_start": null
+        },
+        {
+          "trading_day": "20261027",
+          "night_start": null
+        },
+        {
+          "trading_day": "20261028",
+          "night_start": null
+        },
+        {
+          "trading_day": "20261029",
+          "night_start": null
+        },
+        {
+          "trading_day": "20261030",
+          "night_start": null
+        },
+        {
+          "trading_day": "20261102",
+          "night_start": null
+        },
+        {
+          "trading_day": "20261103",
+          "night_start": null
+        },
+        {
+          "trading_day": "20261104",
+          "night_start": null
+        },
+        {
+          "trading_day": "20261105",
+          "night_start": null
+        },
+        {
+          "trading_day": "20261106",
+          "night_start": null
+        },
+        {
+          "trading_day": "20261109",
+          "night_start": null
+        },
+        {
+          "trading_day": "20261110",
+          "night_start": null
+        },
+        {
+          "trading_day": "20261111",
+          "night_start": null
+        },
+        {
+          "trading_day": "20261112",
+          "night_start": null
+        },
+        {
+          "trading_day": "20261113",
+          "night_start": null
+        },
+        {
+          "trading_day": "20261116",
+          "night_start": null
+        },
+        {
+          "trading_day": "20261117",
+          "night_start": null
+        },
+        {
+          "trading_day": "20261118",
+          "night_start": null
+        },
+        {
+          "trading_day": "20261119",
+          "night_start": null
+        },
+        {
+          "trading_day": "20261120",
+          "night_start": null
+        },
+        {
+          "trading_day": "20261123",
+          "night_start": null
+        },
+        {
+          "trading_day": "20261124",
+          "night_start": null
+        },
+        {
+          "trading_day": "20261125",
+          "night_start": null
+        },
+        {
+          "trading_day": "20261126",
+          "night_start": null
+        },
+        {
+          "trading_day": "20261127",
+          "night_start": null
+        },
+        {
+          "trading_day": "20261130",
+          "night_start": null
+        },
+        {
+          "trading_day": "20261201",
+          "night_start": null
+        },
+        {
+          "trading_day": "20261202",
+          "night_start": null
+        },
+        {
+          "trading_day": "20261203",
+          "night_start": null
+        },
+        {
+          "trading_day": "20261204",
+          "night_start": null
+        },
+        {
+          "trading_day": "20261207",
+          "night_start": null
+        },
+        {
+          "trading_day": "20261208",
+          "night_start": null
+        },
+        {
+          "trading_day": "20261209",
+          "night_start": null
+        },
+        {
+          "trading_day": "20261210",
+          "night_start": null
+        },
+        {
+          "trading_day": "20261211",
+          "night_start": null
+        },
+        {
+          "trading_day": "20261214",
+          "night_start": null
+        },
+        {
+          "trading_day": "20261215",
+          "night_start": null
+        },
+        {
+          "trading_day": "20261216",
+          "night_start": null
+        },
+        {
+          "trading_day": "20261217",
+          "night_start": null
+        },
+        {
+          "trading_day": "20261218",
+          "night_start": null
+        },
+        {
+          "trading_day": "20261221",
+          "night_start": null
+        },
+        {
+          "trading_day": "20261222",
+          "night_start": null
+        },
+        {
+          "trading_day": "20261223",
+          "night_start": null
+        },
+        {
+          "trading_day": "20261224",
+          "night_start": null
+        },
+        {
+          "trading_day": "20261225",
+          "night_start": null
+        },
+        {
+          "trading_day": "20261228",
+          "night_start": null
+        },
+        {
+          "trading_day": "20261229",
+          "night_start": null
+        },
+        {
+          "trading_day": "20261230",
+          "night_start": null
+        },
+        {
+          "trading_day": "20261231",
+          "night_start": null
+        }
+      ]
+    },
+    "SHFE": {
+      "sources": [
+        "https://www.shfe.cn/services/calenderandholidays/holiday/",
+        "https://www.shfe.cn/services/calenderandholidays/tradinghours/",
+        "https://www.shfe.com.cn/docview/docview_35218417.htm"
+      ],
+      "days": [
+        {
+          "trading_day": "20260105",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260106",
+          "night_start": "20260105"
+        },
+        {
+          "trading_day": "20260107",
+          "night_start": "20260106"
+        },
+        {
+          "trading_day": "20260108",
+          "night_start": "20260107"
+        },
+        {
+          "trading_day": "20260109",
+          "night_start": "20260108"
+        },
+        {
+          "trading_day": "20260112",
+          "night_start": "20260109"
+        },
+        {
+          "trading_day": "20260113",
+          "night_start": "20260112"
+        },
+        {
+          "trading_day": "20260114",
+          "night_start": "20260113"
+        },
+        {
+          "trading_day": "20260115",
+          "night_start": "20260114"
+        },
+        {
+          "trading_day": "20260116",
+          "night_start": "20260115"
+        },
+        {
+          "trading_day": "20260119",
+          "night_start": "20260116"
+        },
+        {
+          "trading_day": "20260120",
+          "night_start": "20260119"
+        },
+        {
+          "trading_day": "20260121",
+          "night_start": "20260120"
+        },
+        {
+          "trading_day": "20260122",
+          "night_start": "20260121"
+        },
+        {
+          "trading_day": "20260123",
+          "night_start": "20260122"
+        },
+        {
+          "trading_day": "20260126",
+          "night_start": "20260123"
+        },
+        {
+          "trading_day": "20260127",
+          "night_start": "20260126"
+        },
+        {
+          "trading_day": "20260128",
+          "night_start": "20260127"
+        },
+        {
+          "trading_day": "20260129",
+          "night_start": "20260128"
+        },
+        {
+          "trading_day": "20260130",
+          "night_start": "20260129"
+        },
+        {
+          "trading_day": "20260202",
+          "night_start": "20260130"
+        },
+        {
+          "trading_day": "20260203",
+          "night_start": "20260202"
+        },
+        {
+          "trading_day": "20260204",
+          "night_start": "20260203"
+        },
+        {
+          "trading_day": "20260205",
+          "night_start": "20260204"
+        },
+        {
+          "trading_day": "20260206",
+          "night_start": "20260205"
+        },
+        {
+          "trading_day": "20260209",
+          "night_start": "20260206"
+        },
+        {
+          "trading_day": "20260210",
+          "night_start": "20260209"
+        },
+        {
+          "trading_day": "20260211",
+          "night_start": "20260210"
+        },
+        {
+          "trading_day": "20260212",
+          "night_start": "20260211"
+        },
+        {
+          "trading_day": "20260213",
+          "night_start": "20260212"
+        },
+        {
+          "trading_day": "20260224",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260225",
+          "night_start": "20260224"
+        },
+        {
+          "trading_day": "20260226",
+          "night_start": "20260225"
+        },
+        {
+          "trading_day": "20260227",
+          "night_start": "20260226"
+        },
+        {
+          "trading_day": "20260302",
+          "night_start": "20260227"
+        },
+        {
+          "trading_day": "20260303",
+          "night_start": "20260302"
+        },
+        {
+          "trading_day": "20260304",
+          "night_start": "20260303"
+        },
+        {
+          "trading_day": "20260305",
+          "night_start": "20260304"
+        },
+        {
+          "trading_day": "20260306",
+          "night_start": "20260305"
+        },
+        {
+          "trading_day": "20260309",
+          "night_start": "20260306"
+        },
+        {
+          "trading_day": "20260310",
+          "night_start": "20260309"
+        },
+        {
+          "trading_day": "20260311",
+          "night_start": "20260310"
+        },
+        {
+          "trading_day": "20260312",
+          "night_start": "20260311"
+        },
+        {
+          "trading_day": "20260313",
+          "night_start": "20260312"
+        },
+        {
+          "trading_day": "20260316",
+          "night_start": "20260313"
+        },
+        {
+          "trading_day": "20260317",
+          "night_start": "20260316"
+        },
+        {
+          "trading_day": "20260318",
+          "night_start": "20260317"
+        },
+        {
+          "trading_day": "20260319",
+          "night_start": "20260318"
+        },
+        {
+          "trading_day": "20260320",
+          "night_start": "20260319"
+        },
+        {
+          "trading_day": "20260323",
+          "night_start": "20260320"
+        },
+        {
+          "trading_day": "20260324",
+          "night_start": "20260323"
+        },
+        {
+          "trading_day": "20260325",
+          "night_start": "20260324"
+        },
+        {
+          "trading_day": "20260326",
+          "night_start": "20260325"
+        },
+        {
+          "trading_day": "20260327",
+          "night_start": "20260326"
+        },
+        {
+          "trading_day": "20260330",
+          "night_start": "20260327"
+        },
+        {
+          "trading_day": "20260331",
+          "night_start": "20260330"
+        },
+        {
+          "trading_day": "20260401",
+          "night_start": "20260331"
+        },
+        {
+          "trading_day": "20260402",
+          "night_start": "20260401"
+        },
+        {
+          "trading_day": "20260403",
+          "night_start": "20260402"
+        },
+        {
+          "trading_day": "20260407",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260408",
+          "night_start": "20260407"
+        },
+        {
+          "trading_day": "20260409",
+          "night_start": "20260408"
+        },
+        {
+          "trading_day": "20260410",
+          "night_start": "20260409"
+        },
+        {
+          "trading_day": "20260413",
+          "night_start": "20260410"
+        },
+        {
+          "trading_day": "20260414",
+          "night_start": "20260413"
+        },
+        {
+          "trading_day": "20260415",
+          "night_start": "20260414"
+        },
+        {
+          "trading_day": "20260416",
+          "night_start": "20260415"
+        },
+        {
+          "trading_day": "20260417",
+          "night_start": "20260416"
+        },
+        {
+          "trading_day": "20260420",
+          "night_start": "20260417"
+        },
+        {
+          "trading_day": "20260421",
+          "night_start": "20260420"
+        },
+        {
+          "trading_day": "20260422",
+          "night_start": "20260421"
+        },
+        {
+          "trading_day": "20260423",
+          "night_start": "20260422"
+        },
+        {
+          "trading_day": "20260424",
+          "night_start": "20260423"
+        },
+        {
+          "trading_day": "20260427",
+          "night_start": "20260424"
+        },
+        {
+          "trading_day": "20260428",
+          "night_start": "20260427"
+        },
+        {
+          "trading_day": "20260429",
+          "night_start": "20260428"
+        },
+        {
+          "trading_day": "20260430",
+          "night_start": "20260429"
+        },
+        {
+          "trading_day": "20260506",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260507",
+          "night_start": "20260506"
+        },
+        {
+          "trading_day": "20260508",
+          "night_start": "20260507"
+        },
+        {
+          "trading_day": "20260511",
+          "night_start": "20260508"
+        },
+        {
+          "trading_day": "20260512",
+          "night_start": "20260511"
+        },
+        {
+          "trading_day": "20260513",
+          "night_start": "20260512"
+        },
+        {
+          "trading_day": "20260514",
+          "night_start": "20260513"
+        },
+        {
+          "trading_day": "20260515",
+          "night_start": "20260514"
+        },
+        {
+          "trading_day": "20260518",
+          "night_start": "20260515"
+        },
+        {
+          "trading_day": "20260519",
+          "night_start": "20260518"
+        },
+        {
+          "trading_day": "20260520",
+          "night_start": "20260519"
+        },
+        {
+          "trading_day": "20260521",
+          "night_start": "20260520"
+        },
+        {
+          "trading_day": "20260522",
+          "night_start": "20260521"
+        },
+        {
+          "trading_day": "20260525",
+          "night_start": "20260522"
+        },
+        {
+          "trading_day": "20260526",
+          "night_start": "20260525"
+        },
+        {
+          "trading_day": "20260527",
+          "night_start": "20260526"
+        },
+        {
+          "trading_day": "20260528",
+          "night_start": "20260527"
+        },
+        {
+          "trading_day": "20260529",
+          "night_start": "20260528"
+        },
+        {
+          "trading_day": "20260601",
+          "night_start": "20260529"
+        },
+        {
+          "trading_day": "20260602",
+          "night_start": "20260601"
+        },
+        {
+          "trading_day": "20260603",
+          "night_start": "20260602"
+        },
+        {
+          "trading_day": "20260604",
+          "night_start": "20260603"
+        },
+        {
+          "trading_day": "20260605",
+          "night_start": "20260604"
+        },
+        {
+          "trading_day": "20260608",
+          "night_start": "20260605"
+        },
+        {
+          "trading_day": "20260609",
+          "night_start": "20260608"
+        },
+        {
+          "trading_day": "20260610",
+          "night_start": "20260609"
+        },
+        {
+          "trading_day": "20260611",
+          "night_start": "20260610"
+        },
+        {
+          "trading_day": "20260612",
+          "night_start": "20260611"
+        },
+        {
+          "trading_day": "20260615",
+          "night_start": "20260612"
+        },
+        {
+          "trading_day": "20260616",
+          "night_start": "20260615"
+        },
+        {
+          "trading_day": "20260617",
+          "night_start": "20260616"
+        },
+        {
+          "trading_day": "20260618",
+          "night_start": "20260617"
+        },
+        {
+          "trading_day": "20260622",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260623",
+          "night_start": "20260622"
+        },
+        {
+          "trading_day": "20260624",
+          "night_start": "20260623"
+        },
+        {
+          "trading_day": "20260625",
+          "night_start": "20260624"
+        },
+        {
+          "trading_day": "20260626",
+          "night_start": "20260625"
+        },
+        {
+          "trading_day": "20260629",
+          "night_start": "20260626"
+        },
+        {
+          "trading_day": "20260630",
+          "night_start": "20260629"
+        },
+        {
+          "trading_day": "20260701",
+          "night_start": "20260630"
+        },
+        {
+          "trading_day": "20260702",
+          "night_start": "20260701"
+        },
+        {
+          "trading_day": "20260703",
+          "night_start": "20260702"
+        },
+        {
+          "trading_day": "20260706",
+          "night_start": "20260703"
+        },
+        {
+          "trading_day": "20260707",
+          "night_start": "20260706"
+        },
+        {
+          "trading_day": "20260708",
+          "night_start": "20260707"
+        },
+        {
+          "trading_day": "20260709",
+          "night_start": "20260708"
+        },
+        {
+          "trading_day": "20260710",
+          "night_start": "20260709"
+        },
+        {
+          "trading_day": "20260713",
+          "night_start": "20260710"
+        },
+        {
+          "trading_day": "20260714",
+          "night_start": "20260713"
+        },
+        {
+          "trading_day": "20260715",
+          "night_start": "20260714"
+        },
+        {
+          "trading_day": "20260716",
+          "night_start": "20260715"
+        },
+        {
+          "trading_day": "20260717",
+          "night_start": "20260716"
+        },
+        {
+          "trading_day": "20260720",
+          "night_start": "20260717"
+        },
+        {
+          "trading_day": "20260721",
+          "night_start": "20260720"
+        },
+        {
+          "trading_day": "20260722",
+          "night_start": "20260721"
+        },
+        {
+          "trading_day": "20260723",
+          "night_start": "20260722"
+        },
+        {
+          "trading_day": "20260724",
+          "night_start": "20260723"
+        },
+        {
+          "trading_day": "20260727",
+          "night_start": "20260724"
+        },
+        {
+          "trading_day": "20260728",
+          "night_start": "20260727"
+        },
+        {
+          "trading_day": "20260729",
+          "night_start": "20260728"
+        },
+        {
+          "trading_day": "20260730",
+          "night_start": "20260729"
+        },
+        {
+          "trading_day": "20260731",
+          "night_start": "20260730"
+        },
+        {
+          "trading_day": "20260803",
+          "night_start": "20260731"
+        },
+        {
+          "trading_day": "20260804",
+          "night_start": "20260803"
+        },
+        {
+          "trading_day": "20260805",
+          "night_start": "20260804"
+        },
+        {
+          "trading_day": "20260806",
+          "night_start": "20260805"
+        },
+        {
+          "trading_day": "20260807",
+          "night_start": "20260806"
+        },
+        {
+          "trading_day": "20260810",
+          "night_start": "20260807"
+        },
+        {
+          "trading_day": "20260811",
+          "night_start": "20260810"
+        },
+        {
+          "trading_day": "20260812",
+          "night_start": "20260811"
+        },
+        {
+          "trading_day": "20260813",
+          "night_start": "20260812"
+        },
+        {
+          "trading_day": "20260814",
+          "night_start": "20260813"
+        },
+        {
+          "trading_day": "20260817",
+          "night_start": "20260814"
+        },
+        {
+          "trading_day": "20260818",
+          "night_start": "20260817"
+        },
+        {
+          "trading_day": "20260819",
+          "night_start": "20260818"
+        },
+        {
+          "trading_day": "20260820",
+          "night_start": "20260819"
+        },
+        {
+          "trading_day": "20260821",
+          "night_start": "20260820"
+        },
+        {
+          "trading_day": "20260824",
+          "night_start": "20260821"
+        },
+        {
+          "trading_day": "20260825",
+          "night_start": "20260824"
+        },
+        {
+          "trading_day": "20260826",
+          "night_start": "20260825"
+        },
+        {
+          "trading_day": "20260827",
+          "night_start": "20260826"
+        },
+        {
+          "trading_day": "20260828",
+          "night_start": "20260827"
+        },
+        {
+          "trading_day": "20260831",
+          "night_start": "20260828"
+        },
+        {
+          "trading_day": "20260901",
+          "night_start": "20260831"
+        },
+        {
+          "trading_day": "20260902",
+          "night_start": "20260901"
+        },
+        {
+          "trading_day": "20260903",
+          "night_start": "20260902"
+        },
+        {
+          "trading_day": "20260904",
+          "night_start": "20260903"
+        },
+        {
+          "trading_day": "20260907",
+          "night_start": "20260904"
+        },
+        {
+          "trading_day": "20260908",
+          "night_start": "20260907"
+        },
+        {
+          "trading_day": "20260909",
+          "night_start": "20260908"
+        },
+        {
+          "trading_day": "20260910",
+          "night_start": "20260909"
+        },
+        {
+          "trading_day": "20260911",
+          "night_start": "20260910"
+        },
+        {
+          "trading_day": "20260914",
+          "night_start": "20260911"
+        },
+        {
+          "trading_day": "20260915",
+          "night_start": "20260914"
+        },
+        {
+          "trading_day": "20260916",
+          "night_start": "20260915"
+        },
+        {
+          "trading_day": "20260917",
+          "night_start": "20260916"
+        },
+        {
+          "trading_day": "20260918",
+          "night_start": "20260917"
+        },
+        {
+          "trading_day": "20260921",
+          "night_start": "20260918"
+        },
+        {
+          "trading_day": "20260922",
+          "night_start": "20260921"
+        },
+        {
+          "trading_day": "20260923",
+          "night_start": "20260922"
+        },
+        {
+          "trading_day": "20260924",
+          "night_start": "20260923"
+        },
+        {
+          "trading_day": "20260928",
+          "night_start": null
+        },
+        {
+          "trading_day": "20260929",
+          "night_start": "20260928"
+        },
+        {
+          "trading_day": "20260930",
+          "night_start": "20260929"
+        },
+        {
+          "trading_day": "20261008",
+          "night_start": null
+        },
+        {
+          "trading_day": "20261009",
+          "night_start": "20261008"
+        },
+        {
+          "trading_day": "20261012",
+          "night_start": "20261009"
+        },
+        {
+          "trading_day": "20261013",
+          "night_start": "20261012"
+        },
+        {
+          "trading_day": "20261014",
+          "night_start": "20261013"
+        },
+        {
+          "trading_day": "20261015",
+          "night_start": "20261014"
+        },
+        {
+          "trading_day": "20261016",
+          "night_start": "20261015"
+        },
+        {
+          "trading_day": "20261019",
+          "night_start": "20261016"
+        },
+        {
+          "trading_day": "20261020",
+          "night_start": "20261019"
+        },
+        {
+          "trading_day": "20261021",
+          "night_start": "20261020"
+        },
+        {
+          "trading_day": "20261022",
+          "night_start": "20261021"
+        },
+        {
+          "trading_day": "20261023",
+          "night_start": "20261022"
+        },
+        {
+          "trading_day": "20261026",
+          "night_start": "20261023"
+        },
+        {
+          "trading_day": "20261027",
+          "night_start": "20261026"
+        },
+        {
+          "trading_day": "20261028",
+          "night_start": "20261027"
+        },
+        {
+          "trading_day": "20261029",
+          "night_start": "20261028"
+        },
+        {
+          "trading_day": "20261030",
+          "night_start": "20261029"
+        },
+        {
+          "trading_day": "20261102",
+          "night_start": "20261030"
+        },
+        {
+          "trading_day": "20261103",
+          "night_start": "20261102"
+        },
+        {
+          "trading_day": "20261104",
+          "night_start": "20261103"
+        },
+        {
+          "trading_day": "20261105",
+          "night_start": "20261104"
+        },
+        {
+          "trading_day": "20261106",
+          "night_start": "20261105"
+        },
+        {
+          "trading_day": "20261109",
+          "night_start": "20261106"
+        },
+        {
+          "trading_day": "20261110",
+          "night_start": "20261109"
+        },
+        {
+          "trading_day": "20261111",
+          "night_start": "20261110"
+        },
+        {
+          "trading_day": "20261112",
+          "night_start": "20261111"
+        },
+        {
+          "trading_day": "20261113",
+          "night_start": "20261112"
+        },
+        {
+          "trading_day": "20261116",
+          "night_start": "20261113"
+        },
+        {
+          "trading_day": "20261117",
+          "night_start": "20261116"
+        },
+        {
+          "trading_day": "20261118",
+          "night_start": "20261117"
+        },
+        {
+          "trading_day": "20261119",
+          "night_start": "20261118"
+        },
+        {
+          "trading_day": "20261120",
+          "night_start": "20261119"
+        },
+        {
+          "trading_day": "20261123",
+          "night_start": "20261120"
+        },
+        {
+          "trading_day": "20261124",
+          "night_start": "20261123"
+        },
+        {
+          "trading_day": "20261125",
+          "night_start": "20261124"
+        },
+        {
+          "trading_day": "20261126",
+          "night_start": "20261125"
+        },
+        {
+          "trading_day": "20261127",
+          "night_start": "20261126"
+        },
+        {
+          "trading_day": "20261130",
+          "night_start": "20261127"
+        },
+        {
+          "trading_day": "20261201",
+          "night_start": "20261130"
+        },
+        {
+          "trading_day": "20261202",
+          "night_start": "20261201"
+        },
+        {
+          "trading_day": "20261203",
+          "night_start": "20261202"
+        },
+        {
+          "trading_day": "20261204",
+          "night_start": "20261203"
+        },
+        {
+          "trading_day": "20261207",
+          "night_start": "20261204"
+        },
+        {
+          "trading_day": "20261208",
+          "night_start": "20261207"
+        },
+        {
+          "trading_day": "20261209",
+          "night_start": "20261208"
+        },
+        {
+          "trading_day": "20261210",
+          "night_start": "20261209"
+        },
+        {
+          "trading_day": "20261211",
+          "night_start": "20261210"
+        },
+        {
+          "trading_day": "20261214",
+          "night_start": "20261211"
+        },
+        {
+          "trading_day": "20261215",
+          "night_start": "20261214"
+        },
+        {
+          "trading_day": "20261216",
+          "night_start": "20261215"
+        },
+        {
+          "trading_day": "20261217",
+          "night_start": "20261216"
+        },
+        {
+          "trading_day": "20261218",
+          "night_start": "20261217"
+        },
+        {
+          "trading_day": "20261221",
+          "night_start": "20261218"
+        },
+        {
+          "trading_day": "20261222",
+          "night_start": "20261221"
+        },
+        {
+          "trading_day": "20261223",
+          "night_start": "20261222"
+        },
+        {
+          "trading_day": "20261224",
+          "night_start": "20261223"
+        },
+        {
+          "trading_day": "20261225",
+          "night_start": "20261224"
+        },
+        {
+          "trading_day": "20261228",
+          "night_start": "20261225"
+        },
+        {
+          "trading_day": "20261229",
+          "night_start": "20261228"
+        },
+        {
+          "trading_day": "20261230",
+          "night_start": "20261229"
+        },
+        {
+          "trading_day": "20261231",
+          "night_start": "20261230"
+        }
+      ]
+    }
+  }
+}
