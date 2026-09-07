@@ -18,6 +18,10 @@ int main() {
     CHECK(Read(path).find("\"accepted\": 0") != std::string::npos);
     CHECK(Read(path).find("\"connected\": true") != std::string::npos);
     CHECK(Read(path).find("\"subscribed\": 1") != std::string::npos);
+    const auto coverage = temp.path / ".collector-coverage.json";
+    CHECK(Read(coverage).find("\"id\":\"IF2609\"") != std::string::npos);
+    CHECK(Read(coverage).find("\"subscription\":\"subscribed\"") != std::string::npos);
+    CHECK(Read(coverage).find("\"received\":0") != std::string::npos);
     CHECK(PublishHealth(temp.path, session, stats, store, ProcessState::Stopped));
     CHECK(Read(path).find("\"connected\": false") != std::string::npos);
     CHECK(PublishHealth(temp.path, session, stats, store, ProcessState::Failed));

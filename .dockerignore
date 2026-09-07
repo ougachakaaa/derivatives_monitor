@@ -29,8 +29,9 @@
 !query/poetry.lock
 !query/app.py
 !query/storage.py
+!query/contract_coverage.py
 !query/tests/
-!query/tests/test_api.py
+!query/tests/*.py
 !dashboard/
 !dashboard/Dockerfile
 !dashboard/package.json

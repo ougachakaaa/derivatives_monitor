@@ -4,6 +4,29 @@
 
 int main() {
     using namespace collector;
+    {
+        Config batch_config; batch_config.subscription_batch_size = 100;
+        for (int i = 0; i < 205; ++i) batch_config.instruments.push_back("IO2609-C-" + std::to_string(3000 + i * 50));
+        MarketState batch_state(batch_config.instruments); FakeApi batch_api;
+        CtpSession batch(batch_api, batch_config, batch_state, "test-double-batches");
+        batch_api.RegisterSpi(&batch); batch_api.Init();
+        const auto start = SteadyMs(); batch.Pump(start); batch_api.Login();
+        batch.Pump(start + 1); CHECK(batch_api.requested.size() == 100);
+        const auto failed_id = batch_api.requested.front();
+        for (const auto& id : batch_api.requested) batch_api.SubscriptionReply(id, id == failed_id ? 31 : 0);
+        batch.Pump(start + 999); CHECK(batch_api.subscription_calls == 1);
+        batch.Pump(start + 1001); CHECK(batch_api.requested.size() == 100);
+        for (const auto& id : batch_api.requested) batch_api.SubscriptionReply(id);
+        batch.Pump(start + 2001); CHECK(batch_api.requested.size() == 5);
+        for (const auto& id : batch_api.requested) batch_api.SubscriptionReply(id);
+        std::size_t subscribed = 0;
+        for (const auto& item : batch.Status().instruments) subscribed += item.second.subscription == Subscription::Subscribed;
+        CHECK(subscribed == 204);
+        CHECK(batch.Status().instruments.at(failed_id).subscription == Subscription::Failed);
+        batch.OnFrontDisconnected(1); batch.OnFrontConnected(); batch.Pump(start + 3000); batch_api.Login();
+        batch.Pump(start + 3001); CHECK(batch_api.requested.size() == 100);
+        CHECK(batch_api.subscription_calls == 4);
+    }
     Config config;
     config.instruments = {"IF2609", "IO2609-C-4000"};
     config.connect_timeout_seconds = 2; config.retry_interval_seconds = 1; config.subscription_batch_size = 1;
@@ -51,6 +74,31 @@ int main() {
     auto day1 = Tick("20260907"), day2 = Tick("20260908"), day3 = Tick("20260909");
     api.spi->OnRtnDepthMarketData(&day1); api.spi->OnRtnDepthMarketData(&day2); api.spi->OnRtnDepthMarketData(&day3);
     Throws([&] { session.CheckFailure(); });
+    {
+        MarketState zero_state(config.instruments);
+        FakeApi zero_api;
+        CtpSession zero_session(zero_api, config, zero_state, "test-double-zero-id");
+        zero_api.RegisterSpi(&zero_session);
+        CThostFtdcRspUserLoginField response{};
+        ctp::CopyField(response.TradingDay, "20260907");
+        CThostFtdcRspInfoField info{};
+        zero_api.Init();
+        zero_session.OnRspUserLogin(&response, &info, 0, true);
+        CHECK(!zero_session.Status().logged_in); // No pending request.
+        zero_session.Pump(SteadyMs());
+        zero_session.OnRspUserLogin(&response, &info, zero_api.last_login_id + 1, true);
+        CHECK(!zero_session.Status().logged_in); // Nonzero mismatches remain invalid.
+        zero_session.OnRspUserLogin(&response, &info, 0, false);
+        CHECK(!zero_session.Status().logged_in);
+        zero_session.OnRspUserLogin(&response, &info, 0, true);
+        CHECK(zero_session.Status().logged_in);
+        CHECK(zero_session.Status().login_day == "20260907");
+        zero_session.Pump(SteadyMs());
+        CHECK(zero_api.subscription_calls == 1);
+        zero_session.OnFrontDisconnected(1);
+        zero_session.OnRspUserLogin(&response, &info, 0, true);
+        CHECK(!zero_session.Status().logged_in);
+    }
     {
         TempDirectory temp;
         config.data_directory = temp.path / "data"; config.flow_path = temp.path / "flow";

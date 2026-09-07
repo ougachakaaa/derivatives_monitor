@@ -9,6 +9,7 @@ const health = { query: { status: 'healthy' }, data: { readable: true }, collect
   heartbeat: { connected: true, logged_in: true, expected: 1, subscribed: 1, accepted: 10, written: 5, last_received_us: 0 },
 }};
 function fixture(path) {
+  if (path === '/api/coverage') return { complete: false, collector_current: true, groups: [{ product: 'IO', month: '2609', discovered: 2, listed: 2, target: 2, subscribed: 1, pending: 0, failed: 1, received: 0, no_push: 1, verified: true }], instruments: [], update: {} };
   if (path === '/api/health') return health;
   if (path === '/api/days') return { days: [{ day: '20260904' }, { day: '20260903' }] };
   if (path.includes('/summary')) return { rows: 5, size_bytes: 4096, instruments: [{ instrument: 'IF2609', rows: 5, last_received_us: 0 }], runs: [{ source: 'TEST_DOUBLE_UI' }] };
@@ -63,4 +64,20 @@ test('database error leaves service health intact and removes counts', async () 
   await screen.findByText(/WAL sidecars unavailable/);
   expect(screen.getAllByText('运行正常')).toHaveLength(2);
   expect(screen.getByTestId('rows').textContent).toBe('—');
+});
+
+
+test('coverage distinguishes missing pushes from failed subscriptions and clears on error', async () => {
+  let broken = false;
+  vi.stubGlobal('fetch', vi.fn(async path => {
+    if (path === '/api/coverage' && broken) throw new Error('coverage unavailable');
+    return response(fixture(path));
+  }));
+  render(<App pollMs={30} />);
+  await screen.findByText('IO');
+  expect(screen.getByText('已订阅暂无推送')).toBeTruthy();
+  expect(screen.getByText(/覆盖尚未完整确认/)).toBeTruthy();
+  broken = true;
+  await screen.findByText(/coverage unavailable/);
+  expect(screen.queryByText('IO')).toBeNull();
 });

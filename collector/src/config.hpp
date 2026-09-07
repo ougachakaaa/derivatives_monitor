@@ -12,10 +12,23 @@ struct Config : ctp::Config {
     int subscription_batch_size = 100;
 };
 
-inline Config LoadConfig(const std::filesystem::path& path) {
+inline Config LoadConfig(const std::filesystem::path& path, bool read_instruments_file = true) {
     Config config;
     static_cast<ctp::Config&>(config) = ctp::LoadConfig(path);
     auto values = ctp::ReadConfigValues(path);
+    if (read_instruments_file && !values["InstrumentsFile"].empty()) {
+        std::filesystem::path file = values["InstrumentsFile"];
+        if (file.is_relative()) file = std::filesystem::absolute(path).parent_path() / file;
+        std::ifstream input(file);
+        if (!input) throw std::runtime_error("cannot open InstrumentsFile: " + file.string());
+        config.instruments.clear();
+        std::string line;
+        while (std::getline(input, line)) {
+            line = ctp::Trim(line);
+            if (!line.empty() && line.front() != '#' && line.front() != ';') config.instruments.push_back(line);
+        }
+        if (input.bad()) throw std::runtime_error("cannot read InstrumentsFile");
+    }
     config.data_directory = values["DataDirectory"].empty() ? "data" : values["DataDirectory"];
     if (config.data_directory.is_relative())
         config.data_directory = std::filesystem::absolute(path).parent_path() / config.data_directory;

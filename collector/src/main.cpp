@@ -27,7 +27,7 @@ int main(int argc, char** argv) {
             else if (arg == "--check-config") check = true;
             else throw std::runtime_error("unknown argument: " + arg);
         }
-        auto config = collector::LoadConfig(path);
+        auto config = collector::LoadConfig(path, instruments.empty());
         if (!instruments.empty()) config.instruments = std::move(instruments);
         if (run_seconds >= 0) config.run_seconds = run_seconds;
         collector::ValidateConfig(config);

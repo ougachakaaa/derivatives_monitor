@@ -22,6 +22,8 @@ export default function App({ pollMs = 5000 }) {
   const [data, setData] = useState(null);
   const [dataError, setDataError] = useState('');
   const [updated, setUpdated] = useState(null);
+  const [coverage, setCoverage] = useState(null);
+  const [coverageError, setCoverageError] = useState('');
 
   useEffect(() => {
     let cancelled = false;
@@ -40,6 +42,7 @@ export default function App({ pollMs = 5000 }) {
       };
       try {
         await Promise.all([
+          update(get('/api/coverage', controller.signal), value => { setCoverage(value); setCoverageError(''); }, error => { setCoverage(null); setCoverageError(error); }),
           update(get('/api/health', controller.signal), value => { setHealth(value); setHealthError(''); }, error => { setHealth(null); setHealthError(error); }),
           update(get('/api/days', controller.signal), value => {
             setDays(value.days); setDaysError('');
@@ -70,6 +73,19 @@ export default function App({ pollMs = 5000 }) {
       <article><h2>C++ Collector</h2><strong className={collector?.status === 'healthy' ? 'good' : 'warn'}>{labels[collector?.status] || '状态未知'}</strong><p>主循环：{collector?.process_alive ? '心跳有效' : '未确认存活'} · CTP：{ctp}</p><p>订阅 {freshHeartbeat ? `${number(heartbeat.subscribed)} / ${number(heartbeat.expected)}` : '—'}</p></article>
     </section>
     <p className="muted">应用状态来自 API 与 Collector 心跳；休市无新行情不等于进程停止。</p>
+    <section className="panel" aria-label="CFFEX 覆盖统计">
+      <h2>CFFEX 覆盖统计</h2>
+      {coverageError && <p role="alert">覆盖统计读取失败：{coverageError}。未显示旧数据。</p>}
+      {coverage && <>
+        <p className={coverage.complete ? 'good' : 'warn'}>{coverage.complete ? '当日官方清单已核对，全部目标订阅成功' : '覆盖尚未完整确认，请查看清单与订阅缺口'}</p>
+        <p className="muted">清单日期：{coverage.requested_day || '未知'} · 更新：{timestamp(coverage.updated_us)} · 当前采集状态：{coverage.collector_current ? '有效' : '未知或已过期'}</p>
+        {coverage.update?.error && <p role="alert">清单更新失败：{coverage.update.error}</p>}
+        <p className="muted">发现 / 清单 / 目标分别表示本次来源返回、含保留合约的清单、当前会话订阅目标；已订阅暂无推送不等于订阅失败。</p>
+        <div className="table-wrap"><table><thead><tr><th>品种</th><th>月份</th><th>发现 / 清单 / 目标</th><th>已订阅</th><th>等待</th><th>失败</th><th>已接收合约</th><th>已订阅暂无推送</th><th>清单与缺口</th></tr></thead>
+          <tbody>{coverage.groups?.map(row => <tr key={`${row.product}-${row.month}`}><td>{row.product}</td><td>{row.month}</td><td>{number(row.discovered)} / {number(row.listed)} / {number(row.target)}</td><td>{number(row.subscribed)}</td><td>{number(row.pending)}</td><td className={row.failed ? 'warn' : ''}>{number(row.failed)}</td><td>{number(row.received)}</td><td>{number(row.no_push)}</td><td>{row.verified ? '官方已核对' : row.stale ? '清单缺失或过期' : '公开链条待核对'} · {row.data_date || '来源日期未知'}{row.source && <> · <a href={row.source} target="_blank" rel="noreferrer">来源</a></>}{row.error && <div>{row.error}</div>}{Boolean(row.missing_targets?.length) && <div>未纳入当前目标：{row.missing_targets.join(', ')}</div>}{Boolean(row.extra_targets?.length) && <div>清单外目标：{row.extra_targets.join(', ')}</div>}</td></tr>)}</tbody></table></div>
+        <details><summary>未确认订阅或尚未接收的合约</summary><div className="table-wrap"><table><thead><tr><th>合约</th><th>订阅状态</th><th>错误码</th><th>本次接收</th></tr></thead><tbody>{coverage.instruments?.filter(row => row.subscription !== 'subscribed' || !row.received).map(row => <tr key={row.id}><td>{row.id}</td><td>{({subscribed:'已订阅暂无推送',failed:'订阅失败',pending:'等待确认',not_sent:'等待发送',unknown:'状态未知'})[row.subscription]}</td><td>{number(row.error_id)}</td><td>{number(row.received)}</td></tr>)}</tbody></table></div></details>
+      </>}
+    </section>
     <section className="panel">
       <div className="section-title"><h2>采集数据量</h2><label>交易日 <select aria-label="交易日" value={day} onChange={event => setDay(event.target.value)}><option value="">请选择</option>{days.map(item => <option key={item.day} value={item.day}>{item.day}</option>)}</select></label></div>
       {daysError && <p role="alert">交易日列表读取失败：{daysError}</p>}

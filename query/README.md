@@ -16,6 +16,7 @@ DATA_DIR=../collector/data poetry run uvicorn app:app --host 127.0.0.1 --port 80
 |---|---|
 | `/healthz` | API 自身存活，不取决于行情 |
 | `/api/health` | 共享目录、Collector 主循环心跳和 CTP 状态 |
+| `/api/coverage` | 当前 CFFEX 品种/月清单与会话覆盖、合约缺口和来源；不接受查询参数 |
 | `/api/days` | 日文件列表；size_bytes = 主文件 + WAL，非逻辑数据大小 |
 | `/api/summary?day=20260904` | 精确行数、逐合约数量与最近接收时间、最近 100 个 run 来源 |
 | `/api/snapshots?day=20260904&instrument=IF2609&limit=50` | 最近 snapshot，instrument 可省略，limit 1–200 |

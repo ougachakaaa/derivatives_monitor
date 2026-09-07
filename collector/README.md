@@ -4,6 +4,40 @@
 
 [设计约束](../docs/Data_Collector_Constraints_CN.md) · [Task Specs](../docs/tasks/data-collector/README.md) · [验收记录](../docs/Data_Collector_Acceptance_CN.md)
 
+## 原生 WSL / CFFEX 全量采集
+
+当前部署使用原生 Collector、独立 FastAPI、Vite 看板。Windows 浏览器访问 **http://localhost:8101**，API 为 **http://localhost:8000/docs**。仅绑定回环地址，通过 WSL localhost 转发访问，不需要局域网端口开放。实际 Windows Edge 验收见 [CFFEX 验收记录](../docs/CFFEX_Coverage_Acceptance_CN.md)。
+
+前提：本节下面的 CMake Release 构建及测试完成；按 `query/README.md` 准备 `query/.venv`（Python 3.12）；按 `dashboard/README.md` 安装前端依赖并构建；用户级 systemd 可用。Node 要求 22.12+，可通过 `DM_NODE=/absolute/path/to/node` 指定。当前机器已将缺少的 SQLite 开发包、Node 与构建工具放在被忽略的 `collector/build/` 下；不要删除运行依赖的构建目录。
+
+保留有效的 `collector/config.ini`，要求 `DataDirectory=data`、`RunSeconds=0`。运行：
+
+```bash
+./collector/scripts/native.sh up
+./collector/scripts/native.sh status
+./collector/scripts/native.sh logs
+./collector/scripts/native.sh update
+./collector/scripts/native.sh stop
+```
+
+`up` 先检查依赖、生成并验证服务、刷新清单和校验配置，再迁移本仓库已记录的旧后台进程。配置备份在 `collector/tmp/native-backups/`；管理器将 `InstrumentsFile` 设置为 `data/universe/current/instruments.txt`。三个服务为 `derivatives-monitor-{collector,query,dashboard}.service`；清单服务及定时器为 `derivatives-monitor-universe.{service,timer}`，均由 `systemctl --user` 管理。异常退出间隔 10 秒重启；正常停止允许 60 秒提交尾部，未正常结束会显示异常状态。
+
+启动时执行当天尚未尝试的刷新；每天北京时间 08:45 更新，若未取得当天完整官方清单则在 09:00、09:15 重试。定时器持久化，WSL 恢复后补执行错过的触发。更新成功且清单未变化不会重启采集器；清单变化后仅正常重启 Collector，API 和页面继续运行。`update` 可在重试窗口外手工刷新。`stop` 停止三个服务及更新定时器；用户管理器下次启动时启用的服务会再次启动，长期禁用请另执行 `systemctl --user disable derivatives-monitor-{collector,query,dashboard}.service derivatives-monitor-universe.timer`。WSL 关闭、Windows 睡眠期间无法继续采集。
+
+合约发现程序 `collector/scripts/universe.py` 使用 Python 标准库，独立于 CTP 回调和只读 API：
+
+- 官方来源为中金所交易参数页面所使用的 `http://www.cffex.com.cn/sj/jycs/YYYYMM/DD/index.xml`，按明确返回的代码、品种、月份、上市日和最后交易日解析全部 11 个品种。IO/HO/MO 检查各月份各行权价的 Call/Put 成对数据。
+- 当日官方数据缺失时最多回查 10 个自然日，旧日记录仅作为过期清单；期权可补充新浪实际公布的月份和精确合约，补充结果不会被标记为官方全量。
+- 来源失败按品种保留最近清单；当源结果缺少上次已知且未到期的合约时保留这些合约并标记缺口，避免异常缩表被误当成摘牌。没有任何有效合约时拒绝首次启动；超过 10000 个报错，绝不截断。
+- 原始响应和请求来源、时间、哈希保存在 `collector/data/universe/raw/`；解析后的不可变版本保存在 `generations/`，`current` 以原子符号链接切换，同时发布清单和元数据。`.universe-status.json` 记录最近刷新结果。原始数据仅用于发现，不作为行情写入 SQLite。
+- 最新清单每个品种保留来源日期、发现数量、完整性和错误；当前行情仍完全来自官方 CTP SDK。现货指数缺失不阻断期货期权接收。
+
+`InstrumentsFile` 为逐行代码，可含空行及整行 `#`/`;` 注释，相对路径以 INI 所在目录为基准。优先级为 `--instrument` 参数 > `InstrumentsFile` > `Instruments`；显式文件缺失、不可读或为空时不静默回退。兼容原有配置和数据库，无 SQLite 迁移。
+
+`/api/coverage` 与看板按品种、月份列出本次发现、清单、会话目标、订阅成功/等待/失败、本会话接收和已订阅暂无推送数量，另列出未纳入目标和具体合约缺口。行情诊断由 C++ 原子写入 `.collector-coverage.json`；FastAPI 只读，不从日志猜状态。心跳失效、run 不匹配或诊断过期时清空实时计数；只有当天官方清单已核对、目标完全一致且全部订阅成功才显示全覆盖。此标记不表示每个合约持续活跃。
+
+验证更新程序：`python3 -m unittest discover -s collector/tests -p 'test_*.py' -v`。公开网络访问遵循运行环境的代理设置；`up` 将当时的代理设置保存到权限 0600 的用户服务配置，网络变化后重新 `up`。
+
 ## Docker / WSL 一条命令部署
 
 另一台机器只需 Git、Bash、可用的 Linux x86-64 Docker Engine 和 Compose v2。无需在宿主安装 CMake、G++、SQLite、Python、Poetry 或 Node。将代码放到 WSL 的 Linux 用户目录，例如 `~/repo/derivatives_monitor`，确认 Docker Desktop 已启动且启用该 WSL 的集成；容器无法在 Windows 睡眠或 WSL 停止时继续采集。
@@ -36,7 +70,7 @@ RunSeconds=0
 | `./collector/scripts/deploy.sh stop` | 发送 SIGTERM，最多等待 60 秒完成尾部提交；保留全部数据 |
 | `./collector/scripts/deploy.sh verify 20260907` | 在临时容器中只读验收指定交易日，日期按实际文件修改 |
 
-看板打开 **http://localhost:8080**；FastAPI 文档 **http://localhost:8000/docs**。React 页面由独立 Nginx 容器提供，Python 不托管 JS。`QUERY_PORT` / `DASHBOARD_PORT` 环境变量可调整对应宿主端口（后续命令沿用相同值）；默认只监听 127.0.0.1。
+看板打开 **http://localhost:8101**；FastAPI 文档 **http://localhost:8000/docs**。React 页面由独立 Nginx 容器提供，Python 不托管 JS。`QUERY_PORT` / `DASHBOARD_PORT` 环境变量可调整对应宿主端口（后续命令沿用相同值）；默认只监听 127.0.0.1。
 
 SQLite 并未迁移：宿主 `collector/data/` 是持久 bind mount，Collector `/app/data` 可写，query `/data` 只读；两者使用相同 UID/GID。前端不挂载数据。Collector 不等待 Python 或前端启动。`logs/status/stop` 现在管理三个服务，`status` 增加各自 Docker healthcheck 状态；`verify` 仍只读检查日 SQLite。
 
@@ -112,6 +146,7 @@ collector/build/Release/bin/data_collector --config collector/config.ini
 | `FrontMdAddr` | 必填，沿用券商示例前置；可用性以现场验证为准 |
 | `BrokerID`, `UserID`, `Password`, `UserProductInfo` | 沿用 demo，按 SDK 固定字段长度校验；是否需账号取决于前置 |
 | `Instruments` | 冒号或逗号分隔的精确代码，去重；最多 10000 个 |
+| `InstrumentsFile` | 可选逐行精确代码文件；CLI 覆盖文件，文件覆盖 `Instruments` |
 | `DataDirectory` | `data`，所有每日数据及 `.collector.lock` 所在目录 |
 | `FlowPath` | `flow`，SDK 会话文件；每个运行实例使用独立目录 |
 | `SnapshotIntervalMs` | `1000`，1–60000ms；控制物化间隔，不保证硬实时 |

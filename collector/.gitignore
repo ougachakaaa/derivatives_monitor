@@ -4,3 +4,5 @@
 /flow/
 /.deploy.lock
 /.config-*
+
+__pycache__/

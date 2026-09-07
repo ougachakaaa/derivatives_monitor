@@ -2,7 +2,9 @@
 
 独立 React/Vite 项目。Python 只提供 JSON；生产镜像由 Nginx 提供页面，并将同源 `/api/` 转发到 `query:8000`。前端不挂载 SQLite、CTP 配置或 Docker socket。
 
-全栈部署，在仓库根目录执行 `./collector/scripts/deploy.sh up`，浏览器打开 **http://localhost:8080**。后端直接访问 **http://localhost:8000/docs**。两个 HTTP 端口都只绑定宿主回环地址。
+当前 WSL 原生部署使用 `./collector/scripts/native.sh up`，Windows 打开 **http://localhost:8101**。页面增加 CFFEX 各品种/月的覆盖统计，展示清单来源和过期状态、订阅失败及已订阅暂无推送的区别。
+
+Docker 全栈部署，在仓库根目录执行 `./collector/scripts/deploy.sh up`，浏览器打开 **http://localhost:8101**。后端直接访问 **http://localhost:8000/docs**。两个 HTTP 端口都只绑定宿主回环地址。
 
 本地前端开发需要 Node 22.12+：
 
@@ -11,7 +13,7 @@ npm ci
 npm run dev
 ```
 
-默认代理本机 8000 端口 FastAPI；用 `QUERY_URL=http://127.0.0.1:其他端口 npm run dev` 调整。构建 `npm run build`，组件测试 `npm test`；部署镜像构建会运行这两项，最终镜像不含 Node 或测试依赖。
+开发服务固定监听 `127.0.0.1:8101`，端口占用时报错。默认代理本机 8000 端口 FastAPI；用 `QUERY_URL=http://127.0.0.1:其他端口 npm run dev` 调整。构建 `npm run build`，组件测试 `npm test`；部署镜像构建会运行这两项，最终镜像不含 Node 或测试依赖。
 
 页面每 5 秒查询：Python API 可达性、Collector 主循环心跳、CTP 连接/登录/订阅、每日 snapshot 数量及合约明细、最近 20 行。单次请求 4 秒超时；API 断线会清除绿色状态，数据查询失败会清空数值而不展示旧值。休市无行情不等于进程停止。日文件大小包括 WAL，不等于逻辑数据大小；最后接收时间统一显示北京时间。run 来源包含 `TEST DOUBLE` 的数据是测试数据。
 

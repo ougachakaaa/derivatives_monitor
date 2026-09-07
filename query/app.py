@@ -5,6 +5,7 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from storage import QueryError, Store
+from contract_coverage import coverage
 
 
 def create_app(directory=None):
@@ -46,6 +47,14 @@ def create_app(directory=None):
         except QueryError as error:
             data = {"readable": False, "error": error.message}
         return {"query": {"status": "healthy"}, "data": data, "collector": store.heartbeat()}
+
+    @app.get("/api/coverage")
+    def contract_coverage(request: Request):
+        parameters(request, ())
+        try:
+            return coverage(store)
+        except (ValueError, TypeError, KeyError, AttributeError):
+            raise QueryError(503, "Coverage files unavailable or invalid") from None
 
     @app.get("/api/days")
     def days(request: Request):

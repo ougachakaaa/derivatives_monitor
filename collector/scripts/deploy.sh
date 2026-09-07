@@ -86,7 +86,7 @@ check_config() {
         }
         END {
             if (values["FrontMdAddr"]=="") fail("FrontMdAddr is required")
-            if (values["Instruments"]=="") fail("Instruments is required")
+            if (values["Instruments"]=="" && values["InstrumentsFile"]=="") fail("Instruments or InstrumentsFile is required")
             if (values["DataDirectory"]!="" && values["DataDirectory"]!="data") fail("Docker requires DataDirectory=data")
             if (values["FlowPath"]!="" && values["FlowPath"]!="flow") fail("Docker requires FlowPath=flow")
             if (values["RunSeconds"]!="" && values["RunSeconds"]!="0") fail("Docker requires RunSeconds=0")
@@ -169,7 +169,7 @@ case "$command_name" in
         compose build collector query dashboard
         preflight
         compose up --detach --no-build --pull never collector query dashboard
-        printf '已部署 Collector、FastAPI 和 React 看板（不代表已收到真实行情）。\n看板：http://localhost:%s\nAPI：http://localhost:%s/docs\n日志：%s logs\n状态：%s status\n停止：%s stop\n' "${DASHBOARD_PORT:-8080}" "${QUERY_PORT:-8000}" "$0" "$0" "$0"
+        printf '已部署 Collector、FastAPI 和 React 看板（不代表已收到真实行情）。\n看板：http://localhost:%s\nAPI：http://localhost:%s/docs\n日志：%s logs\n状态：%s status\n停止：%s stop\n' "${DASHBOARD_PORT:-8101}" "${QUERY_PORT:-8000}" "$0" "$0" "$0"
         status
         ;;
     logs) compose logs --follow --tail 100 collector query dashboard ;;

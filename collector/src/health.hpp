@@ -19,6 +19,7 @@ inline const char* ProcessStateName(ProcessState state) {
 inline bool PublishHealth(const std::filesystem::path& directory, const SessionStatus& session,
                           const StateStats& market, const DailyStore& store, ProcessState state) {
     const auto temporary = directory / ".collector-status.tmp";
+    const auto coverage_temporary = directory / ".collector-coverage.tmp";
     try {
         std::size_t subscribed = 0, failed = 0;
         for (const auto& item : session.instruments) {
@@ -47,9 +48,27 @@ inline bool PublishHealth(const std::filesystem::path& directory, const SessionS
         output << json.str(); output.close();
         if (!output) throw std::runtime_error("cannot write diagnostic heartbeat");
         std::filesystem::rename(temporary, directory / ".collector-status.json");
+        // Kept separate so the small heartbeat remains bounded for existing readers.
+        std::ofstream coverage(coverage_temporary, std::ios::trunc);
+        coverage << "{\"schema_version\":1,\"run_id\":\"" << store.RunId()
+                 << "\",\"updated_us\":" << NowUs() << ",\"instruments\":[";
+        bool first = true;
+        for (const auto& item : session.instruments) {
+            if (!first) coverage << ',';
+            first = false;
+            // Instrument IDs have already passed the restricted ASCII config validation.
+            coverage << "{\"id\":\"" << item.first << "\",\"subscription\":\""
+                     << SubscriptionName(item.second.subscription) << "\",\"error_id\":" << item.second.error_id
+                     << ",\"received\":" << item.second.received
+                     << ",\"last_received_us\":" << item.second.last_received_us << '}';
+        }
+        coverage << "]}\n"; coverage.close();
+        if (!coverage) throw std::runtime_error("cannot write coverage diagnostic");
+        std::filesystem::rename(coverage_temporary, directory / ".collector-coverage.json");
         return true;
     } catch (const std::exception& error) {
         std::error_code ignored; std::filesystem::remove(temporary, ignored);
+        std::filesystem::remove(coverage_temporary, ignored);
         ctp::Log("event=status_write_failed run_id=", store.RunId(), " message=\"", error.what(), "\"");
         return false;
     }

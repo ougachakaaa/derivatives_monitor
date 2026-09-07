@@ -13,7 +13,15 @@ CTP → C++ Data Collector → YYYYMMDD.sqlite
 - [读路径约束](docs/Read_Path_Constraints_CN.md) · [读路径验收](docs/Read_Path_Acceptance_CN.md)
 - [设计约束](docs/Data_Collector_Constraints_CN.md)
 - [分步 Task Specs 与验证记录](docs/tasks/data-collector/README.md)
-- [第一阶段验收结果](docs/Data_Collector_Acceptance_CN.md)：离线闭环已验证；本次真实前置连接被拒，实盘持续行情仍待交易时段复验。
+- [第一阶段验收结果](docs/Data_Collector_Acceptance_CN.md) · [CFFEX 全量实连验收](docs/CFFEX_Coverage_Acceptance_CN.md)：2026-09-07 已核对官方清单，714 个合约真实订阅及接收成功。
+
+当前 WSL 原生部署（需已有 Collector Release 构建、query Python 3.12 环境和前端 Node 22.12+ 依赖）：
+
+```bash
+./collector/scripts/native.sh up
+```
+
+通过 **Windows http://localhost:8101** 访问看板。原生管理器会发现 CFFEX 全部挂牌合约，安装用户级 systemd 服务及每日更新定时器；`status` 查看状态，`logs` 跟随日志，`update` 手动刷新清单，`stop` 正常停止服务及定时器。详见 [原生 CFFEX 部署](collector/README.md#原生-wsl--cffex-全量采集)。
 
 另一台 Linux x86-64 / WSL 机器已有 Docker Engine + Compose v2 时，可直接部署：
 
@@ -21,7 +29,7 @@ CTP → C++ Data Collector → YYYYMMDD.sqlite
 ./collector/scripts/deploy.sh up
 ```
 
-首次交互填写前置、必要账号和精确合约，随后自动构建、测试并后台启动 Collector、FastAPI 与 React/Nginx 三个独立容器；后续复用本地配置。数据保存在宿主 `collector/data/`，重建容器不会清除。打开 **http://localhost:8080** 查看状态和数据量，**http://localhost:8000/docs** 查看 API。SQLite 同一宿主目录以 RW 挂载给 C++、RO 挂载给 Python；前端没有数据挂载。查看日志用 `./collector/scripts/deploy.sh logs`，正常停止用 `./collector/scripts/deploy.sh stop`。详见 [Docker / WSL 手册](collector/README.md#docker--wsl-一条命令部署) 和 [Docker 验证边界](docs/Data_Collector_Docker_Acceptance_CN.md)。
+首次交互填写前置、必要账号和精确合约，随后自动构建、测试并后台启动 Collector、FastAPI 与 React/Nginx 三个独立容器；后续复用本地配置。数据保存在宿主 `collector/data/`，重建容器不会清除。打开 **http://localhost:8101** 查看状态和数据量，**http://localhost:8000/docs** 查看 API。SQLite 同一宿主目录以 RW 挂载给 C++、RO 挂载给 Python；前端没有数据挂载。查看日志用 `./collector/scripts/deploy.sh logs`，正常停止用 `./collector/scripts/deploy.sh stop`。详见 [Docker / WSL 手册](collector/README.md#docker--wsl-一条命令部署) 和 [Docker 验证边界](docs/Data_Collector_Docker_Acceptance_CN.md)。
 
 在仓库根目录构建（需要 CMake、G++、SQLite 开发包）：
 

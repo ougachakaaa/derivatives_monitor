@@ -27,7 +27,9 @@ void CtpSession::OnHeartBeatWarning(int elapsed) {
 void CtpSession::OnRspUserLogin(CThostFtdcRspUserLoginField* response, CThostFtdcRspInfoField* info, int id, bool last) {
     Callback([&] {
         std::lock_guard<std::mutex> lock(mutex_);
-        if (!last || !status_.connected || !login_pending_ || id != active_login_id_) return;
+        // Some real MD fronts return zero instead of echoing the request ID.
+        // Only accept that uncorrelated response while a login is pending.
+        if (!last || !status_.connected || !login_pending_ || (id != 0 && id != active_login_id_)) return;
         const int error = info ? info->ErrorID : 0;
         login_pending_ = false;
         status_.logged_in = error == 0 && response != nullptr;
