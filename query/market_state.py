@@ -275,3 +275,97 @@ class MarketStateReader:
                     stale_after_us=stale_after_us, completeness=status,
                     expected_count=len(rows), observed_count=observed, usable_count=usable,
                     **counts, rows=rows)
+
+    def latest(self, scope, at, *, stale_after_us=60000000, raw_revision=None):
+        """Current period when OPEN; explicitly historical last period otherwise."""
+        at = aware(at)
+        self._policy(stale_after_us, raw_revision)
+        try:
+            calendar = self._calendar(at)
+        except CalendarError as error:
+            return dict(schema_version=1, requested_at=at.isoformat(), market_state='UNKNOWN',
+                        calendar_trading_day=None, calendar_version=None, historical=None,
+                        reason=str(error), frame=None)
+        state = calendar.query(scope.exchange, scope.product, at)
+        result = dict(schema_version=1, requested_at=at.isoformat(), market_state=state['market_state'],
+                      calendar_trading_day=state['trading_day'], calendar_version=state['calendar_version'],
+                      historical=None, reason=state['reason'], frame=None)
+        if state['market_state'] == 'UNKNOWN':
+            return result
+        periods = calendar.periods(scope.exchange, scope.product)
+        historical = state['market_state'] != 'OPEN'
+        if historical:
+            period = next((p for p in reversed(periods) if p['end'] <= at), None)
+            if period is None:
+                result.update(historical=True, reason='no previous market period in calendar coverage')
+                return result
+            cutoff, inclusive = period['end'], False
+        else:
+            period = next(p for p in periods if p['start'] <= at < p['end'])
+            cutoff, inclusive = at, True
+        result.update(historical=historical,
+                      frame=self._frame(scope, calendar, period, cutoff, inclusive, at,
+                                        stale_after_us, raw_revision))
+        return result
+
+
+def main(argv=None):
+    """Small reproducible JSON entry point; no server or scheduler required."""
+    import argparse
+    import json
+    from pathlib import Path
+    from market_calendar import parse_at
+
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('mode', choices=('minute', 'as-of', 'latest'))
+    parser.add_argument('--data-dir', required=True, type=Path)
+    parser.add_argument('--calendar-dir', type=Path, default=DEFAULT_DIRECTORY)
+    parser.add_argument('--day', required=True, help='actual frame trading day, not next calendar day')
+    parser.add_argument('--at', required=True, help='aware ISO time; minute label in minute mode')
+    parser.add_argument('--evaluated-at', help='required for minute mode')
+    selection = parser.add_mutually_exclusive_group(required=True)
+    selection.add_argument('--instrument')
+    selection.add_argument('--universe', type=Path, help='explicit day/version/instruments/complete JSON')
+    parser.add_argument('--exchange')
+    parser.add_argument('--product')
+    parser.add_argument('--month')
+    parser.add_argument('--option-chain', action='store_true')
+    parser.add_argument('--stale-after-us', type=int, default=60000000)
+    parser.add_argument('--raw-revision', type=int)
+    args = parser.parse_args(argv)
+    try:
+        if (args.mode == 'minute') != (args.evaluated_at is not None):
+            raise ValueError('--evaluated-at is required only for minute mode')
+        if args.instrument:
+            if args.exchange or args.product or args.month or args.option_chain:
+                raise ValueError('instrument cannot be combined with product/month selectors')
+            scope = Scope.instrument(args.instrument, args.day)
+        else:
+            with args.universe.open('rb') as stream:
+                raw = stream.read(8 * 1024 * 1024 + 1)
+            if len(raw) > 8 * 1024 * 1024:
+                raise ValueError('universe exceeds 8 MiB')
+            universe = Universe(**json.loads(raw))
+            if universe.trading_day != args.day:
+                raise ValueError('universe day differs from --day')
+            scope = Scope.select(universe, args.exchange, args.product, month=args.month,
+                                 option_chain=args.option_chain)
+        reader = MarketStateReader(Store(args.data_dir), args.calendar_dir)
+        policy = dict(stale_after_us=args.stale_after_us, raw_revision=args.raw_revision)
+        at = parse_at(args.at)
+        if args.mode == 'minute':
+            result = reader.minute(scope, at, evaluated_at=parse_at(args.evaluated_at), **policy)
+        elif args.mode == 'as-of':
+            result = reader.as_of(scope, at, **policy)
+        else:
+            result = reader.latest(scope, at, **policy)
+        print(json.dumps(result, ensure_ascii=False, sort_keys=True))
+        return 0
+    except (ValueError, TypeError, KeyError, OSError, QueryError) as error:
+        message = error.message if isinstance(error, QueryError) else str(error)
+        print(json.dumps(dict(error=message, status=error.status if isinstance(error, QueryError) else 400)))
+        return 2
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())

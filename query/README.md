@@ -43,3 +43,46 @@ python3 query/market_calendar.py --exchange SHFE --product AU --at '2026-09-07T2
 在仓库根目录执行，得到 `OPEN / NIGHT / CONTINUOUS / 20260908`。日期覆盖与更新流程见 [参考年历说明](calendars/README.md)。
 
 `/api/coverage` 保留原产品/月分组与计数，增加 exchange、各交易所 requested_days；SHFE 针对当前/下一逻辑交易日核对清单。旧 CFFEX manifest 仍可读取；缺少AU/AG不能声明多市场全覆盖。日历失效会让SHFE清单状态未知/过期，但不会抹去有效的CTP订阅证据或把无推送当失败。
+
+## Market State Read Model（Python 契约 v1）
+
+`market_state.py` 提供 `Universe`、`Scope`、`MarketStateReader`，不需要启动 HTTP 或调度任务。它是后续 Analytics 的 Raw 读取边界；本阶段不包含 IV/Skew/Basis。完整语义见 [设计基线](../docs/Market_State_Read_Model_Design_CN.md)。
+
+```python
+from datetime import datetime
+from storage import Store
+from market_state import MarketStateReader, Scope, Universe
+
+reader = MarketStateReader(Store('../collector/data'))
+scope = Scope.instrument('MO2609-C-5000', '20260908')
+frame = reader.minute(scope, datetime.fromisoformat('2026-09-08T09:30:00+08:00'),
+                      evaluated_at=datetime.fromisoformat('2026-09-08T09:31:00+08:00'))
+point = reader.as_of(scope, datetime.fromisoformat('2026-09-08T09:30:45+08:00'))
+latest = reader.latest(scope, datetime.fromisoformat('2026-09-08T12:00:00+08:00'))
+```
+
+分钟 `[09:30,09:31)` 选取严格早于09:31的最新真实 `received_us`，point 包含等于 at 的 observation。同一时段内更早 observation 保留原始时间和 age，不插入/补齐行情。竞价、连续交易和各休息段隔离。未 sealed 的分钟只查询到 `evaluated_at`；sealed 只表示分钟已经结束，不保证 Raw 不再追加迟到 observation。用返回的 `raw_revision` 参数可重放同一 append-only 日库切片。
+
+每个 scope 成员对应一条 `rows`：`observation` 是原始事实（无行情则 null），`quality` 含 `quote_age_us`、missing/stale/invalid/usable 和原因。默认一级双边价格、挂量有效且 age ≤60秒才 usable；可显式传 `stale_after_us`。最新 invalid 不回退到旧报价。`completeness` 是 COMPLETE/PARTIAL/EMPTY；清单不完整时不会 COMPLETE。
+
+完整产品/月/期权链需显式提供清单，不能从 Raw 出现过的代码推断全量：
+
+```python
+# saved_manifest 是调用者明确选择、保存的历史 manifest；不会自动读取 current。
+universe = Universe.from_manifest(saved_manifest, 'CFFEX', 'MO', '20260908', 'saved-generation-id')
+chain = Scope.select(universe, 'CFFEX', 'MO', month='2609', option_chain=True)
+chain_frame = reader.minute(chain, minute, evaluated_at=evaluated_at)
+# 不传 month 得到 product scope；不传 option_chain 得到 month scope。
+```
+
+也可直接构造 `Universe(trading_day, version, instruments, complete)`。complete 是调用方对参考清单的声明，版本应标识固定清单；未经验证的清单必须传 False。Latest OPEN 只查当前段；BREAK/CLOSED 返回明确 `historical=true` 的最近已结束段，其 `effective_as_of` 停留在段末，`age_reference` 为请求时刻。CLOSED 的 `calendar_trading_day` 可能是下一交易日，scope day 必须使用历史 frame 的实际交易日。UNKNOWN 不构造 frame；缺库/不可读仍报错，不伪装 EMPTY、不搜索更旧的有行情日。
+
+命令行从仓库根目录运行：
+
+```bash
+query/.venv/bin/python query/market_state.py minute \
+  --data-dir collector/data --day 20260908 --instrument MO2609-C-5000 \
+  --at '2026-09-08T09:30:00+08:00' --evaluated-at '2026-09-08T09:31:00+08:00'
+```
+
+产品/月/链用 `--universe saved-universe.json --exchange CFFEX --product MO --month 2609 --option-chain` 替换 `--instrument`。JSON 格式为 `{"trading_day":"20260908","version":"saved-v1","instruments":["MO2609-C-5000","MO2609-P-5000"],"complete":false}`；示例的两个合约不能声称真实完整链。`as-of` / `latest` 使用 `--at` 且不传 `--evaluated-at`。输出 JSON，查询错误退出码2。

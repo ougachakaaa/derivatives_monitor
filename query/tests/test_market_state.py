@@ -245,3 +245,94 @@ class FrameTest(unittest.TestCase):
         self.assertEqual(self.frame('09:00:00')['completeness'], 'EMPTY')
         self.insert('10:14:59', code='au2610', ExchangeID='SHFE')
         self.assertEqual(self.frame('10:30:00')['completeness'], 'EMPTY')
+
+    def test_latest_open_break_reopen_and_close(self):
+        self.insert('11:29:45')
+        opened = self.reader.latest(self.scope, at('11:29:50'))
+        self.assertEqual(opened['market_state'], 'OPEN')
+        self.assertFalse(opened['historical'])
+        self.assertEqual(opened['frame']['rows'][0]['quality']['quote_age_us'], 5000000)
+        lunch = self.reader.latest(self.scope, at('12:00:00'))
+        self.assertEqual(lunch['market_state'], 'BREAK')
+        self.assertTrue(lunch['historical'])
+        self.assertEqual(lunch['frame']['effective_as_of'], at('11:30:00').isoformat())
+        self.assertEqual(lunch['frame']['age_reference'], at('12:00:00').isoformat())
+        self.assertEqual(lunch['frame']['rows'][0]['quality']['quote_age_us'], 1815000000)
+        self.assertEqual(lunch['frame']['stale_count'], 1)
+        reopened = self.reader.latest(self.scope, at('13:00:00'))
+        self.assertEqual(reopened['frame']['completeness'], 'EMPTY')
+        self.insert('14:56:59')
+        auction = self.reader.latest(self.scope, at('14:57:00'))
+        self.assertEqual(auction['frame']['session']['phase'], 'AUCTION')
+        self.assertEqual(auction['frame']['completeness'], 'EMPTY')
+        self.insert('14:59:45')
+        self.insert('15:00:00')  # out of session, never used
+        closed = self.reader.latest(self.scope, at('16:00:00'))
+        self.assertEqual(closed['market_state'], 'CLOSED')
+        self.assertTrue(closed['historical'])
+        self.assertEqual(closed['calendar_trading_day'], '20260909')
+        self.assertEqual(closed['frame']['trading_day'], '20260908')
+        self.assertEqual(closed['frame']['session']['phase'], 'AUCTION')
+        self.assertEqual(closed['frame']['rows'][0]['observation']['received_us'], micros(at('14:59:45')))
+        self.assertEqual(closed['frame']['rows'][0]['quality']['quote_age_us'], 3615000000)
+
+    def test_latest_unknown_and_scope_day_mismatch(self):
+        unknown_reader = MarketStateReader(Store(self.directory / 'absent'), self.directory / 'no-calendar')
+        unknown = unknown_reader.latest(self.scope, at('10:00:00'))
+        self.assertEqual(unknown['market_state'], 'UNKNOWN')
+        self.assertIsNone(unknown['frame'])
+        outside = self.reader.latest(self.scope, datetime.fromisoformat('2027-01-04T10:00:00+08:00'))
+        self.assertEqual(outside['market_state'], 'UNKNOWN')
+        with self.assertRaises(ValueError):
+            self.reader.latest(Scope.instrument('MO2609-C-5000', '20260909'), at('16:00:00'))
+
+    def test_latest_shfe_cross_midnight_and_morning_no_inheritance(self):
+        self.scope = Scope.instrument('au2610', '20260908')
+        self.insert(datetime.fromisoformat('2026-09-07T23:59:50+08:00'), code='au2610', ExchangeID='SHFE')
+        night = self.reader.latest(self.scope, at('00:00:00'))
+        self.assertEqual(night['market_state'], 'OPEN')
+        self.assertEqual(night['frame']['trading_day'], '20260908')
+        self.assertEqual(night['frame']['rows'][0]['quality']['quote_age_us'], 10000000)
+        self.assertTrue(self.reader.latest(self.scope, at('03:00:00'))['historical'])
+        self.assertEqual(self.reader.latest(self.scope, at('09:00:00'))['frame']['completeness'], 'EMPTY')
+
+    def test_latest_weekend_uses_actual_frame_day(self):
+        # Fixture only: move the synthetic daily file and its metadata to Friday.
+        received = datetime.fromisoformat('2026-09-04T14:59:45+08:00')
+        self.insert(received, TradingDay='20260904', ActionDay='20260904')
+        self.db.execute("UPDATE dataset SET trading_day='20260904'")
+        self.db.commit()
+        self.db.close()
+        fcntl.flock(self.lock, fcntl.LOCK_UN)
+        self.path.rename(self.directory / '20260904.sqlite')
+        weekend = self.reader.latest(Scope.instrument('MO2609-C-5000', '20260904'),
+                                     datetime.fromisoformat('2026-09-05T12:00:00+08:00'))
+        self.assertEqual(weekend['market_state'], 'CLOSED')
+        self.assertEqual(weekend['calendar_trading_day'], '20260907')
+        self.assertEqual(weekend['frame']['trading_day'], '20260904')
+        self.assertEqual(weekend['frame']['rows'][0]['observation']['received_us'], micros(received))
+
+    def test_cli_real_chain_json_and_errors(self):
+        import json
+        import subprocess
+        import sys
+        codes = [f'MO2609-{side}-{strike}' for side in ('C', 'P') for strike in range(4000, 8000, 100)]
+        for code in codes:
+            self.insert(code=code)
+        listing = self.directory / 'universe.json'
+        listing.write_text(json.dumps(dict(trading_day='20260908', version='synthetic-80-v1',
+                                         instruments=codes, complete=True)))
+        base = [sys.executable, str(Path(__file__).resolve().parents[1] / 'market_state.py'),
+                'minute', '--data-dir', str(self.directory), '--day', '20260908',
+                '--at', at('09:30:00').isoformat(), '--evaluated-at', at('09:31:00').isoformat(),
+                '--universe', str(listing), '--exchange', 'CFFEX', '--product', 'MO',
+                '--month', '2609', '--option-chain']
+        result = subprocess.run(base, capture_output=True, text=True, check=True)
+        frame = json.loads(result.stdout)
+        self.assertEqual(frame['completeness'], 'COMPLETE')
+        self.assertEqual(len(frame['rows']), 80)
+        self.assertEqual(frame['rows'][0]['quality']['quote_age_us'], 15000000)
+        self.assertEqual(subprocess.run(base, capture_output=True, text=True, check=True).stdout, result.stdout)
+        result = subprocess.run(base + ['--raw-revision', '9999'], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 2)
+        self.assertEqual(json.loads(result.stdout)['status'], 400)
