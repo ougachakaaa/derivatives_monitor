@@ -9,7 +9,7 @@ flowchart LR
     RAW -->|只读 Store| MS[Python Market State]
     CAL[版本化日历与显式历史 Universe] --> MS
     MS -.-> A[Analytics：IV / Skew 待实现]
-    REF[模型所需版本化参数 待定义] -.-> A
+    REF[已冻结契约的版本化参考包 导入待实现] -.-> A
     A -.-> API[FastAPI JSON]
     RAW -->|只读诊断| API
     CAL --> API
@@ -44,7 +44,7 @@ flowchart LR
 6. **健康分层**：进程心跳、连接登录、订阅、实际接收、数据质量、市场时段分别展示；休市或冷门合约不推送不能直接推断进程故障。
 7. **本地与持久化**：Linux x86-64/WSL；服务生命周期与数据分离；宿主回环默认 8101/8000。配置、日志、flow 与数据不进入镜像；不增加交易或外网暴露。
 
-详细不变量分别由 [Collector](contracts/collector.md)、[Read Path](contracts/read-path.md)、[Market State](contracts/market-state.md)、[Calendar/Universe](contracts/market-session.md)、[Deployment](contracts/deployment.md)定义。
+详细不变量分别由 [Collector](contracts/collector.md)、[Read Path](contracts/read-path.md)、[Market State](contracts/market-state.md)、[Calendar/Universe](contracts/market-session.md)、[Deployment](contracts/deployment.md)定义。下游的七项数学/参考/同步/验证决定已在[Analytics / Skew v1](contracts/analytics-skew.md)冻结。
 
 ## 业务输出与回看设计
 
@@ -54,4 +54,4 @@ Analytics 输出应携带 scope、实际 trading_day、effective_as_of、evaluat
 
 汇报首页的业务对象、Skew 水平/变化、数据时间/质量位于首屏；服务、覆盖、行数等诊断按需展开。切换月份或分钟后清楚显示对象；错误清除对应有效状态，历史结果不得披上当前时间。
 
-Skew 数学口径和参数源仍是 [MVP 待决项](mvp.md)，本文不擅自固定模型。历史日缺 sidecar 的只读限制暂作为显式操作限制保留；若实际回看流程必须停采而无法满足可用性门槛，应在同一只读边界内另行设计解决，不能把 503 算验收成功。
+Skew 已冻结为 [25Δ Put−Call / Black-76 / 同月平价隐含远期](contracts/analytics-skew.md)，折现使用前一CFFEX日3M Shibor的显式单利代理；计算仍待实现。历史日缺 sidecar 的只读限制暂作为显式操作限制保留；若实际回看流程必须停采而无法满足可用性门槛，应在同一只读边界内另行设计解决，不能把 503 算验收成功。

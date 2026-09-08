@@ -1,12 +1,12 @@
 # 设计与证据入口
 
-本目录是项目的长期设计记录（system of record）。只维护一套 MVP 目标与架构；代码、测试和证据用于验证其实现程度。当前 MVP **尚未收尾**。
+本目录是项目的长期设计记录（system of record）。只维护一套 MVP 目标与架构；代码、测试和证据用于验证其实现程度。当前 MVP **尚未收尾**；[Analytics / Skew 七项契约](contracts/analytics-skew.md)已冻结，生产计算尚未实现。
 
 | 阅读顺序 | 文档 | 回答的问题 |
 |---|---|---|
 | 1 | [MVP 范围](mvp.md) | 给谁用、解决什么问题、做到哪里停止 |
 | 2 | [系统架构](architecture.md) | 模块职责、依赖方向、数据所有权与未实现部分 |
-| 3 | [Collector](contracts/collector.md)、[只读 API](contracts/read-path.md)、[Market State](contracts/market-state.md)、[日历和清单](contracts/market-session.md)、[部署](contracts/deployment.md) | 不可破坏的契约和故障语义 |
+| 3 | [Collector](contracts/collector.md)、[只读 API](contracts/read-path.md)、[Market State](contracts/market-state.md)、[日历和清单](contracts/market-session.md)、[部署](contracts/deployment.md)、[Analytics / Skew](contracts/analytics-skew.md) | 不可破坏的契约和故障语义 |
 | 4 | [验收矩阵](acceptance.md)、[Harness](../harness/README.md) | 每个收尾条件如何证明，哪些还没证明 |
 | 5 | [运行与恢复](operations.md) | 如何部署、检查、备份和恢复 |
 | 6 | [外部参考](references/README.md) | 券商咨询与回复原件、SDK 来源、官方规则 |

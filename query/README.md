@@ -48,7 +48,7 @@ python3 query/market_calendar.py --exchange SHFE --product AU --at '2026-09-07T2
 
 ## Market State Read Model（Python 契约 v1）
 
-`market_state.py` 提供 `Universe`、`Scope`、`MarketStateReader`，不需要启动 HTTP 或调度任务。它是 Analytics 的 Raw 读取边界；当前尚未实现 IV/Skew/Basis。完整语义见 [设计基线](../docs/contracts/market-state.md)。
+`market_state.py` 提供 `Universe`、`Scope`、`MarketStateReader`，不需要启动 HTTP 或调度任务。它是 Analytics 的 Raw 读取边界；当前尚未实现 IV/Skew/Basis；MO Skew 的[七项下游契约](../docs/contracts/analytics-skew.md)已冻结。完整语义见 [设计基线](../docs/contracts/market-state.md)。
 
 ```python
 from datetime import datetime

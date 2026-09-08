@@ -28,6 +28,8 @@
 
 ## 市场参考与技术依据
 
+[Analytics / Skew 来源记录](analytics-skew-sources.md)区分官方MO/IM/Shibor事实、独立QuantLib oracle与项目自行冻结的近似和阈值。
+
 - [日历/时段契约及官方来源](../contracts/market-session.md)、[版本化年历与更新](../../query/calendars/README.md)；年历文件自身保存来源、版本和覆盖范围，整理未改变交易规则。
 - [CFFEX 官方清单历史验证](../archive/acceptance/CFFEX_Coverage_Acceptance_CN.md)、[SHFE 官方清单和夜盘历史验证](../archive/acceptance/Market_Session_SHFE_Acceptance_CN.md)保留日期 URL/哈希与证据路径。运行时原响应保存在 `collector/data/universe/raw/`，清单 generation 与来源一同发布；不把公开参考价格作为 Raw 行情。
 - [SQLite WAL](https://www.sqlite.org/wal.html)、[只读 URI](https://www.sqlite.org/uri.html)、[同步级别](https://www.sqlite.org/pragma.html#pragma_synchronous)；部署和前端技术链接保留在[只读契约](../contracts/read-path.md)及模块手册。

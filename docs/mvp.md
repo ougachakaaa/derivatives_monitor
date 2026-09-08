@@ -9,19 +9,23 @@
 - C++ → Raw SQLite → Python Market State → Analytics → JSON → React 汇报页。Analytics 与汇报页是待实现能力，现有页面仍是采集诊断看板。
 - 独立采集、只读消费、真实 TradingDay、时间/质量语义和本地部署边界见[架构与契约](architecture.md)。这次文档整理不改变这些边界。
 
-## Skew 设计完成前必须冻结的口径
+## 已冻结的 Analytics / Skew 口径
 
-业务方向已确定，但公式未在已有项目中确定，不能由整理文档暗中定案。下列是同一 MVP 设计的待决项，不是额外阶段或过程任务：
+2026-09-08 冻结 **`mo-skew-25d-v1`**。七项决定的唯一完整定义见[Analytics / Skew contract](contracts/analytics-skew.md)，固定常量见[机器策略](contracts/analytics-skew-v1.json)。
 
-| 决定 | 必须记录的内容 |
+| 决定 | 冻结结果 |
 |---|---|
-| Skew 定义 | delta 点位或行权价选择、看涨/看跌差值方向、单位、插值和缺翼规则 |
-| 定价和标的 | 定价模型；现货、对应期货或其他参考值的来源和含义；不得把期货当现货而不披露 |
-| 参考参数 | 行权价、精确到期时刻、期限计数、利率/分红等模型所需参数；来源、有效期和版本 |
-| 报价与同步 | bid/ask/mid 选择、可计算性筛选、最大 age、跨合约时间差、PARTIAL 可接受条件 |
-| 数值算法 | IV 求解边界、收敛条件、失败输出；独立验证方法与提前固定的误差阈值 |
+| Skew definition | 25Δ Put IV − 25Δ Call IV，vol points；未折现 forward delta，σ按abs(delta)线性插值，不外推 |
+| Pricing model | Black-76，European premium-style，ACT/365F真实秒数年化 |
+| Underlying semantics | 同月三个近ATM C/P对的平价隐含远期中位数；不把IM或现货猜值代入 |
+| Reference parameters | 官方已验证挂牌/到期日与产品规则；前一CFFEX日3M Shibor、flat simple ACT360折现；显式不可变日参考包，缺失拒绝 |
+| Quote synchronization | 封口连续分钟、双边mid，age≤30秒、C/P差≤5秒、所有实际输入跨度≤15秒 |
+| IV solver contract | 有界二分、价格边界/time value/vega门槛、固定精度及失败状态 |
+| Independent validation | 固定QuantLib/mpmath独立oracle、入库数值样本与硬误差阈值；之后至少10个真实时点对账 |
 
-冻结后直接补充本节及 Market State 下游契约。当前 CTP 不提供现货指数，Raw 的默认 usable 也不意味着可算 IV。输入不足时应显示无法计算，不能用默认利率、虚构到期日或旧报价悄悄补齐。
+到期日不计算新Skew；竞价/休市只显示明确历史分钟，不混入当前值。不自动换月。完整上市清单是必须输入，部分Raw缺失只有在全部所需节点有效时才允许带PARTIAL标签产出指标。来源与近似假设均在契约中明示，禁止静默补零利率或旧行情。
+
+**契约已冻结，生产 Analytics、参考导入器、汇报页及真实对账仍待完成。** 冻结契约不改变下面的六项产品收尾条件。
 
 ## 六个收尾条件
 

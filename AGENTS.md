@@ -1,6 +1,6 @@
 # 项目工作约定
 
-先读 [文档入口](docs/README.md)、[MVP](docs/mvp.md)、[架构](docs/architecture.md)，再读所改模块的契约与 README。当前实现及验收缺口以 [验收矩阵](docs/acceptance.md) 为入口；历史报告不代表当前版本已经通过。
+先读 [文档入口](docs/README.md)、[MVP](docs/mvp.md)、[架构](docs/architecture.md)，再读所改模块的契约与 README。Analytics 实现必须先读[冻结的 Skew v1](docs/contracts/analytics-skew.md)及其机器策略，不能另选模型/利率/delta或事后放宽验收容差。当前实现及验收缺口以 [验收矩阵](docs/acceptance.md) 为入口；历史报告不代表当前版本已经通过。
 
 - C++ Collector 独立接收、物化并唯一写入 Raw 日 SQLite。Python/Browser/Analytics 的故障不能进入采集链路。
 - 分区只取源 TradingDay；保留源、接收、物化时间。默认 15 秒 dirty snapshot 不等于 tick 或自然分钟线，不补造行情。

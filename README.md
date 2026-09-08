@@ -2,7 +2,7 @@
 
 本地衍生品监控项目：独立 C++ 采集并保存市场事实，Python 只读解释，React 展示。MVP 目标是一个 MO 到期月的可信 Skew 观察与分钟回看。
 
-**当前已实现采集、只读诊断、市场日历和 Market State；Skew 与汇报首页待实现，MVP 尚未收尾。**
+**当前已实现采集、只读诊断、市场日历和 Market State；[Analytics / Skew 七项契约](docs/contracts/analytics-skew.md)已冻结，计算与汇报首页待实现，MVP 尚未收尾。**
 
 ```text
 CTP → C++ Collector → 按源 TradingDay 的 SQLite

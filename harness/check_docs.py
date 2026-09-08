@@ -36,7 +36,9 @@ def check(root=ROOT):
                 'docs/references/README.md', 'docs/archive/README.md',
                 'harness/README.md', 'harness/live-acceptance-template.md']
     required += ['docs/contracts/' + name + '.md' for name in
-                 ('collector', 'read-path', 'market-state', 'market-session', 'deployment')]
+                 ('collector', 'read-path', 'market-state', 'market-session', 'deployment', 'analytics-skew')]
+    required += ['docs/contracts/analytics-skew-v1.json', 'docs/references/analytics-skew-sources.md',
+                 'harness/fixtures/analytics-skew-v1.json']
     for relative in required:
         if not (root / relative).is_file():
             errors.append('Missing document: ' + relative)
