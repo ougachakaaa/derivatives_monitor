@@ -14,6 +14,23 @@ from storage import Store, QueryError, validate_day
 
 EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
 MAX_MEMBERS = 10000
+# Explicit projection fixes the v1 output schema and fails clearly on incompatible files.
+OBSERVATION_COLUMNS = (
+    'id run_id sequence received_us snapshot_us TradingDay ExchangeID InstrumentID '
+    'ExchangeInstID ActionDay UpdateTime UpdateMillisec LastPrice PreSettlementPrice '
+    'PreClosePrice PreOpenInterest OpenPrice HighestPrice LowestPrice Volume Turnover '
+    'OpenInterest ClosePrice SettlementPrice UpperLimitPrice LowerLimitPrice PreDelta '
+    'CurrDelta BidPrice1 BidVolume1 AskPrice1 AskVolume1 BidPrice2 BidVolume2 AskPrice2 '
+    'AskVolume2 BidPrice3 BidVolume3 AskPrice3 AskVolume3 BidPrice4 BidVolume4 AskPrice4 '
+    'AskVolume4 BidPrice5 BidVolume5 AskPrice5 AskVolume5 AveragePrice BandingUpperPrice '
+    'BandingLowerPrice'
+).split()
+
+
+def product_pair(exchange, product):
+    if not isinstance(exchange, str) or not isinstance(product, str):
+        raise ValueError('scope requires an explicit exchange and product')
+    return selected_products(exchange, product)[0]
 
 
 def aware(value):
@@ -65,7 +82,7 @@ class Universe:
         Completeness is limited to this product and its day-matched verified entry.
         A partial/stale entry remains usable as an explicitly incomplete listing.
         """
-        exchange, product = selected_products(exchange, product)[0]
+        exchange, product = product_pair(exchange, product)
         if manifest.get('schema_version') != 1:
             raise ValueError('unsupported manifest version')
         entry = manifest.get('products', {}).get(product)
@@ -99,7 +116,7 @@ class Scope:
     def __post_init__(self):
         if self.kind not in ('instrument', 'product', 'month', 'option_chain'):
             raise ValueError('unsupported scope kind')
-        if selected_products(self.exchange, self.product) != [(self.exchange, self.product)]:
+        if product_pair(self.exchange, self.product) != (self.exchange, self.product):
             raise ValueError('scope exchange/product must be canonical')
         universe = Universe(self.trading_day, self.universe_version, self.instruments, self.universe_complete)
         object.__setattr__(self, 'instruments', universe.instruments)
@@ -124,7 +141,7 @@ class Scope:
 
     @classmethod
     def select(cls, universe, exchange, product, *, month=None, option_chain=False):
-        exchange, product = selected_products(exchange, product)[0]
+        exchange, product = product_pair(exchange, product)
         kind = 'option_chain' if option_chain else 'month' if month is not None else 'product'
         codes = tuple(code for code in universe.instruments
                       if identity(code)[:2] == (exchange, product)
@@ -137,3 +154,124 @@ class Scope:
                     trading_day=self.trading_day, month=self.month,
                     instruments=list(self.instruments), universe_version=self.universe_version,
                     universe_complete=self.universe_complete)
+
+
+def period_dict(period):
+    return {key: value.isoformat() if isinstance(value, datetime) else value
+            for key, value in period.items()}
+
+
+def quality(observation, age_reference_us, stale_after_us, scope):
+    if observation is None:
+        return dict(missing=True, stale=False, invalid=False, usable=False,
+                    flags=['MISSING'], reasons=[], quote_age_us=None)
+    age = age_reference_us - observation['received_us']
+    reasons = []
+    for field in ('BidPrice1', 'AskPrice1', 'BidVolume1', 'AskVolume1'):
+        value = observation[field]
+        if (not isinstance(value, (int, float)) or not math.isfinite(value)
+                or value <= 0 or abs(value) == float.fromhex('0x1.fffffffffffffp+1023')):
+            reasons.append('invalid_' + field)
+    if not reasons and observation['BidPrice1'] > observation['AskPrice1']:
+        reasons.append('crossed_book')
+    if observation['TradingDay'] != scope.trading_day:
+        reasons.append('trading_day_mismatch')
+    # CTP ExchangeID can legitimately be empty. A populated contradiction cannot.
+    if observation['ExchangeID'] not in ('', scope.exchange):
+        reasons.append('exchange_mismatch')
+    if observation['snapshot_us'] < observation['received_us']:
+        reasons.append('snapshot_before_observation')
+    stale = age > stale_after_us
+    flags = (['STALE'] if stale else []) + (['INVALID'] if reasons else [])
+    return dict(missing=False, stale=stale, invalid=bool(reasons), usable=not flags,
+                flags=flags, reasons=reasons, quote_age_us=age)
+
+
+class MarketStateReader:
+    """One short, read-only SQLite transaction per frame; no implicit current clock."""
+
+    def __init__(self, store, calendar_directory=DEFAULT_DIRECTORY):
+        self.store = store
+        self.calendar_directory = calendar_directory
+
+    def _calendar(self, at):
+        from pathlib import Path
+        return Calendar(Path(self.calendar_directory) / f'{at.year}.json')
+
+    @staticmethod
+    def _policy(stale_after_us, raw_revision):
+        if type(stale_after_us) is not int or stale_after_us < 0:
+            raise ValueError('stale_after_us must be a nonnegative integer')
+        if raw_revision is not None and (type(raw_revision) is not int or raw_revision < 0):
+            raise ValueError('raw_revision must be a nonnegative integer')
+
+    def as_of(self, scope, at, *, stale_after_us=60000000, raw_revision=None):
+        """Point-in-time state, inclusive of observations received exactly at at."""
+        at = aware(at)
+        calendar = self._calendar(at)
+        state = calendar.query(scope.exchange, scope.product, at)
+        if state['market_state'] != 'OPEN':
+            raise ValueError('as_of must be inside a known market period')
+        period = next(p for p in calendar.periods(scope.exchange, scope.product)
+                      if p['start'] <= at < p['end'])
+        return self._frame(scope, calendar, period, at, True, at, stale_after_us, raw_revision)
+
+    def minute(self, scope, minute, *, evaluated_at, stale_after_us=60000000, raw_revision=None):
+        """State just before the end of [minute, minute+1m); no minute resampling."""
+        minute, evaluated_at = aware(minute), aware(evaluated_at)
+        if minute.second or minute.microsecond:
+            raise ValueError('minute must be aligned to a whole minute')
+        end = minute + timedelta(minutes=1)
+        if evaluated_at < minute:
+            raise ValueError('evaluated_at precedes minute')
+        calendar = self._calendar(minute)
+        state = calendar.query(scope.exchange, scope.product, minute)
+        if state['market_state'] != 'OPEN':
+            raise ValueError('minute must be inside a known market period')
+        period = next(p for p in calendar.periods(scope.exchange, scope.product)
+                      if p['start'] <= minute and end <= p['end'])
+        # An unfinished minute only knows receipts through evaluated_at.
+        sealed = evaluated_at >= end
+        cutoff = end if sealed else evaluated_at
+        result = self._frame(scope, calendar, period, cutoff, not sealed, cutoff,
+                             stale_after_us, raw_revision)
+        result.update(kind='minute', minute=minute.isoformat(), minute_end=end.isoformat(),
+                      evaluated_at=evaluated_at.isoformat(), sealed=sealed)
+        return result
+
+    def _frame(self, scope, calendar, period, cutoff, inclusive, age_reference,
+               stale_after_us, raw_revision):
+        self._policy(stale_after_us, raw_revision)
+        if period['trading_day'] != scope.trading_day:
+            raise ValueError('scope trading_day does not match selected market period')
+        lower, upper, age_us = micros(period['start']), micros(cutoff), micros(age_reference)
+        with self.store.connect(scope.trading_day) as db:
+            maximum = db.execute('SELECT COALESCE(MAX(id),0) FROM snapshots').fetchone()[0]
+            revision = maximum if raw_revision is None else raw_revision
+            if revision > maximum:
+                raise ValueError('raw_revision exceeds the visible daily database revision')
+            rows = []
+            comparison = '<=' if inclusive else '<'
+            for code in scope.instruments:
+                record = db.execute(
+                    'SELECT ' + ','.join(OBSERVATION_COLUMNS) + ' FROM snapshots WHERE InstrumentID=? AND received_us>=? '
+                    f'AND received_us{comparison}? AND id<=? '
+                    'ORDER BY received_us DESC,id DESC LIMIT 1',
+                    (code, lower, upper, revision)).fetchone()
+                observation = dict(record) if record is not None else None
+                q = quality(observation, age_us, stale_after_us, scope)
+                rows.append(dict(instrument=code, observation=observation, quality=q))
+        observed = sum(not row['quality']['missing'] for row in rows)
+        usable = sum(row['quality']['usable'] for row in rows)
+        counts = {name + '_count': sum(row['quality'][name] for row in rows)
+                  for name in ('missing', 'stale', 'invalid')}
+        status = ('EMPTY' if not observed else 'COMPLETE' if scope.universe_complete
+                  and usable == len(rows) else 'PARTIAL')
+        return dict(schema_version=1, kind='as_of', scope=scope.as_dict(),
+                    trading_day=scope.trading_day, calendar_version=calendar.data['version'],
+                    session=period_dict(period), effective_as_of=cutoff.isoformat(),
+                    cutoff_inclusive=inclusive, age_reference=age_reference.isoformat(),
+                    observation_clock='received_us', raw_revision=revision,
+                    stale_after_us=stale_after_us, completeness=status,
+                    expected_count=len(rows), observed_count=observed, usable_count=usable,
+                    **counts, rows=rows)
