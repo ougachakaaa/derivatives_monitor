@@ -41,7 +41,7 @@ def profiles(profile):
     if profile == 'analytics':
         return checks + [step('analytics-contract', [sys.executable, 'harness/check_analytics_contract.py']),
                          step('analytics-production', [PYTHON, '-m', 'unittest',
-                              'tests.test_analytics', '-v'], ROOT / 'query')]
+                              'tests.test_analytics', 'tests.test_skew_api', '-v'], ROOT / 'query')]
     if profile in ('docker', 'packaging'):
         checks += [step('docker-engine', ['docker', 'version'], timeout=30),
                    step('docker-context', [sys.executable, 'harness/check_docker_context.py'], requires=['docker'], timeout=150)]

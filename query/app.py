@@ -7,12 +7,18 @@ from fastapi.responses import JSONResponse
 from storage import QueryError, Store
 from contract_coverage import coverage
 from market_calendar import sessions, DEFAULT_DIRECTORY
+from skew_references import ReferenceRepository
+from skew_service import SkewService
 
 
-def create_app(directory=None, calendar_directory=None):
+def create_app(directory=None, calendar_directory=None, *, reference_directory=None,
+               target_month=None, reference_repository=None):
     app = FastAPI(title="Derivatives Monitor read API", version="0.1.0")
     store = Store(directory or os.environ.get("DATA_DIR", "/data"))
     calendar_directory = calendar_directory or os.environ.get("MARKET_CALENDAR_DIR", DEFAULT_DIRECTORY)
+    skew = SkewService(store, reference_repository or ReferenceRepository(
+        reference_directory or os.environ.get("SKEW_REFERENCE_DIR", store.directory / 'references/analytics')),
+        calendar_directory, target_month or os.environ.get("SKEW_TARGET_MONTH"))
 
     @app.exception_handler(QueryError)
     async def query_error(request, error):
@@ -71,6 +77,28 @@ def create_app(directory=None, calendar_directory=None):
     def days(request: Request):
         parameters(request, ())
         return {"days": store.days()}
+
+    @app.get("/api/skew/latest")
+    def skew_latest(request: Request, month: str | None = None, at: str | None = None,
+                    raw_revision: int | None = None, bundle_id: str | None = None):
+        parameters(request, ("month", "at", "raw_revision", "bundle_id"))
+        return skew.query('latest', month=month, at=at, raw_revision=raw_revision, bundle_id=bundle_id)
+
+    @app.get("/api/skew/minute")
+    def skew_minute(request: Request, day: str, minute: str, month: str | None = None,
+                    at: str | None = None, raw_revision: int | None = None,
+                    bundle_id: str | None = None):
+        parameters(request, ("day", "minute", "month", "at", "raw_revision", "bundle_id"))
+        return skew.query('minute', day=day, minute=minute, month=month, at=at,
+                          raw_revision=raw_revision, bundle_id=bundle_id)
+
+    @app.get("/api/skew/series")
+    def skew_series(request: Request, day: str, month: str | None = None,
+                    at: str | None = None, raw_revision: int | None = None,
+                    bundle_id: str | None = None):
+        parameters(request, ("day", "month", "at", "raw_revision", "bundle_id"))
+        return skew.query('series', day=day, month=month, at=at,
+                          raw_revision=raw_revision, bundle_id=bundle_id)
 
     @app.get("/api/summary")
     def summary(request: Request, day: str):

@@ -1,6 +1,6 @@
 # MVP Analytics / Skew contract v1
 
-状态：**FROZEN / CORE IMPLEMENTED**，2026-09-08；契约 ID `mo-skew-25d-v1`。本文件冻结七项设计，机器常量见[策略文件](analytics-skew-v1.json)。这是当前 MVP 的唯一 Analytics 定义；生产数值核心位于 `query/analytics.py`，参考导入器及 HTTP/页面仍待实现。实现不意味着实盘验收完成。
+状态：**FROZEN / CORE IMPLEMENTED**，2026-09-08；契约 ID `mo-skew-25d-v1`。本文件冻结七项设计，机器常量见[策略文件](analytics-skew-v1.json)。这是当前 MVP 的唯一 Analytics 定义；生产数值核心位于 `query/analytics.py`，审核参考包导入与 HTTP 已实现，页面及真实对账仍待完成。实现不意味着实盘验收完成。
 
 | 决定 | v1 选择 |
 |---|---|
@@ -93,9 +93,9 @@ MO 的法律标的是中证1000指数；v1 的估值输入是该到期月的**�
 
 允许 `0<T≤1`；**到期日当天全部停止新 IV/Skew 计算**，返回 `EXPIRY_DAY_UNSUPPORTED`，到期时刻及之后 `EXPIRED`。原因是股指期权交割基于指数最后两小时平均值，v1 不建立平均价期权模型；到期日前的 Black IV 也只是统一报价约定。历史查询按历史 t 判断，不能用今天的自然日期拒绝过去有效分钟。
 
-参考包位于独立只读 `references/analytics/<day>/<bundle_id>.json`（未来实现路径约定，当前没有生产包）。由外部审核/导入工具维护，Python Analytics 不写 Raw；生产与测试包完全分开，`SYNTHETIC` 只准用于明确 TEST DOUBLE 的验收。修订产生新 bundle_id/哈希，旧包不覆盖；原响应受限本地归档，Git 保存非敏感参考说明与版本清单。
+参考包位于独立只读 `references/analytics/<day>/<bundle_id>/bundle.json`（独立不可变输入包；尚无已验收生产包）。由外部审核/导入工具维护，Python Analytics 不写 Raw；生产与测试包完全分开，`SYNTHETIC` 只准用于明确 TEST DOUBLE 的验收。修订产生新 bundle_id/哈希，旧包不覆盖；原响应受限本地归档，Git 保存非敏感参考说明与版本清单。
 
-现有 Market State frame 只携带 Universe/Calendar version，不携带它们的文件哈希。未来只读适配器负责从明确且不可变的 Universe/Calendar输入生成frame、核对参考包中的对应哈希，并提供读取上下文；不得伪造frame中不存在的hash字段。Calendar 使用解析到的只读版本目录初始化reader，Universe使用保存的历史manifest，不在同次请求中跟随可变current。数值核心仍只读frame/参考输入，不读取Raw或参考文件。
+现有 Market State frame 只携带 Universe/Calendar version，不携带它们的文件哈希。`query/skew_references.py` 只读适配器负责从明确且不可变的 Universe/Calendar输入生成frame、核对参考包中的对应哈希，并提供读取上下文；不得伪造frame中不存在的hash字段。Calendar 从已核对哈希的原文件字节初始化，并固定传给 reader；Universe 使用保存的历史 manifest，不在同次请求中跟随可变 current。离线包布局与导入见 [Query 手册](../../query/README.md)，HTTP 业务投影见 [Read Path](read-path.md)。数值核心仍只读frame/参考输入，不读取Raw或参考文件。
 
 重放身份至少包含 `(contract_id, algorithm_version, actual_trading_day, month, minute, raw_revision, universe_version+hash, calendar_version+hash, reference_bundle_id+hash)`。同输入结果相同；后补参考包的 retrieved_at 可以晚于历史 t，但必须标 `reconstructed=true`，不得声称当时系统已经拥有该参考或已提交行情。
 
@@ -137,9 +137,9 @@ MO 的法律标的是中证1000指数；v1 的估值输入是该到期月的**�
 
 ## 7. 输出、错误及当日变化
 
-逻辑输出契约（不预先增设 HTTP endpoint）：`schema_version=1, contract_id, algorithm_version, status, reasons[], scope, valuation_at, requested_at, historical, current_usable, reconstructed, display_age_us, raw_revision, universe/calendar/reference身份, input_completeness, expected/observed/eligible counts, F及三对明细, L/T/D/r_eff, wings, skew_25d_vp, provenance[]`。每个 provenance 含 day/id/run_id/received_us/snapshot_us/source time、mid、剔除原因或使用角色；不可计算为 JSON null，禁止 NaN/Inf、空字符串或0冒充失败。
+逻辑输出契约（HTTP 入口与投影另见 Read Path）：`schema_version=1, contract_id, algorithm_version, status, reasons[], scope, valuation_at, requested_at, historical, current_usable, reconstructed, display_age_us, raw_revision, universe/calendar/reference身份, input_completeness, expected/observed/eligible counts, F及三对明细, L/T/D/r_eff, wings, skew_25d_vp, provenance[]`。每个 provenance 含 day/id/run_id/received_us/snapshot_us/source time、mid、剔除原因或使用角色；不可计算为 JSON null，禁止 NaN/Inf、空字符串或0冒充失败。
 
-`status=OK` 或 `UNAVAILABLE`；OK 仍可带 PARTIAL_INPUT，历史标识单独保留。参数类型/必需结构缺失或非MO scope 抛 `ValueError`（未来HTTP适配为400）；结构完整但参考缺失/不匹配、质量或业务前提不满足时返回 UNAVAILABLE 与对应reason，不另造成功结果；现有 QueryError 404/503 继续原样抛出，不转成 EMPTY 或普通缺翼。
+`status=OK` 或 `UNAVAILABLE`；OK 仍可带 PARTIAL_INPUT，历史标识单独保留。参数类型/必需结构缺失或非MO scope 抛 `ValueError`（HTTP适配为400）；结构完整但参考缺失/不匹配、质量或业务前提不满足时返回 UNAVAILABLE 与对应reason，不另造成功结果；现有 QueryError 404/503 继续原样抛出，不转成 EMPTY 或普通缺翼。
 
 确定处理顺序：输入结构/参考身份 → 日历/分钟封口/expiry → 基础报价 → forward → IV → 两翼/最终同步 → Skew。收集阶段内全部原因，按 instrument/reason 排序；前置阶段失败不执行后续阶段。保留原始质量字段和剔除计数。常见状态包括 `REFERENCE_INVALID, RATE_MISSING, UNIVERSE_INCOMPLETE, MINUTE_UNSEALED, UNSUPPORTED_SESSION, WAITING_FOR_MINUTE, EXPIRY_DAY_UNSUPPORTED, EXPIRED, FORWARD_PAIRS_MISSING, FORWARD_UNSYNCHRONIZED, FORWARD_INCONSISTENT, PRICE_OUT_OF_BOUNDS, TIME_VALUE_TOO_SMALL, IV_OUT_OF_RANGE, LOW_VEGA, IV_NOT_CONVERGED, NUMERICAL_ERROR, NON_MONOTONE_DELTA, WING_UNBRACKETED, WING_GAP_TOO_WIDE, INPUTS_UNSYNCHRONIZED`；不把失败变成成功数字。
 

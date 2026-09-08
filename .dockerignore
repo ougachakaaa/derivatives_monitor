@@ -46,6 +46,8 @@ query/**
 !query/market_calendar.py
 !query/market_state.py
 !query/analytics.py
+!query/skew_service.py
+!query/skew_references.py
 !query/calendars/
 query/calendars/**
 !query/calendars/*.json

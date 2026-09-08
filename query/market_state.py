@@ -190,12 +190,15 @@ def quality(observation, age_reference_us, stale_after_us, scope):
 class MarketStateReader:
     """One short, read-only SQLite transaction per frame; no implicit current clock."""
 
-    def __init__(self, store, calendar_directory=DEFAULT_DIRECTORY):
+    def __init__(self, store, calendar_directory=DEFAULT_DIRECTORY, *, calendar=None):
         self.store = store
         self.calendar_directory = calendar_directory
+        self.calendar = calendar
 
     def _calendar(self, at):
         from pathlib import Path
+        if self.calendar is not None:
+            return self.calendar
         return Calendar(Path(self.calendar_directory) / f'{at.year}.json')
 
     @staticmethod

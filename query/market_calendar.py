@@ -71,10 +71,13 @@ def unknown(exchange, product, at, reason):
 
 
 class Calendar:
-    def __init__(self, path):
+    def __init__(self, path, *, content=None):
         try:
-            with Path(path).open('rb') as stream:
-                raw = stream.read(1024 * 1024 + 1)
+            if content is None:
+                with Path(path).open('rb') as stream:
+                    raw = stream.read(1024 * 1024 + 1)
+            else:
+                raw = content
             if len(raw) > 1024 * 1024:
                 raise CalendarError('calendar exceeds 1 MiB')
             self.data = json.loads(raw)

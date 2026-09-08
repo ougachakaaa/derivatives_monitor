@@ -19,7 +19,7 @@ python3 harness/run.py docker
 |---|---|
 | `docs` | 检查维护文档的本地文件链接、设计入口、原件/SDK 哈希和必要 Docker 白名单；不访问外网，不验证 Markdown 锚点 |
 | `analytics-contract` | 仅标准库；核对七项冻结状态、策略/生成器哈希，使用float64二分与固定独立oracle核对价格/IV/delta/远期/两翼；不运行生产Analytics |
-| `analytics` | 在 `analytics-contract` 基础上，用 `query/.venv` 运行生产 Analytics 正常、异常和边界回归；不读取实盘、不证明官方参考可用 |
+| `analytics` | 在 `analytics-contract` 基础上，用 `query/.venv` 运行生产 Analytics 及 Skew HTTP 切片正常、异常和边界回归；不读取实盘、不证明官方参考可用 |
 | `offline` | CMake/G++/SQLite 开发库、Python 3.12 的 `query/.venv`、Linux Node 22.12+/npm/已安装前端依赖、SQLite CLI；重新 configure/build Release，执行 CTest、Query、Universe、deploy 替身、verify 真 SQLite CLI、React 和构建 |
 | `native` | 原生编译及 query 依赖；重新构建后运行合成夜盘与真实 HTTP 独立停启测试，临时数据/随机端口 |
 | `browser` | native 前提，加 Linux Node/前端依赖、Playwright Chromium 及系统库；合成夜盘与含浏览器的原生闭环 |
@@ -37,7 +37,7 @@ python3 harness/run.py docker
 测试文件维持模块归属，避免为了统一命令移动测试导致 Docker/CMake/import 路径变化：
 
 - `collector/tests/`：采集/存储/生命周期、配置、清单、部署/验收器与 Collector 容器。
-- `query/tests/`：真实 SQLite 只读、API、Calendar、Universe coverage、Market State、生产 Analytics 核心。
+- `query/tests/`：真实 SQLite 只读、API、Calendar、Universe coverage、Market State、生产 Analytics 核心、Skew HTTP 及只读参考包适配。
 - `dashboard/tests/`：React 组件和实际浏览器交互。
 - `tests/`：跨 C++/SQLite/HTTP/容器的集成场景。
 - `harness/tests/`：结果分类、缺依赖/超时、模拟环境隔离、打包白名单回归。
@@ -46,7 +46,7 @@ TEST DOUBLE 不等于真实 CTP；100ms 合成场景不等于生产 15 秒调度
 
 ## Analytics / Skew 契约数值基线
 
-规范：[mo-skew-25d-v1](../docs/contracts/analytics-skew.md)，常量：[策略JSON](../docs/contracts/analytics-skew-v1.json)，固定期望：[SYNTHETIC数值样本](fixtures/analytics-skew-v1.json)。样本包括12组价格/IV/delta和高精度价格、两条按tick舍入的完整合成链（两种Skew符号）、插值/单位例子。`analytics-contract` 用独立的标准库实现检查这些例子和失败/误用回归，不读取生产模块。`analytics` 再让生产模块消费合成 Market State minute frame 与显式 ReferenceBundle，核对固定期望及失败状态；两者都不读取实盘。
+规范：[mo-skew-25d-v1](../docs/contracts/analytics-skew.md)，常量：[策略JSON](../docs/contracts/analytics-skew-v1.json)，固定期望：[SYNTHETIC数值样本](fixtures/analytics-skew-v1.json)。样本包括12组价格/IV/delta和高精度价格、两条按tick舍入的完整合成链（两种Skew符号）、插值/单位例子。`analytics-contract` 用独立的标准库实现检查这些例子和失败/误用回归，不读取生产模块。`analytics` 再让生产模块消费合成 Market State minute frame 与显式 ReferenceBundle，核对固定期望及失败状态；`analytics` 还运行真实临时 SQLite → Market State → Analytics → HTTP 的 TEST DOUBLE 回归，覆盖分钟选择、历史/当前、固定revision序列/迟到写入、失败缺口、哈希与错误；两者都不读取实盘。
 
 重新核对外部 oracle（单独验证环境，不改Query依赖）：
 

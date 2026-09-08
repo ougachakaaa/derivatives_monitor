@@ -48,7 +48,7 @@ python3 query/market_calendar.py --exchange SHFE --product AU --at '2026-09-07T2
 
 ## Market State Read Model（Python 契约 v1）
 
-`market_state.py` 提供 `Universe`、`Scope`、`MarketStateReader`，不需要启动 HTTP 或调度任务。它是 Analytics 的 Raw 读取边界；`analytics.py` 只消费一个 Market State minute frame、显式 ReferenceBundle 和请求时间，计算 MO 单月 IV/Skew。口径与输入字段见[冻结契约](../docs/contracts/analytics-skew.md)，Market State 完整语义见[设计基线](../docs/contracts/market-state.md)。官方参考导入器和 HTTP 适配尚未实现。
+`market_state.py` 提供 `Universe`、`Scope`、`MarketStateReader`，不需要启动 HTTP 或调度任务。它是 Analytics 的 Raw 读取边界；`analytics.py` 只消费一个 Market State minute frame、显式 ReferenceBundle 和请求时间，计算 MO 单月 IV/Skew。口径与输入字段见[冻结契约](../docs/contracts/analytics-skew.md)，Market State 完整语义见[设计基线](../docs/contracts/market-state.md)。审核参考包离线导入和 HTTP 适配已实现，用法见下文；尚无真实官方日包和10时点对账证据。
 
 ```python
 from analytics import calculate_skew
@@ -98,3 +98,57 @@ query/.venv/bin/python query/market_state.py minute \
 ```
 
 产品/月/链用 `--universe saved-universe.json --exchange CFFEX --product MO --month 2609 --option-chain` 替换 `--instrument`。JSON 格式为 `{"trading_day":"20260908","version":"saved-v1","instruments":["MO2609-C-5000","MO2609-P-5000"],"complete":false}`；示例的两个合约不能声称真实完整链。`as-of` / `latest` 使用 `--at` 且不传 `--evaluated-at`。输出 JSON，查询错误退出码2。
+
+## Skew 业务查询与参考包
+
+三个入口是 `/api/skew/latest`、`/api/skew/series`、`/api/skew/minute`，参数/JSON/错误的公共契约见 [Read Path](../docs/contracts/read-path.md)。不需要启动页面即可用 JSON 观察目标 MO 月、当日变化和分钟回看。
+
+```bash
+# 从 query/ 启动独立本地后端；month 必须由用户显式选定。
+SKEW_TARGET_MONTH=2610 DATA_DIR=../collector/data \
+  poetry run uvicorn app:app --host 127.0.0.1 --port 8000
+
+curl --get http://127.0.0.1:8000/api/skew/latest --data-urlencode 'month=2610'
+curl --get http://127.0.0.1:8000/api/skew/series \
+  --data-urlencode 'month=2610' --data-urlencode 'day=20260916'
+curl --get http://127.0.0.1:8000/api/skew/minute \
+  --data-urlencode 'month=2610' --data-urlencode 'day=20260916' \
+  --data-urlencode 'minute=2026-09-16T09:30:00+08:00'
+```
+
+上面的月/日只是调用格式示例，不代表该日实盘已验收或已提供参考包。使用返回的 `raw_revision` 与 `reference.bundle_id` 作为同名参数，再保留原 `at=requested_at`，可重放同一已保存输入。固定 revision 不恢复15秒采样未保存的 tick，也不声称历史时刻 Raw 已提交。无参考包会明确 REFERENCE_MISSING，不以测试参数代替官方数据。
+
+`SKEW_REFERENCE_DIR` 默认 `${DATA_DIR}/references/analytics`，允许指定独立只读目录；不是 Collector 的配置、清单更新或采集控制路径。`SKEW_TARGET_MONTH` 可省略，但每次请求必须显式给出 month，否则 TARGET_MONTH_MISSING。Docker 现有 `/data:ro` 挂载可读取默认目录；用 month 参数不需要修改服务配置。独立参考目录需只读挂载，并在自管服务环境设置 SKEW_REFERENCE_DIR；不要把审核包 COPY 入镜像。
+
+内部输入包布局（仅运维输入格式，**不是 HTTP 公共契约**）：
+
+```text
+references/analytics/
+  20260916/
+    2610.json                 # {"bundle_id":"reviewed-mo2610-v1"}
+    reviewed-mo2610-v1/       # 永不覆盖；修订使用新 ID
+      manifest.json
+      bundle.json
+      universe.json
+      calendar.json
+      listing.source         # 保存官方清单原响应
+      rules.source           # 保存官方产品规则原响应
+      rate.source            # 保存官方 Shibor 原响应
+```
+
+- `bundle.json` 是[冻结契约 §4](../docs/contracts/analytics-skew.md)的日 ReferenceBundle，**不含 bundle_sha256**；该值由外部 manifest 的原文件字节哈希核对后注入数值核心。source_kind 必须 OFFICIAL，review/reviewed_at 明确记录审核，日历前一CFFEX日与 fixing_date 精确一致。
+- `universe.json` 是保存的 Collector Universe manifest v1，不是 current 路径；MO 条目须同日 verified=true、stale=false。bundle.universe.version 保存该不可变 generation 身份；sha256 为 universe.json 原字节哈希。该月精确成员、side/strike/官方 expiry 必须与 bundle 一致；拒绝空链、过期/未验证清单及猜到期日。
+- `calendar.json` 为保存的完整年度参考文件；bundle.calendar 的 version/sha256 与该文件一致。请求只使用核对后的内存 Calendar，不在每分钟重读可变目录。当前文件无法确认前一交易日时拒绝，不跨年猜工作日。
+- `manifest.json` 为 `{"schema_version":1,"bundle_id":"reviewed-mo2610-v1","sha256":{"bundle.json":"<64位sha256>","universe.json":"<64位sha256>","calendar.json":"<64位sha256>","listing.source":"<64位sha256>","rules.source":"<64位sha256>","rate.source":"<64位sha256>"}}`。不自哈希 manifest。rules/rate 哈希还须分别等于 bundle.product_rules.source_sha256 / bundle.rate.source_sha256；清单 source URL 来自 Universe MO 条目。仅接受 CFFEX / CFETS、Shibor 官方 HTTPS 域名，且所列原响应字节存在并匹配哈希。
+- 包导入器验证结构、来源 URL/归档哈希、完整性、日期、字段一致性及冻结参考策略；它**不自动审核原文或从网页提取利率**。审核者须先对照官方发布内容填写并审核 Bundle，保留原件与审核依据。哈希和 OFFICIAL 标签自身不能证明归一化金融值正确。
+
+从仓库根目录离线导入已审核包，目标目录为显式参数；不启动/重启任何服务、不写 Raw、不联网：
+
+```bash
+query/.venv/bin/python query/skew_references.py /path/to/audited-package \
+  --directory /path/to/references/analytics
+```
+
+工具先校验，再复制到同文件系统的暂存目录、再次校验、原子发布到 day/bundle_id；已有 ID 拒绝覆盖，不改变月选择。审核者随后在相应 day 目录原子发布 `<month>.json` 选择文件，内容只含 bundle_id。旧选择引用的包保留供显式回放。文件应由运维账户维护、Query 只读；API 不接受任意文件名、路径或上传参考。测试构造器的 allow_synthetic 仅供 TEST DOUBLE，未暴露为环境或 HTTP 参数。
+
+工程验证：`python3 harness/run.py analytics`（仓库根目录）包含固定独立 oracle、生产核心和真实临时 SQLite → Market State → Analytics → FastAPI 的 TEST DOUBLE 切片。完整 Query 回归仍为本目录 `.venv/bin/python -m unittest discover -s tests -v`。当前未提供可用于 G2/G3 签收的真实官方日包、完整链质量现场记录或10时点独立对账；合成成功不关闭这些门槛。

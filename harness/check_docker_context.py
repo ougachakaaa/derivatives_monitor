@@ -15,7 +15,7 @@ def main():
                         '-f', '-', str(ROOT)], input='FROM scratch\nCOPY . /\n',
                        text=True, check=True, timeout=120)
         expected = ['query/app.py', 'query/storage.py', 'query/contract_coverage.py',
-                    'query/market_calendar.py', 'query/market_state.py', 'query/analytics.py',
+                    'query/market_calendar.py', 'query/market_state.py', 'query/analytics.py', 'query/skew_service.py', 'query/skew_references.py',
                     'query/calendars/2026.json',
                     'query/poetry.lock', 'harness/fixtures/analytics-skew-v1.json',
                     'collector/src/main.cpp', 'dashboard/src/App.jsx',

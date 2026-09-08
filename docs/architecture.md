@@ -9,14 +9,14 @@ flowchart LR
     RAW -->|只读 Store| MS[Python Market State]
     CAL[版本化日历与显式历史 Universe] --> MS
     MS --> A[Analytics：IV / Skew 核心]
-    REF[已冻结契约的版本化参考包 导入待实现] -.-> A
-    A -.-> API[FastAPI JSON]
+    REF[已冻结契约的版本化审核参考包] --> A
+    A --> API[FastAPI JSON]
     RAW -->|只读诊断| API
     CAL --> API
-    API --> UI[独立 React：汇报视图待实现]
+    API -.-> UI[独立 React：汇报视图待实现]
 ```
 
-实线为已有路径，虚线为待实现的业务路径。Market State 和纯计算 Analytics 核心已有 Python 契约，尚无官方参考导入器或 Analytics HTTP API。Calendar 可脱离 Raw/HTTP 独立使用。
+实线为已有路径，虚线为待实现的业务路径。Market State、Analytics 核心、审核参考包离线导入及 Skew HTTP API 已实现；生产官方包和真实对账尚待验收。Calendar 可脱离 Raw/HTTP 独立使用。
 
 ## 职责与所有权
 
@@ -28,6 +28,7 @@ flowchart LR
 | `query/market_calendar.py` | 参考日历、产品时段与逻辑交易日解释 | 不改源 TradingDay，不决定采集启停；缺参考返回 UNKNOWN |
 | `query/storage.py` / `app.py` | 只读数据库访问、诊断 JSON 与有界查询 | WAL/目录锁协议；不提供静态 JS，不控制 Collector |
 | `query/market_state.py` | 单合约/产品/月/链的 as-of、minute、latest、质量与 revision | 显式 Universe、日历和时钟；不猜完整链、不补行情、不做定价 |
+| `query/skew_service.py` / `skew_references.py` | 最新封口分钟、固定 revision 日序列、分钟回看、审核参考包导入与哈希校验 | 经 Market State 读取；参考不在请求中联网；API 不暴露 Raw frame、SQL 或文件路径 |
 | `query/analytics.py` | 由单个 Market State minute frame 及显式 ReferenceBundle 计算 IV/Skew和追溯结果 | 纯 Python 下游；不访问 Raw SQL/网络；不影响采集；MVP 不引入 Derived SQLite 或常驻调度器 |
 | `dashboard/` | 独立 React 页面；生产 Nginx 静态服务和同源 API 代理 | 无 SQLite、凭据、flow、Docker socket 挂载；不在浏览器另写一套权威指标公式 |
 | `harness/` 与模块测试 | 可重复回归、证据范围与收尾门槛映射 | 测试 SDK 仅用于隔离测试；无实盘启动或配置修改 |
@@ -54,4 +55,4 @@ Analytics 输出应携带 scope、实际 trading_day、effective_as_of、evaluat
 
 汇报首页的业务对象、Skew 水平/变化、数据时间/质量位于首屏；服务、覆盖、行数等诊断按需展开。切换月份或分钟后清楚显示对象；错误清除对应有效状态，历史结果不得披上当前时间。
 
-Skew 已冻结为 [25Δ Put−Call / Black-76 / 同月平价隐含远期](contracts/analytics-skew.md)，折现使用前一CFFEX日3M Shibor的显式单利代理；计算仍待实现。历史日缺 sidecar 的只读限制暂作为显式操作限制保留；若实际回看流程必须停采而无法满足可用性门槛，应在同一只读边界内另行设计解决，不能把 503 算验收成功。
+Skew 已冻结为 [25Δ Put−Call / Black-76 / 同月平价隐含远期](contracts/analytics-skew.md)，折现使用前一CFFEX日3M Shibor的显式单利代理；数值核心与 JSON 查询已实现，真实市场对账待验。历史日缺 sidecar 的只读限制暂作为显式操作限制保留；若实际回看流程必须停采而无法满足可用性门槛，应在同一只读边界内另行设计解决，不能把 503 算验收成功。

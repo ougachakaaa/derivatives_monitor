@@ -10,6 +10,8 @@
 - 正式 Collector 只链接仓库官方 SDK。TEST DOUBLE 动态库仅为隔离测试显式加载，不进入正式 runtime 镜像。
 - Query 只提供 JSON，React/Nginx 独立服务页面，同源 `/api/` 代理；默认宿主 `127.0.0.1:8101` 和 `127.0.0.1:8000`。容器 Nginx 内部 8080 与宿主 8101 不混用。
 
+Skew 审核参考包可保存在数据目录的 `references/analytics/`，由独立运维导入、Query 随现有数据挂载只读消费；默认路径随 DATA_DIR，独立目录使用 SKEW_REFERENCE_DIR 和只读挂载。HTTP month 参数或显式 SKEW_TARGET_MONTH 选择目标月，不引入 Collector 配置或自动换月。参考包不进入镜像。详见 [Query 手册](../../query/README.md)。
+
 ## 生命周期
 
 - Collector 无 Query/Dashboard 启动依赖。API 不调用管理器；日历不触发开收盘启停。
