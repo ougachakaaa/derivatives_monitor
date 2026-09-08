@@ -1,0 +1,34 @@
+# Dashboard image boundary: deny by default and admit only declared build inputs.
+**
+!dashboard/
+dashboard/**
+!dashboard/Dockerfile
+!dashboard/Dockerfile.dockerignore
+!dashboard/package.json
+!dashboard/package-lock.json
+!dashboard/index.html
+!dashboard/vite.config.js
+!dashboard/nginx.conf
+!dashboard/src/
+dashboard/src/**
+!dashboard/src/App.jsx
+!dashboard/src/main.jsx
+!dashboard/src/style.css
+!dashboard/tests/
+dashboard/tests/**
+!dashboard/tests/App.test.jsx
+!dashboard/tests/browser.mjs
+
+# Defense in depth for secrets and runtime state.
+**/.env
+**/.env.*
+**/config.ini
+**/credentials.*
+**/secrets.*
+**/*.key
+**/*.pem
+**/*.p12
+**/*.pfx
+**/*.sqlite*
+**/*.db
+**/*.log

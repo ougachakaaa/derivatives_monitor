@@ -1,3 +1,6 @@
+FROM scratch AS context-audit
+COPY . /
+
 FROM ubuntu:24.04 AS build
 
 RUN apt-get update \

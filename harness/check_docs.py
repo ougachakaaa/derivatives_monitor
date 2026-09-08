@@ -12,6 +12,8 @@ from pathlib import Path
 import re
 from urllib.parse import unquote
 
+from docker_boundaries import BOUNDARIES, FORBIDDEN_SAMPLES
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -76,25 +78,26 @@ def check(root=ROOT):
                 errors.append('SDK hash mismatch: ' + name)
     except (OSError, ValueError, KeyError) as error:
         errors.append('SDK manifest invalid: ' + str(error))
-    rules = (root / '.dockerignore').read_text().splitlines()
-    # Explicit COPY inputs and all tracked Python test/source/calendar files in Query.
-    inputs = [str(p.relative_to(root)) for p in (root / 'query').glob('*.py')]
-    inputs += [str(p.relative_to(root)) for p in (root / 'query/tests').glob('*.py')]
-    inputs += [str(p.relative_to(root)) for p in (root / 'query/calendars').glob('*.json')]
-    inputs += ['query/pyproject.toml', 'query/poetry.lock', 'collector/src/main.cpp',
-               'collector/cmake/ctp_sdk.cmake', 'collector/include/client_support.hpp',
-               'collector/third_party/ctp/v6.7.13_20260225/MANIFEST.txt',
-               'dashboard/src/App.jsx',
-               'collector/third_party/ctp/v6.7.13_20260225/linux64/mdapi/thostmduserapi_se.so']
-    for path in inputs:
-        if not docker_included(path, rules):
-            errors.append('Required Docker input excluded: ' + path)
-    for path in ('collector/config.ini', 'collector/data/sample.sqlite', 'collector/flow/state',
-                 'query/secrets.json', 'query/tests/private.log', 'dashboard/.env',
-                 'docs/references/originals/csc-ctp-mvp-questions-and-replies.docx',
-                 'artifacts/harness/result.json'):
-        if docker_included(path, rules):
-            errors.append('Private/runtime Docker input included: ' + path)
+    if (root / '.dockerignore').exists():
+        errors.append('Root .dockerignore must not own formal image boundaries')
+    for service, inputs in BOUNDARIES.items():
+        policy_path = root / service / 'Dockerfile.dockerignore'
+        try:
+            rules = policy_path.read_text().splitlines()
+        except OSError as error:
+            errors.append(f'{service} Docker boundary unavailable: {error}')
+            continue
+        active_rules = [line.strip() for line in rules if line.strip() and not line.startswith('#')]
+        if not active_rules or active_rules[0] != '**':
+            errors.append(f'{service} Docker boundary must start deny-by-default with **')
+        for path in inputs:
+            if not (root / path).is_file():
+                errors.append(f'{service} Docker input missing: {path}')
+            elif not docker_included(path, rules):
+                errors.append(f'{service} Docker input excluded: {path}')
+        for path in FORBIDDEN_SAMPLES:
+            if docker_included(path, rules):
+                errors.append(f'{service} Docker boundary exposes private/unrelated input: {path}')
     return errors
 
 
@@ -103,7 +106,7 @@ def main():
     for error in errors:
         print('FAIL:', error)
     if not errors:
-        print('PASS: maintained local file links, design entrypoints, original/SDK hashes, Docker input allowlist')
+        print('PASS: maintained links, design entrypoints, hashes and per-image Docker allowlists')
         print('Scope: offline structural checks; no external URL availability, Markdown anchors or business correctness claim.')
     return int(bool(errors))
 

@@ -6,7 +6,7 @@
 
 - 宿主 `collector/data/`、`collector/flow/` 的生命周期独立于服务/镜像/构建。没有数据迁移，也不是容器临时层；不得用清理镜像或项目目录的动作删除历史数据。
 - Docker Collector 可写 `/app/data`；Query 同 UID/GID 只读挂载该目录到 `/data` 并设置只读 rootfs；Dashboard 无数据/flow/配置/Docker socket 挂载。Query 和 Dashboard 均无 CTP 凭据。
-- 配置只读挂载，以 0600 保存本地 INI；已有配置不覆盖。构建上下文采用白名单：源码、锁文件、必要 SDK/测试/日历；配置、凭据、Raw、日志、flow、参考咨询原件和本机工具不进入镜像。
+- 配置只读挂载，以 0600 保存本地 INI；已有配置不覆盖。三个正式镜像保持 repository root build context，各自通过同目录 `Dockerfile.dockerignore` 采用 deny-by-default 白名单，只允许本镜像的源码、锁文件、必要 SDK/测试/日历等明确输入；配置、凭据、Raw、日志、flow、参考咨询原件和本机工具不进入上下文。新增仓库文件默认不进入既有镜像，成为构建依赖时须显式更新所属镜像的白名单。
 - 正式 Collector 只链接仓库官方 SDK。TEST DOUBLE 动态库仅为隔离测试显式加载，不进入正式 runtime 镜像。
 - Query 只提供 JSON，React/Nginx 独立服务页面，同源 `/api/` 代理；默认宿主 `127.0.0.1:8101` 和 `127.0.0.1:8000`。容器 Nginx 内部 8080 与宿主 8101 不混用。
 
@@ -24,5 +24,7 @@ Skew 审核参考包可保存在数据目录的 `references/analytics/`，由独
 ## 验收边界
 
 Docker 构建执行 CTest、Query 测试、React 测试/构建；隔离容器 smoke 检查实际挂载、健康、重启和保留数据。原生测试、Compose 静态解析、CLI 替身均不替代真实 Engine 验收。`up` 成功只说明部署完成，不说明真实 CTP 订阅或持续行情成立。
+
+Docker build boundary 由对应服务的 `Dockerfile` 与 `Dockerfile.dockerignore` 共同拥有；它与 Compose 负责的 runtime composition 分离。边界验收须导出三个 Dockerfile 实际过滤后的上下文，逐字节核对明确输入且拒绝额外文件，并实际走完三个 runtime image 的依赖安装、构建和 build-stage 测试。
 
 只读验收器 `verify YYYYMMDD` 检查非空、schema/日身份、外键/完整性及 run 来源。活跃 WAL 正常只读；停机无非空 WAL 且取得目录共享锁才使用 immutable。旧日缺 sidecar 且 Collector 活跃时明确失败，不创建空库、不删除 WAL、不放宽只读。
