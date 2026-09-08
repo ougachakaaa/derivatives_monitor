@@ -48,7 +48,17 @@ python3 query/market_calendar.py --exchange SHFE --product AU --at '2026-09-07T2
 
 ## Market State Read Model（Python 契约 v1）
 
-`market_state.py` 提供 `Universe`、`Scope`、`MarketStateReader`，不需要启动 HTTP 或调度任务。它是 Analytics 的 Raw 读取边界；当前尚未实现 IV/Skew/Basis；MO Skew 的[七项下游契约](../docs/contracts/analytics-skew.md)已冻结。完整语义见 [设计基线](../docs/contracts/market-state.md)。
+`market_state.py` 提供 `Universe`、`Scope`、`MarketStateReader`，不需要启动 HTTP 或调度任务。它是 Analytics 的 Raw 读取边界；`analytics.py` 只消费一个 Market State minute frame、显式 ReferenceBundle 和请求时间，计算 MO 单月 IV/Skew。口径与输入字段见[冻结契约](../docs/contracts/analytics-skew.md)，Market State 完整语义见[设计基线](../docs/contracts/market-state.md)。官方参考导入器和 HTTP 适配尚未实现。
+
+```python
+from analytics import calculate_skew
+
+frame = reader.minute(scope, minute, evaluated_at=requested_at,
+                      stale_after_us=30_000_000, raw_revision=fixed_revision)
+result = calculate_skew(frame, reference_bundle, requested_at, historical=False)
+```
+
+`historical` 必须由调用方按 Calendar 选择结果显式传入。结构缺失抛 `ValueError`；完整输入不满足参考、质量、同步或求解前提时返回 `status=UNAVAILABLE` 和原因，不返回旧值或猜测值。结果携带 Raw revision、Universe/Calendar/ReferenceBundle 哈希、算法参数，以及每个 observation 的时间、剔除原因和使用角色。函数不打开 SQLite、不读取 current 文件、不联网，也不保存派生数据。
 
 ```python
 from datetime import datetime

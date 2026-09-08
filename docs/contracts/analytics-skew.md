@@ -1,6 +1,6 @@
 # MVP Analytics / Skew contract v1
 
-状态：**FROZEN**，2026-09-08；契约 ID `mo-skew-25d-v1`。本文件冻结七项设计，机器常量见[策略文件](analytics-skew-v1.json)。这是当前 MVP 的唯一 Analytics 定义；生产 Analytics、参考导入器及 HTTP/页面仍待实现。冻结不意味着实盘验收完成。
+状态：**FROZEN / CORE IMPLEMENTED**，2026-09-08；契约 ID `mo-skew-25d-v1`。本文件冻结七项设计，机器常量见[策略文件](analytics-skew-v1.json)。这是当前 MVP 的唯一 Analytics 定义；生产数值核心位于 `query/analytics.py`，参考导入器及 HTTP/页面仍待实现。实现不意味着实盘验收完成。
 
 | 决定 | v1 选择 |
 |---|---|
@@ -10,7 +10,7 @@
 | Reference parameters | 官方已验证合约/到期日与产品规则；前一 CFFEX 交易日 3M Shibor；显式版本化日参考包 |
 | Quote synchronization | 已封口的连续交易分钟；最新真实 bid/ask midpoint；age≤30秒；C/P差≤5秒；最终所有输入跨度≤15秒 |
 | IV solver contract | 有界二分法，σ∈[0.0001,5]、最多128轮，同时满足σ区间和回代价格精度；失败不夹值 |
-| Independent validation | 固定 QuantLib 1.40 外部 oracle、mpmath 1.3.0 高精度价格对照、入库数值向量；未来实现另做真实10时点对账 |
+| Independent validation | 固定 QuantLib 1.40 外部 oracle、mpmath 1.3.0 高精度价格对照、入库数值向量；生产后续另做真实10时点对账 |
 
 ## 1. 范围与边界
 
@@ -172,4 +172,14 @@ MO 的法律标的是中证1000指数；v1 的估值输入是该到期月的**�
 - 两条tick舍入合成链结果分别约 `+1.1730254434`、`−1.1790944252` vol points；它们验证正反两种符号，非真实MO市场观测。平坦插值例为0，Put0.29/Call0.24例为+5 vol points。
 - 生产 Collector/Query/React源码、Raw schema和 `experiments/` 未改。MVP/架构/验收矩阵/来源索引/agent入口已指向同一冻结契约；当前文档不再将七项列为待决。
 
-这不是完整生产行为覆盖或实盘验收。未来实现仍须执行§8的全部场景及真实10时点对账，不得用本次“契约验证通过”关闭G3。验证日志在本机 `artifacts/harness/` 和 `artifacts/analytics-contract-freeze/`，不随Git发布；跨机器复核使用入库生成器/策略/数值样本及上述命令。
+这不是完整生产行为覆盖或实盘验收。后续仍须补齐§8的全部场景及真实10时点对账，不得用本次“契约验证通过”关闭G3。验证日志在本机 `artifacts/harness/` 和 `artifacts/analytics-contract-freeze/`，不随Git发布；跨机器复核使用入库生成器/策略/数值样本及上述命令。
+
+## 11. 数值核心实现状态
+
+2026-09-08，`query/analytics.py` 实现 `black_price`、`solve_iv` 和 `calculate_skew`。`calculate_skew(frame, reference_bundle, requested_at, historical=...)` 的依赖只有单个 Market State v1 MO option-chain minute frame、显式日参考包、请求时间与调用方按 Calendar 判定的历史标志；它不打开 Raw SQLite、不读取可变 `current`、不联网、不写 Derived SQLite，也不启动后台任务。
+
+参考包的对象字段按§4表格落为：顶层 `schema_version/bundle_id/bundle_sha256/valid_trading_day/exchange/product/month/reviewed_at/review/source_kind/expiry_at`；`universe.version/sha256/instruments[]`，每个合约含 `id/side/strike/expiry`；`calendar.version/sha256/previous_cffex_trading_day`；`product_rules` 含产品事实、`source_url/source_version/source_sha256`；`rate` 含原始 `percent`、换算后 `decimal`、fixing/publish/retrieve/source 身份及计息元数据。必需结构缺失抛 `ValueError`，完整但不匹配返回 `UNAVAILABLE`。`SYNTHETIC` 只在 review 明确含 `TEST DOUBLE` 时接受。
+
+结果除§7字段外，将冻结的模型、delta、插值、报价阈值和 solver 常量放入 `algorithm`，并在 `reference` 给出 bundle、Universe、Calendar、产品规则与利率来源哈希。`provenance` 为每个 scope 成员保留 TradingDay、observation/run ID、received/snapshot/source time、bid/ask/mid、原 Market State quality、剔除原因、使用角色与 solver 详情；`excluded_count` 与 `eligible_count` 分开。错误不复用旧报价、旧 IV 或旧 Skew。
+
+`python3 harness/run.py analytics` 同时运行独立 contract/oracle 检查和生产核心回归。生产测试直接消费一条由真实 SQLite/`MarketStateReader.minute()` 形成的 TEST DOUBLE frame，并覆盖§8.4：平坦及两种 Skew 符号、12个独立价格/IV/delta向量、正负利率与两种日数、平价远期/三对不足/偏离、两翼失败、30秒/5秒/15秒等号及超1微秒、盘口质量、solver边界与失败、参考错误、未知日历、竞价/首分钟/午休历史、到期、固定revision重放和PARTIAL。官方参考导入、§8.5真实10时点对账、HTTP/页面和性能仍未完成，不能关闭 G3/P1/P2。

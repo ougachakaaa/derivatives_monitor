@@ -38,6 +38,10 @@ def profiles(profile):
     checks += [step('harness-tests', [sys.executable, '-m', 'unittest', 'discover', '-s', 'harness/tests', '-v'])]
     if profile == 'analytics-contract':
         return checks + [step('analytics-contract', [sys.executable, 'harness/check_analytics_contract.py'])]
+    if profile == 'analytics':
+        return checks + [step('analytics-contract', [sys.executable, 'harness/check_analytics_contract.py']),
+                         step('analytics-production', [PYTHON, '-m', 'unittest',
+                              'tests.test_analytics', '-v'], ROOT / 'query')]
     if profile in ('docker', 'packaging'):
         checks += [step('docker-engine', ['docker', 'version'], timeout=30),
                    step('docker-context', [sys.executable, 'harness/check_docker_context.py'], requires=['docker'], timeout=150)]
@@ -126,7 +130,8 @@ def git(*args):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('profile', choices=('docs', 'analytics-contract', 'offline', 'native', 'browser', 'packaging', 'docker'))
+    parser.add_argument('profile', choices=('docs', 'analytics-contract', 'analytics', 'offline',
+                                            'native', 'browser', 'packaging', 'docker'))
     args = parser.parse_args()
     timestamp = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')
     folder = ROOT / 'artifacts/harness' / (timestamp + '-' + args.profile + '-' + uuid.uuid4().hex[:8])

@@ -15,8 +15,10 @@ def main():
                         '-f', '-', str(ROOT)], input='FROM scratch\nCOPY . /\n',
                        text=True, check=True, timeout=120)
         expected = ['query/app.py', 'query/storage.py', 'query/contract_coverage.py',
-                    'query/market_calendar.py', 'query/market_state.py', 'query/calendars/2026.json',
-                    'query/poetry.lock', 'collector/src/main.cpp', 'dashboard/src/App.jsx',
+                    'query/market_calendar.py', 'query/market_state.py', 'query/analytics.py',
+                    'query/calendars/2026.json',
+                    'query/poetry.lock', 'harness/fixtures/analytics-skew-v1.json',
+                    'collector/src/main.cpp', 'dashboard/src/App.jsx',
                     'experiments/ctp/sdk/v6.7.13_20260225/linux64/mdapi/thostmduserapi_se.so']
         for relative in expected:
             original, exported = ROOT / relative, destination / relative

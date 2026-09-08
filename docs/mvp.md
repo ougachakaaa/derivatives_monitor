@@ -6,7 +6,7 @@
 
 - 业务闭环：选定 **MO 一个到期月**，查看 Skew 当前水平、当日分钟变化和指定分钟回看；同时看到数据时间、质量与不能计算的原因。
 - 现有采集范围保留：CFFEX IF/IH/IC/IM、TS/TF/T/TL、IO/HO/MO，以及 SHFE AU/AG 期货。分析不要求同时扩展至所有品种/月。
-- C++ → Raw SQLite → Python Market State → Analytics → JSON → React 汇报页。Analytics 与汇报页是待实现能力，现有页面仍是采集诊断看板。
+- C++ → Raw SQLite → Python Market State → Analytics → JSON → React 汇报页。纯计算 Analytics 核心已实现；官方参考导入、JSON API 与汇报页待实现，现有页面仍是采集诊断看板。
 - 独立采集、只读消费、真实 TradingDay、时间/质量语义和本地部署边界见[架构与契约](architecture.md)。这次文档整理不改变这些边界。
 
 ## 已冻结的 Analytics / Skew 口径
@@ -25,7 +25,7 @@
 
 到期日不计算新Skew；竞价/休市只显示明确历史分钟，不混入当前值。不自动换月。完整上市清单是必须输入，部分Raw缺失只有在全部所需节点有效时才允许带PARTIAL标签产出指标。来源与近似假设均在契约中明示，禁止静默补零利率或旧行情。
 
-**契约已冻结，生产 Analytics、参考导入器、汇报页及真实对账仍待完成。** 冻结契约不改变下面的六项产品收尾条件。
+**契约与生产数值核心已实现；参考导入器、HTTP/汇报页及真实对账仍待完成。** 这不改变下面的六项产品收尾条件。
 
 ## 六个收尾条件
 
