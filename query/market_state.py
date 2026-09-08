@@ -228,8 +228,10 @@ class MarketStateReader:
         state = calendar.query(scope.exchange, scope.product, minute)
         if state['market_state'] != 'OPEN':
             raise ValueError('minute must be inside a known market period')
-        period = next(p for p in calendar.periods(scope.exchange, scope.product)
-                      if p['start'] <= minute and end <= p['end'])
+        period = next((p for p in calendar.periods(scope.exchange, scope.product)
+                       if p['start'] <= minute and end <= p['end']), None)
+        if period is None:
+            raise ValueError('minute crosses a market period boundary')
         # An unfinished minute only knows receipts through evaluated_at.
         sealed = evaluated_at >= end
         cutoff = end if sealed else evaluated_at

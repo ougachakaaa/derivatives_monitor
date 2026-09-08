@@ -336,3 +336,79 @@ class FrameTest(unittest.TestCase):
         result = subprocess.run(base + ['--raw-revision', '9999'], capture_output=True, text=True)
         self.assertEqual(result.returncode, 2)
         self.assertEqual(json.loads(result.stdout)['status'], 400)
+
+    def test_quality_flags_preserve_raw_values(self):
+        cases = [({'BidPrice1': None}, 'invalid_BidPrice1'),
+                 ({'AskPrice1': float('inf')}, 'invalid_AskPrice1'),
+                 ({'AskPrice1': float.fromhex('0x1.fffffffffffffp+1023')}, 'invalid_AskPrice1'),
+                 ({'BidVolume1': 0}, 'invalid_BidVolume1'),
+                 ({'AskVolume1': -1}, 'invalid_AskVolume1'),
+                 ({'TradingDay': '20260907'}, 'trading_day_mismatch'),
+                 ({'ExchangeID': 'SHFE'}, 'exchange_mismatch'),
+                 ({'snapshot_us': 1}, 'snapshot_before_observation')]
+        for changes, reason in cases:
+            with self.subTest(reason=reason, changes=changes):
+                self.insert('09:30:00', **changes)
+                row = self.frame('09:31:00')['rows'][0]
+                self.assertEqual(row['quality']['flags'], ['STALE', 'INVALID'])
+                self.assertIn(reason, row['quality']['reasons'])
+                for field, value in changes.items():
+                    self.assertEqual(row['observation'][field], value)
+        self.insert('09:31:45', LastPrice=None, ExchangeID='')
+        self.assertTrue(self.frame('09:31:00')['rows'][0]['quality']['usable'])
+
+    def test_wal_commit_during_frame_is_not_mixed(self):
+        from unittest.mock import patch
+        import market_state
+        codes = ('MO2609-C-5000', 'MO2609-P-5000')
+        self.scope = Scope.select(Universe('20260908', 'v1', codes, True), 'CFFEX', 'MO', month='2609')
+        self.insert(code=codes[0])
+        self.insert(code=codes[1])
+        old_quality = market_state.quality
+        calls = 0
+        before_files = set(self.directory.iterdir())
+        def quality_with_writer(*args):
+            nonlocal calls
+            calls += 1
+            if calls == 1:
+                self.insert('09:30:59', code=codes[1])
+            return old_quality(*args)
+        with patch('market_state.quality', side_effect=quality_with_writer):
+            frame = self.frame()
+        self.assertEqual(frame['raw_revision'], 2)
+        self.assertEqual([row['observation']['id'] for row in frame['rows']], [1, 2])
+        self.assertEqual([row['observation']['id'] for row in self.frame()['rows']], [1, 3])
+        self.assertEqual(self.frame(raw_revision=2), frame)
+        self.assertEqual(set(self.directory.iterdir()), before_files)
+
+    def test_actual_query_uses_existing_instrument_time_index(self):
+        from contextlib import contextmanager
+        statements = []
+        class TracedStore(Store):
+            @contextmanager
+            def connect(store, day):
+                with super().connect(day) as db:
+                    db.set_trace_callback(statements.append)
+                    yield db
+        self.insert()
+        self.reader.store = TracedStore(self.directory)
+        self.frame()
+        query = next(sql for sql in statements if 'FROM snapshots WHERE InstrumentID=' in sql)
+        plan = self.db.execute('EXPLAIN QUERY PLAN ' + query).fetchall()
+        detail = ' '.join(row[3] for row in plan)
+        self.assertIn('USING INDEX snapshots_instrument_time', detail)
+        self.assertNotIn('TEMP B-TREE', detail)
+
+    def test_bad_schema_is_query_error_not_empty(self):
+        self.db.execute('ALTER TABLE snapshots DROP COLUMN ActionDay')
+        self.db.commit()
+        with self.assertRaises(QueryError) as caught:
+            self.frame()
+        self.assertEqual(caught.exception.status, 503)
+
+    def test_equivalent_utc_time_is_identical(self):
+        from datetime import timezone
+        self.insert()
+        local = self.reader.as_of(self.scope, at('09:31:00'))
+        utc = self.reader.as_of(self.scope, at('09:31:00').astimezone(timezone.utc))
+        self.assertEqual(local, utc)

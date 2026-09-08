@@ -1,6 +1,6 @@
 # Minute Market Frame / Latest Market State
 
-设计基线：2026-09-08，实施前建立。状态：设计已确定，实现与验收见任务记录。
+设计基线：2026-09-08，实施前建立。状态：实现与离线验收完成，见 [验收记录](Market_State_Read_Model_Acceptance_CN.md)。
 
 ## 当前架构与本阶段位置
 
@@ -21,7 +21,7 @@ Universe 不完整时即使已知代码都有行情，frame 也不能 COMPLETE�
 - 每个成员按 received_us DESC, id DESC 选一条。id 是该日唯一且跨 run 稳定的平局裁决，不比较跨 run sequence。最新行 invalid 时保留该行并报告问题，绝不退回较老的有效行。
 - 必须限制在同一个 Calendar period 的 [start,end)，竞价/连续切换、午休、日夜切换均隔离。请求 day 必须匹配该 period 的逻辑交易日；分钟必须全部位于一个 period 中。休市/休息分钟和未知日历不可当作可重建的交易分钟。
 - snapshot_us 可能晚于 minute end：本模型重建当前 Raw 中已保存的接收事实，不声称重现当时可见的数据库，不恢复未被15秒采样保留的 tick。
-- sealed = 显式 evaluated_at >= minute end，仅表示分钟时间已结束。Raw 无最终提交 watermark，sealed 不保证后续 Raw 不变。每次事务读取 max(id) 作为 raw_revision；可传回该上限重建同一 append-only 日文件切片。相同 Raw、scope（含版本）、calendar、时间、策略和 revision 得到相同输出；不读取隐含 now。外部覆写/删除旧行不在 append-only 保证内。
+- sealed = 显式 evaluated_at >= minute end，仅表示分钟时间已结束。未封口分钟只选择到 evaluated_at（inclusive），age也以 evaluated_at 计算；evaluated_at 早于分钟开始则拒绝。Raw 无最终提交 watermark，sealed 不保证后续 Raw 不变。每次事务读取 max(id) 作为 raw_revision；可传回该上限重建同一 append-only 日文件切片。相同 Raw、scope（含版本）、calendar、时间、策略和 revision 得到相同输出；不读取隐含 now。外部覆写/删除旧行不在 append-only 保证内。
 
 ## 质量与 Latest
 
