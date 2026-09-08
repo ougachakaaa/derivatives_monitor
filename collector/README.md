@@ -50,10 +50,10 @@
 拉取包含 Docker 部署实现的代码后，在仓库根目录执行：
 
 ```bash
-./collector/scripts/deploy.sh up
+./scripts/deploy.sh up
 ```
 
-三服务的系统级 runtime composition 定义在仓库根 `compose.yaml`；当前部署入口仍保留在 Collector 下，并从自身位置解析该根文件。Collector 的 `config.ini`、`data/` 和 `flow/` 仍留在 `collector/`，不随 Compose 文件迁移。
+三服务的系统级 runtime composition 定义在仓库根 `compose.yaml`，系统部署入口是根级 `scripts/deploy.sh`。Collector 自身的 native、universe、healthcheck 和数据验证工具仍在 `collector/scripts/`；`config.ini`、`data/` 和 `flow/` 继续归 Collector，不随系统入口迁移。
 
 首次运行依次询问前置、BrokerID、UserID、隐藏输入的密码和精确合约代码。账号按前置要求填写，可留空；合约必填，先选一个已确认的期货和一个活跃期权。连接地址的示例默认值不代表现场一定可用。
 
@@ -71,11 +71,11 @@ RunSeconds=0
 
 | 命令 | 用途 |
 |---|---|
-| `./collector/scripts/deploy.sh up` | 首次配置、构建及后台启动；更新代码后也运行此命令 |
-| `./collector/scripts/deploy.sh logs` | 跟随最近 100 行日志；Ctrl+C 只结束日志查看 |
-| `./collector/scripts/deploy.sh status` | 查看容器状态、重启次数、最近退出码和采集健康日志 |
-| `./collector/scripts/deploy.sh stop` | 发送 SIGTERM，最多等待 60 秒完成尾部提交；保留全部数据 |
-| `./collector/scripts/deploy.sh verify 20260907` | 在临时容器中只读验收指定交易日，日期按实际文件修改 |
+| `./scripts/deploy.sh up` | 首次配置、构建及后台启动；更新代码后也运行此命令 |
+| `./scripts/deploy.sh logs` | 跟随最近 100 行日志；Ctrl+C 只结束日志查看 |
+| `./scripts/deploy.sh status` | 查看容器状态、重启次数、最近退出码和采集健康日志 |
+| `./scripts/deploy.sh stop` | 发送 SIGTERM，最多等待 60 秒完成尾部提交；保留全部数据 |
+| `./scripts/deploy.sh verify 20260907` | 在临时容器中只读验收指定交易日，日期按实际文件修改 |
 
 看板打开 **http://localhost:8101**；FastAPI 文档 **http://localhost:8000/docs**。React 页面由独立 Nginx 容器提供，Python 不托管 JS。`QUERY_PORT` / `DASHBOARD_PORT` 环境变量可调整对应宿主端口（后续命令沿用相同值）；默认只监听 127.0.0.1。
 
@@ -87,7 +87,7 @@ SQLite 并未迁移：宿主 `collector/data/` 是持久 bind mount，Collector 
 docker stop --time 60 "$(docker ps -q --filter label=com.docker.compose.project=derivatives-monitor --filter label=com.docker.compose.service=collector)"
 ```
 
-随后查询历史日；恢复采集执行 `./collector/scripts/deploy.sh up`。详情见 [后端](../query/README.md)、[看板](../dashboard/README.md) 和 [读路径验收](../docs/archive/acceptance/Read_Path_Acceptance_CN.md)。
+随后查询历史日；恢复采集执行 `./scripts/deploy.sh up`。详情见 [后端](../query/README.md)、[看板](../dashboard/README.md) 和 [读路径验收](../docs/archive/acceptance/Read_Path_Acceptance_CN.md)。
 
 构建或预检失败不会先停止原容器；新配置验证通过后才更新服务。每个 Docker Engine 使用固定 Compose 项目名 `derivatives-monitor`，只管理一个 Collector；另一 checkout 不能通过 `up/stop` 替换或停止原 checkout 的实例。需要迁移时先从原目录正常停止并移除原 Compose 容器，再安排数据目录迁移。不要同时运行原生 Collector 和 Docker Collector 写同一目录。
 

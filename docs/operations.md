@@ -7,7 +7,7 @@
 | 方式 | 前提 | 管理入口 |
 |---|---|---|
 | 原生 | Linux/WSL x86-64、Release 构建、query Python 3.12/.venv、Node 22.12+、前端依赖、用户 systemd、有效配置 | `./collector/scripts/native.sh up`；`status` / `logs` / `update` / `stop` |
-| Docker | Docker Engine + Compose v2、Git/Bash、有效配置或首次交互输入 | `./collector/scripts/deploy.sh up`；`status` / `logs` / `stop` / `verify YYYYMMDD` |
+| Docker | Docker Engine + Compose v2、Git/Bash、有效配置或首次交互输入 | `./scripts/deploy.sh up`；`status` / `logs` / `stop` / `verify YYYYMMDD` |
 
 同一数据目录只能有一个 Collector。离线测试无需启动真实服务；文档整理无需执行 up/update/stop。宿主安装步骤见各模块 README，不依赖历史报告中 `/tmp` 下的工具路径。
 

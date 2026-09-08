@@ -96,6 +96,7 @@ FORBIDDEN_SAMPLES = (
     'query/new_module.py',
     'query/secrets.json',
     'query/tests/private.log',
+    'scripts/deploy.sh',
     'dashboard/.env.local',
     'dashboard/node_modules/react/index.js',
     'dashboard/src/NewView.jsx',

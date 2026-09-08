@@ -22,6 +22,6 @@ Collector 无需 Python 或浏览器运行；现有 FastAPI 和 React 已能展�
 - [外部参考档案](docs/references/README.md)：中信建投咨询和回复原件、SDK 下载入口/版本/哈希、交易所来源。
 - [历史验收](docs/archive/README.md)：日期化证据，不作为当前状态保证。
 
-完成各模块依赖准备并保留有效配置后，原生 WSL 入口为 `./collector/scripts/native.sh up`；Docker Engine + Compose v2 环境为 `./collector/scripts/deploy.sh up`，该兼容入口读取仓库根的 `compose.yaml`。默认看板 **http://localhost:8101**。两种方式不要同时写同一目录。数据保持在宿主 `collector/data/`，升级镜像不删除历史数据。
+完成各模块依赖准备并保留有效配置后，原生 WSL 入口为 `./collector/scripts/native.sh up`；Docker Engine + Compose v2 的系统级入口为 `./scripts/deploy.sh up`，读取仓库根的 `compose.yaml`。默认看板 **http://localhost:8101**。两种方式不要同时写同一目录。数据保持在宿主 `collector/data/`，升级镜像不删除历史数据。
 
 `experiments/` 原位保留：[CTP 接入实验](experiments/ctp/README.md)、[数据覆盖实验](experiments/data_coverage/README.md)。正式 Collector 的 SDK、公共头和构建适配归 `collector/` 所有，不依赖实验目录；实验客户端可以依赖正式模块。

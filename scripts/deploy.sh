@@ -5,21 +5,21 @@ set -euo pipefail
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 readonly script_dir
-COLLECTOR_DIR="$(cd -- "$script_dir/.." && pwd -P)"
-REPO_DIR="$(cd -- "$COLLECTOR_DIR/.." && pwd -P)"
+REPO_ROOT="$(cd -- "$script_dir/.." && pwd -P)"
+COLLECTOR_DIR="$REPO_ROOT/collector"
+COMPOSE_FILE="$REPO_ROOT/compose.yaml"
 COLLECTOR_UID="$(id -u)"
 COLLECTOR_GID="$(id -g)"
-export COLLECTOR_DIR REPO_DIR COLLECTOR_UID COLLECTOR_GID
+export REPO_ROOT COLLECTOR_DIR COMPOSE_FILE COLLECTOR_UID COLLECTOR_GID
 readonly image_name='derivatives-monitor-collector:local'
 readonly config_path="$COLLECTOR_DIR/config.ini"
-readonly compose_path="$REPO_DIR/compose.yaml"
 readonly project_name='derivatives-monitor'
 temp_config=''
 trap 'if [[ -n "$temp_config" ]]; then rm -f -- "$temp_config"; fi' EXIT
 
 die() { printf 'Error: %s\n' "$*" >&2; exit 1; }
 usage() { printf 'Usage: %s {up|logs|status|stop|verify YYYYMMDD}\n' "$0"; }
-compose() { docker compose --project-name "$project_name" --file "$compose_path" "$@"; }
+compose() { docker compose --project-name "$project_name" --file "$COMPOSE_FILE" "$@"; }
 
 check_docker() {
     command -v docker >/dev/null 2>&1 || die 'Docker 未安装或不在 PATH 中。'
@@ -106,7 +106,7 @@ check_existing_checkout() {
         cid=$(compose ps --all --quiet "$service")
         [[ -n "$cid" ]] || continue
         project_files=$(docker inspect --format '{{index .Config.Labels "com.docker.compose.project.config_files"}}' "$cid")
-        [[ "$project_files" == "$compose_path" ]] || die '同名部署属于另一 checkout；请从原目录管理，未替换容器。'
+        [[ "$project_files" == "$COMPOSE_FILE" ]] || die '同名部署属于另一 checkout；请从原目录管理，未替换容器。'
         if [[ "$service" == collector ]]; then
             mounted=$(docker inspect --format '{{range .Mounts}}{{if eq .Destination "/app/config.ini"}}{{.Source}}{{end}}{{end}}' "$cid")
             [[ -n "$mounted" ]] || die '已有容器缺少预期配置挂载，未替换容器。'
