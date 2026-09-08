@@ -44,7 +44,7 @@ flowchart LR
 5. **只读安全**：活跃库使用 WAL，离线 immutable 必须持目录共享锁且无非空 WAL。活跃 Collector 采集另一日而旧日缺 sidecar 时明确 503，不能绕过锁或删除 WAL。
 6. **健康分层**：进程心跳、连接登录、订阅、实际接收、数据质量、市场时段分别展示；休市或冷门合约不推送不能直接推断进程故障。
 7. **本地与持久化**：Linux x86-64/WSL；服务生命周期与数据分离；宿主回环默认 8101/8000。配置、日志、flow 与数据不进入镜像；不增加交易或外网暴露。
-8. **制品输入边界**：Collector、Query、Dashboard 保持仓库根 build context，但各自由 `Dockerfile.dockerignore` 维护 deny-by-default allowlist；新增仓库文件默认不可见。Dockerfile 与其输入策略归对应服务所有，和 Compose runtime topology 分开演进。
+8. **构建与编排所有权**：Collector、Query、Dashboard 保持仓库根 build context，但各自由模块内的 `Dockerfile.dockerignore` 维护 deny-by-default allowlist；新增仓库文件默认不可见。单服务 Dockerfile 与其输入策略归对应服务所有，仓库根 `compose.yaml` 归系统级 runtime composition，二者分开演进。
 
 详细不变量分别由 [Collector](contracts/collector.md)、[Read Path](contracts/read-path.md)、[Market State](contracts/market-state.md)、[Calendar/Universe](contracts/market-session.md)、[Deployment](contracts/deployment.md)定义。下游的七项数学/参考/同步/验证决定已在[Analytics / Skew v1](contracts/analytics-skew.md)冻结。
 

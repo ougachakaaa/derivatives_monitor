@@ -12,7 +12,7 @@ export COLLECTOR_DIR="$work/collector" QUERY_PORT=0 DASHBOARD_PORT=0
 COLLECTOR_UID=$(id -u); COLLECTOR_GID=$(id -g)
 export COLLECTOR_UID COLLECTOR_GID
 mkdir -p "$COLLECTOR_DIR/data" "$COLLECTOR_DIR/flow"
-compose() { docker compose -p "$project" -f "$repo_dir/collector/compose.yaml" -f "$work/override.yaml" "$@"; }
+compose() { docker compose -p "$project" -f "$repo_dir/compose.yaml" -f "$work/override.yaml" "$@"; }
 cleanup() {
     local result=$?
     trap - EXIT
@@ -34,7 +34,7 @@ trap cleanup EXIT
 {
     printf '#!/usr/bin/env bash\nset -euo pipefail\n'
     printf 'export COLLECTOR_DIR=%q COLLECTOR_UID=%q COLLECTOR_GID=%q QUERY_PORT=0 DASHBOARD_PORT=0\n' "$COLLECTOR_DIR" "$COLLECTOR_UID" "$COLLECTOR_GID"
-    printf 'docker compose -p %q -f %q -f %q down --timeout 60\n' "$project" "$repo_dir/collector/compose.yaml" "$work/override.yaml"
+    printf 'docker compose -p %q -f %q -f %q down --timeout 60\n' "$project" "$repo_dir/compose.yaml" "$work/override.yaml"
     printf 'docker image rm %q %q %q %q\n' "$project:collector" "$project:query" "$project:dashboard" "$project:build"
 } > "$work/stop.sh"
 cat > "$COLLECTOR_DIR/config.ini" <<'INI'

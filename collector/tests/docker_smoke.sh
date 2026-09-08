@@ -22,7 +22,7 @@ COLLECTOR_UID=$(id -u); COLLECTOR_GID=$(id -g)
 export COLLECTOR_UID COLLECTOR_GID
 mkdir -p "$COLLECTOR_DIR/data" "$COLLECTOR_DIR/flow" "$work/timeout-data" "$work/timeout-flow"
 
-compose() { docker compose --project-name "$test_name" --file "$repo_dir/collector/compose.yaml" --file "$work/override.yaml" "$@"; }
+compose() { docker compose --project-name "$test_name" --file "$repo_dir/compose.yaml" --file "$work/override.yaml" "$@"; }
 cleanup() {
     local result=$?
     trap - EXIT

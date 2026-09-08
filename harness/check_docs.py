@@ -36,7 +36,7 @@ def check(root=ROOT):
     required = ['README.md', 'AGENTS.md', 'docs/README.md', 'docs/mvp.md',
                 'docs/architecture.md', 'docs/acceptance.md', 'docs/operations.md',
                 'docs/references/README.md', 'docs/archive/README.md',
-                'harness/README.md', 'harness/live-acceptance-template.md']
+                'harness/README.md', 'harness/live-acceptance-template.md', 'compose.yaml']
     required += ['docs/contracts/' + name + '.md' for name in
                  ('collector', 'read-path', 'market-state', 'market-session', 'deployment', 'analytics-skew')]
     required += ['docs/contracts/analytics-skew-v1.json', 'docs/references/analytics-skew-sources.md',
@@ -46,6 +46,8 @@ def check(root=ROOT):
             errors.append('Missing document: ' + relative)
     if (root / 'docs/tasks').exists():
         errors.append('Process specs must not return under docs/tasks; maintain the durable design.')
+    if (root / 'collector/compose.yaml').exists():
+        errors.append('System Compose file must be owned at repository root')
     files = [root / p for p in ('README.md', 'AGENTS.md', 'collector/README.md',
                                'query/README.md', 'query/calendars/README.md', 'dashboard/README.md')]
     files += list((root / 'docs').rglob('*.md')) + list((root / 'harness').rglob('*.md'))

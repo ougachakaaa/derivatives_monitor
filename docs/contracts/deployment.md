@@ -1,6 +1,6 @@
 # 部署长期契约
 
-目标为本地 Linux x86-64 / WSL。Collector、Query、Dashboard 三个独立项目；原生 systemd 和 Docker Compose 是两种部署方式，不同时写同一个 Raw 目录。命令与排障见[Collector 手册](../../collector/README.md)和[运行与恢复](../operations.md)。
+目标为本地 Linux x86-64 / WSL。Collector、Query、Dashboard 三个独立项目；仓库根 `compose.yaml` 定义三服务的系统级 runtime composition，原生 systemd 和 Docker Compose 是两种部署方式，不同时写同一个 Raw 目录。命令与排障见[Collector 手册](../../collector/README.md)和[运行与恢复](../operations.md)。
 
 ## 数据与隔离
 
@@ -25,6 +25,6 @@ Skew 审核参考包可保存在数据目录的 `references/analytics/`，由独
 
 Docker 构建执行 CTest、Query 测试、React 测试/构建；隔离容器 smoke 检查实际挂载、健康、重启和保留数据。原生测试、Compose 静态解析、CLI 替身均不替代真实 Engine 验收。`up` 成功只说明部署完成，不说明真实 CTP 订阅或持续行情成立。
 
-Docker build boundary 由对应服务的 `Dockerfile` 与 `Dockerfile.dockerignore` 共同拥有；它与 Compose 负责的 runtime composition 分离。边界验收须导出三个 Dockerfile 实际过滤后的上下文，逐字节核对明确输入且拒绝额外文件，并实际走完三个 runtime image 的依赖安装、构建和 build-stage 测试。
+Docker build boundary 由对应服务的 `Dockerfile` 与 `Dockerfile.dockerignore` 共同拥有；仓库根 `compose.yaml` 负责 runtime composition。三个 service 均以仓库根为 build context；Compose 文件移动不改变 `collector/config.ini`、`collector/data/`、`collector/flow/` 的归属和挂载语义。边界验收须导出三个 Dockerfile 实际过滤后的上下文，逐字节核对明确输入且拒绝额外文件，并实际走完三个 runtime image 的依赖安装、构建和 build-stage 测试。
 
 只读验收器 `verify YYYYMMDD` 检查非空、schema/日身份、外键/完整性及 run 来源。活跃 WAL 正常只读；停机无非空 WAL 且取得目录共享锁才使用 immutable。旧日缺 sidecar 且 Collector 活跃时明确失败，不创建空库、不删除 WAL、不放宽只读。

@@ -53,6 +53,8 @@
 ./collector/scripts/deploy.sh up
 ```
 
+三服务的系统级 runtime composition 定义在仓库根 `compose.yaml`；当前部署入口仍保留在 Collector 下，并从自身位置解析该根文件。Collector 的 `config.ini`、`data/` 和 `flow/` 仍留在 `collector/`，不随 Compose 文件迁移。
+
 首次运行依次询问前置、BrokerID、UserID、隐藏输入的密码和精确合约代码。账号按前置要求填写，可留空；合约必填，先选一个已确认的期货和一个活跃期权。连接地址的示例默认值不代表现场一定可用。
 
 脚本以 0600 权限保存 `collector/config.ini`，然后构建镜像、运行七项 CTest、后端与前端测试，校验配置、目录权限及 Nginx 配置，最后后台启动三个独立服务。首次拉取基础镜像及安装编译依赖需要联网，建议开盘前提前完成。首次非交互运行必须预先准备 INI，脚本不会猜测合约。

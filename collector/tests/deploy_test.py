@@ -13,6 +13,7 @@ import time
 import unittest
 
 COLLECTOR = Path(__file__).resolve().parents[1]
+REPO = COLLECTOR.parent
 MOCK = r'''
 import json, os, pathlib, sys
 a=sys.argv[1:]; log=pathlib.Path(os.environ['MOCK_LOG']); state=log.with_suffix('.state')
@@ -29,7 +30,7 @@ elif a[0]=='compose':
  elif op=='stop': state.write_text('exited')
  elif op=='logs': print('event=health accepted=10 written=5')
 elif a[0]=='inspect':
- if 'project.config_files' in a[2]: print(os.environ.get('MOCK_CONFIG_FILES',os.environ['COLLECTOR_DIR']+'/compose.yaml'))
+ if 'project.config_files' in a[2]: print(os.environ.get('MOCK_CONFIG_FILES',os.environ['REPO_DIR']+'/compose.yaml'))
  elif '.Mounts' in a[2]: print(os.environ['COLLECTOR_DIR']+'/config.ini')
  else: print('status=running restart_count=0 last_exit_code=0')
 elif a[0]=='run':
@@ -47,8 +48,9 @@ class DeployTest(unittest.TestCase):
         (self.collector / 'scripts').mkdir(parents=True)
         for name in ('deploy.sh', 'verify.sh'):
             shutil.copy2(COLLECTOR / 'scripts' / name, self.collector / 'scripts' / name)
-        for name in ('config.example.ini', 'compose.yaml'):
+        for name in ('config.example.ini',):
             shutil.copy2(COLLECTOR / name, self.collector / name)
+        shutil.copy2(REPO / 'compose.yaml', self.root / 'compose.yaml')
         bindir = self.root / 'bin'; bindir.mkdir()
         docker = bindir / 'docker'
         docker.write_text('#!' + sys.executable + '\n' + MOCK); docker.chmod(0o755)
@@ -74,6 +76,16 @@ class DeployTest(unittest.TestCase):
 
     def assert_no_up(self):
         self.assertFalse(any(a[0] == 'compose' and len(a) > 5 and a[5] == 'up' for a in self.calls()))
+
+    def test_root_compose_path(self):
+        self.config()
+        result = self.run_script('status')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        compose_calls = [a for a in self.calls() if a[0] == 'compose' and '--file' in a]
+        self.assertTrue(compose_calls)
+        for call in compose_calls:
+            self.assertIn(str(self.root / 'compose.yaml'), call)
+            self.assertNotIn(str(self.collector / 'compose.yaml'), call)
 
     def test_noninteractive_missing_config_and_engine_failure(self):
         result = self.run_script('up')

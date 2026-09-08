@@ -24,7 +24,7 @@ python3 harness/run.py docker
 | `native` | 原生编译及 query 依赖；重新构建后运行合成夜盘与真实 HTTP 独立停启测试，临时数据/随机端口 |
 | `browser` | native 前提，加 Linux Node/前端依赖、Playwright Chromium 及系统库；合成夜盘与含浏览器的原生闭环 |
 | `packaging` | Docker Engine；分别以三个正式 Dockerfile 的 `context-audit` scratch stage 导出实际上下文，逐字节核对每个镜像的精确输入集合；无需拉取基础镜像，不证明 runtime 镜像可运行 |
-| `docker` | Docker Engine + Compose v2、Bash；隔离三容器和 Collector 生命周期测试，构建镜像，可能下载基础镜像/依赖；默认自动清理本次专用容器/镜像 |
+| `docker` | Docker Engine + Compose v2、Bash；通过仓库根 Compose 构建并隔离测试三容器，再执行 Collector 生命周期测试；可能下载基础镜像/依赖，默认自动清理本次专用容器/镜像 |
 
 除了 `docs` 外均先运行 harness 自测。`docker` 包含 packaging 检查；基础镜像仓库不可达时可单独运行 packaging，不能据此宣称完整容器验收通过。各 profile 独立，选择与修改相关的范围；需要完整工程证据时分别运行 offline、browser、docker。浏览器 profile 的 read-path 已含 native HTTP，不必为同一版本重复运行 native。真实行情和人工使用/对账/恢复/性能门槛用[现场模板](live-acceptance-template.md)记录，不包含在任何自动 profile 中。
 
