@@ -33,7 +33,7 @@ flowchart LR
 | `dashboard/` | 独立 React 页面；生产 Nginx 静态服务和同源 API 代理 | 无 SQLite、凭据、flow、Docker socket 挂载；不在浏览器另写一套权威指标公式 |
 | `harness/` 与模块测试 | 可重复回归、证据范围与收尾门槛映射 | 测试 SDK 仅用于隔离测试；无实盘启动或配置修改 |
 
-`experiments/` 暂不整理。正式 Collector 构建继续引用其 `ctp/common` 与 `ctp/sdk`，这是现有构建依赖，不是新增运行服务。实验 coverage harness 与产品验收 harness 各自独立。
+`experiments/` 是探索空间，不得成为正式 runtime 或 build dependency。CTP SDK 及其 CMake 适配归 `collector/` 所有；实验客户端可以依赖 Collector 的正式第三方依赖与构建设施。实验 coverage harness 与产品验收 harness 各自独立。
 
 ## 稳定边界
 

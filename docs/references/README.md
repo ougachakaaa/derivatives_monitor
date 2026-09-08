@@ -20,8 +20,8 @@
 
 当前固定版本 **v6.7.13_20260225 / Linux x86-64 Market Data**，不在整理过程中升级或重新下载替换。
 
-- [仓库 SDK 清单](../../experiments/ctp/sdk/v6.7.13_20260225/MANIFEST.txt)：原包 `v6.7.13_20260225_trader.zip`，SHA-256 `a15958da251fe8d375fc66f56721ef067b2f300bc7979572e4eaf95d53ca8ae5`；包含三份头文件转码前后和动态库哈希。包名含 trader 不代表项目使用 Trader API。
-- [SDK 目录](../../experiments/ctp/sdk/v6.7.13_20260225/linux64/mdapi/)、[接入/构建说明](../../experiments/ctp/README.md)、[行情字段表](../../experiments/ctp/docs/ctp-depth-market-data-fields.csv)。仅注释从 GB18030 转为 UTF-8；二进制未改。
+- [仓库 SDK 清单](../../collector/third_party/ctp/v6.7.13_20260225/MANIFEST.txt)：原包 `v6.7.13_20260225_trader.zip`，SHA-256 `a15958da251fe8d375fc66f56721ef067b2f300bc7979572e4eaf95d53ca8ae5`；包含三份头文件转码前后和动态库哈希。包名含 trader 不代表项目使用 Trader API。
+- [SDK 目录](../../collector/third_party/ctp/v6.7.13_20260225/linux64/mdapi/)、[Collector 构建说明](../../collector/README.md)、[实验接入说明](../../experiments/ctp/README.md)、[行情字段表](../../experiments/ctp/docs/ctp-depth-market-data-fields.csv)。仅注释从 GB18030 转为 UTF-8；二进制未改。
 - [上期技术官方下载入口](https://www.sfit.com.cn/5_2_DocumentDown_2.htm)、[SimNow API 下载入口](https://www.simnow.com.cn/static/apiDownload.action)。上期技术入口亦可从[中信建投外部接入指引](https://m.cfc108sh.com/uploads/czzy.pdf)的官网地址追溯。
 
 2026-09-08 补录上述下载入口：上期技术访问出现 TLS/网关错误；SimNow 返回 202 验证页面，未取得下载清单。原 MANIFEST 没有记录该版本 ZIP 的原始直链，当前不能确认精确下载 URL 或入口可用性。保留可定位入口、固定版本和哈希，不将未经验证的拼接 URL 当成来源。未来重新取得原包时核对原包哈希并补充真实 URL/抓取时间；构建目前使用已入库最小 SDK，无需联网下载。

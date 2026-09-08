@@ -18,8 +18,11 @@ def main():
                     'query/market_calendar.py', 'query/market_state.py', 'query/analytics.py', 'query/skew_service.py', 'query/skew_references.py',
                     'query/calendars/2026.json',
                     'query/poetry.lock', 'harness/fixtures/analytics-skew-v1.json',
-                    'collector/src/main.cpp', 'dashboard/src/App.jsx',
-                    'experiments/ctp/sdk/v6.7.13_20260225/linux64/mdapi/thostmduserapi_se.so']
+                    'collector/src/main.cpp', 'collector/cmake/ctp_sdk.cmake',
+                    'collector/include/client_support.hpp',
+                    'collector/third_party/ctp/v6.7.13_20260225/MANIFEST.txt',
+                    'dashboard/src/App.jsx',
+                    'collector/third_party/ctp/v6.7.13_20260225/linux64/mdapi/thostmduserapi_se.so']
         for relative in expected:
             original, exported = ROOT / relative, destination / relative
             if not exported.is_file() or exported.read_bytes() != original.read_bytes():

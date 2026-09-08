@@ -114,7 +114,7 @@ Docker 未就绪、配置错误、构建失败、目录不可写、日文件不�
 
 ## 构建与测试
 
-Linux x86-64，CMake ≥ 3.16，C++17 编译器，SQLite ≥ 3.24 开发包。Ubuntu/Debian 可用 `build-essential cmake libsqlite3-dev`（`sqlite3` 命令行工具可选）。使用仓库内官方 v6.7.13 SDK，CMake 共享原 demo 的 SDK 查找/链接规则。
+Linux x86-64，CMake ≥ 3.16，C++17 编译器，SQLite ≥ 3.24 开发包。Ubuntu/Debian 可用 `build-essential cmake libsqlite3-dev`（`sqlite3` 命令行工具可选）。使用 `collector/third_party/ctp/` 内的官方 v6.7.13 SDK，并由 `collector/cmake/ctp_sdk.cmake` 负责 SDK 查找/链接；Collector 的源码、构建定义和 CTP 第三方依赖不依赖 `experiments/`。
 
 在仓库根目录：
 

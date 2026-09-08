@@ -67,7 +67,7 @@ def check(root=ROOT):
                 errors.append('Archived original hash mismatch: ' + artifact['path'])
     except (OSError, ValueError, KeyError) as error:
         errors.append('Reference manifest invalid: ' + str(error))
-    sdk = root / 'experiments/ctp/sdk/v6.7.13_20260225'
+    sdk = root / 'collector/third_party/ctp/v6.7.13_20260225'
     try:
         entries = dict(line.split('=', 1) for line in (sdk / 'MANIFEST.txt').read_text().splitlines() if '=' in line)
         for name in ('ThostFtdcMdApi.h', 'ThostFtdcUserApiDataType.h', 'ThostFtdcUserApiStruct.h', 'thostmduserapi_se.so'):
@@ -82,7 +82,10 @@ def check(root=ROOT):
     inputs += [str(p.relative_to(root)) for p in (root / 'query/tests').glob('*.py')]
     inputs += [str(p.relative_to(root)) for p in (root / 'query/calendars').glob('*.json')]
     inputs += ['query/pyproject.toml', 'query/poetry.lock', 'collector/src/main.cpp',
-               'dashboard/src/App.jsx', 'experiments/ctp/sdk/v6.7.13_20260225/linux64/mdapi/thostmduserapi_se.so']
+               'collector/cmake/ctp_sdk.cmake', 'collector/include/client_support.hpp',
+               'collector/third_party/ctp/v6.7.13_20260225/MANIFEST.txt',
+               'dashboard/src/App.jsx',
+               'collector/third_party/ctp/v6.7.13_20260225/linux64/mdapi/thostmduserapi_se.so']
     for path in inputs:
         if not docker_included(path, rules):
             errors.append('Required Docker input excluded: ' + path)
