@@ -2,13 +2,13 @@
 
 独立链路：CTP → 内存最新行情 → 定时 snapshot → 按交易日 SQLite。仅依赖 C++17/Linux、CTP 行情 SDK、SQLite 和系统线程库，无 Python/Browser/HTTP 服务。
 
-[设计约束](../docs/Data_Collector_Constraints_CN.md) · [Task Specs](../docs/tasks/data-collector/README.md) · [验收记录](../docs/Data_Collector_Acceptance_CN.md)
+[长期契约](../docs/contracts/collector.md) · [MVP 范围](../docs/mvp.md) · [当前验收矩阵](../docs/acceptance.md) · [Harness](../harness/README.md)
 
 ## 原生 WSL / CFFEX 与 SHFE AU、AG 采集
 
-当前部署使用原生 Collector、独立 FastAPI、Vite 看板。Windows 浏览器访问 **http://localhost:8101**，API 为 **http://localhost:8000/docs**。仅绑定回环地址，通过 WSL localhost 转发访问，不需要局域网端口开放。实际 Windows Edge 验收见 [CFFEX 验收记录](../docs/CFFEX_Coverage_Acceptance_CN.md)。
+当前部署使用原生 Collector、独立 FastAPI、Vite 看板。Windows 浏览器访问 **http://localhost:8101**，API 为 **http://localhost:8000/docs**。仅绑定回环地址，通过 WSL localhost 转发访问，不需要局域网端口开放。实际 Windows Edge 验收见 [CFFEX 验收记录](../docs/archive/acceptance/CFFEX_Coverage_Acceptance_CN.md)。
 
-前提：本节下面的 CMake Release 构建及测试完成；按 `query/README.md` 准备 `query/.venv`（Python 3.12）；按 `dashboard/README.md` 安装前端依赖并构建；用户级 systemd 可用。Node 要求 22.12+，可通过 `DM_NODE=/absolute/path/to/node` 指定。当前机器已将缺少的 SQLite 开发包、Node 与构建工具放在被忽略的 `collector/build/` 下；不要删除运行依赖的构建目录。
+前提：本节下面的 CMake Release 构建及测试完成；按 `query/README.md` 准备 `query/.venv`（Python 3.12）；按 `dashboard/README.md` 安装前端依赖并构建；用户级 systemd 可用。Node 要求 22.12+，可通过 `DM_NODE=/absolute/path/to/node` 指定。本地可能将 SQLite 开发包、Node 与构建工具放在被忽略的 `collector/build/` 下；清理前核对实际依赖，不将其视为可任意删除的缓存。
 
 保留有效的 `collector/config.ini`，要求 `DataDirectory=data`、`RunSeconds=0`。运行：
 
@@ -85,7 +85,7 @@ SQLite 并未迁移：宿主 `collector/data/` 是持久 bind mount，Collector 
 docker stop --time 60 "$(docker ps -q --filter label=com.docker.compose.project=derivatives-monitor --filter label=com.docker.compose.service=collector)"
 ```
 
-随后查询历史日；恢复采集执行 `./collector/scripts/deploy.sh up`。详情见 [后端](../query/README.md)、[看板](../dashboard/README.md) 和 [读路径验收](../docs/Read_Path_Acceptance_CN.md)。
+随后查询历史日；恢复采集执行 `./collector/scripts/deploy.sh up`。详情见 [后端](../query/README.md)、[看板](../dashboard/README.md) 和 [读路径验收](../docs/archive/acceptance/Read_Path_Acceptance_CN.md)。
 
 构建或预检失败不会先停止原容器；新配置验证通过后才更新服务。每个 Docker Engine 使用固定 Compose 项目名 `derivatives-monitor`，只管理一个 Collector；另一 checkout 不能通过 `up/stop` 替换或停止原 checkout 的实例。需要迁移时先从原目录正常停止并移除原 Compose 容器，再安排数据目录迁移。不要同时运行原生 Collector 和 Docker Collector 写同一目录。
 
@@ -102,22 +102,15 @@ docker logs "$(docker ps -aq --filter label=com.docker.compose.project=derivativ
 
 验收器的目录挂载与 SQLite 连接都只读。对于正常停机且没有 WAL 的库，验收器在持有 Collector 目录共享锁期间使用 `immutable`，避免 SQLite 尝试创建 sidecar；该模式不会用于正在写入的数据。若正在采集其他交易日，而所查历史日缺少 sidecar，请正常 `stop` 后再验收。异常结束留下的 WAL 不得删除；必要时先正常启动 Collector 完成 SQLite 恢复再查询。
 
-Docker 未就绪、配置错误、构建失败、目录不可写、日文件不存在或验收失败均返回非零退出码。`up` 的“已部署”不表示已通过真实 CTP 验收。周一仍需确认登录、逐合约订阅、持续接收和 `snapshot_commit`，见 [实盘验收步骤](../docs/Data_Collector_Acceptance_CN.md)。
+Docker 未就绪、配置错误、构建失败、目录不可写、日文件不存在或验收失败均返回非零退出码。`up` 的“已部署”不表示已通过真实 CTP 验收。实盘验收需确认登录、逐合约订阅、持续接收和 `snapshot_commit`，见 [实盘验收步骤](../docs/archive/acceptance/Data_Collector_Acceptance_CN.md)。
 
-部署实现与验证边界见 [Docker 验收记录](../docs/Data_Collector_Docker_Acceptance_CN.md)。
+部署实现与验证边界见 [Docker 验收记录](../docs/archive/acceptance/Data_Collector_Docker_Acceptance_CN.md)。
 
-## WSL 提示找不到 docker 时
+## WSL Docker 排障
 
-先在 Windows 启动 Docker Desktop，等待 Engine 就绪，再回到 WSL 执行 `docker version` 与 `docker compose version`。需要同时看到 Client 和 Linux Server；仅 CLI 可用不代表 Engine 可用。也可从 WSL 调用已安装的 Desktop CLI：
+先确认 Docker Desktop 已启动且启用当前 WSL 发行版集成，执行 `docker version` 和 `docker compose version`，需有 Linux Server；只有 CLI 不代表 Engine 可用。不要为修复连接而清理数据或重装发行版。恢复后用 `python3 harness/run.py docker` 验证隔离链路。
 
-```bash
-'/mnt/c/Program Files/Docker/Docker/resources/bin/docker.exe' desktop start
-docker version
-```
-
-若 Windows CLI 能连接 Server、WSL 却没有 `/var/run/docker.sock`，检查 Desktop → Settings → Resources → WSL Integration 中当前发行版是否启用。若弹出 `setup groups / whoami / Wsl/Service/0x8007274c`，先确认 `wsl.exe -d Ubuntu-24.04 -e whoami` 正常返回，再在 Desktop 错误窗口选择 **Restart the WSL integration**。本机实际遇到的就是 Desktop 未运行及随后集成启动超时；重试集成后已恢复，无需重装或清空数据。
-
-恢复后可先执行 `bash tests/read_path_docker_smoke.sh` 验证隔离三容器链路，再用 `deploy.sh up` 部署真实配置。官方说明：[WSL 集成](https://docs.docker.com/desktop/features/wsl/)、[Desktop CLI](https://docs.docker.com/reference/cli/docker/desktop/)。
+官方说明：[WSL 集成](https://docs.docker.com/desktop/features/wsl/)、[Desktop CLI](https://docs.docker.com/reference/cli/docker/desktop/)。历史现场故障见[归档](../docs/archive/README.md)，不是每台机器都需执行的操作。
 
 ## 构建与测试
 
@@ -144,7 +137,7 @@ collector/build/Release/bin/data_collector --config collector/config.ini --check
 collector/build/Release/bin/data_collector --config collector/config.ini
 ```
 
-`config.ini`、默认 `data/`、`flow/`、`build/` 已忽略。真实配置和凭据不要提交。示例 `Instruments` 故意留空，空 universe 会拒绝启动，不会把只登录的探测误当成采集。行情 API 不查询上市合约；合约清单由操作人维护。
+`config.ini`、默认 `data/`、`flow/`、`build/` 已忽略。真实配置和凭据不要提交。示例 `Instruments` 故意留空，空 universe 会拒绝启动，不会把只登录的探测误当成采集。行情 API 不查询上市合约；原生管理器可发现公开清单，手工或 Docker 部署仍需明确提供合约。
 
 | 参数 | 默认/语义 |
 |---|---|
@@ -169,18 +162,11 @@ CLI：`--config PATH`、可重复 `--instrument CODE`（整体覆盖配置 unive
 
 已有配置不会被部署脚本改写：在实际部署的 `config.ini` 中显式设置 `SnapshotIntervalMs=15000`，正常停止旧 Collector 后更新启动，沿用原数据目录。同日旧 1 秒 run 与新 15 秒 run 可以共存，不需要 schema 迁移；启动日志及新 `runs.snapshot_interval_ms` 应为 `15000`。省略此配置才会采用新版默认值，显式 `1000` 仍表示 1 秒。
 
-实盘接收及数据库增长对比步骤见 [15 秒 Snapshot 验收记录](../docs/Collector_15s_Snapshot_Acceptance_CN.md)。
+实盘接收及数据库增长对比步骤见 [15 秒 Snapshot 验收记录](../docs/archive/acceptance/Collector_15s_Snapshot_Acceptance_CN.md)。
 
-## 采样和交易日
+## 采样与可靠性契约
 
-- callback 复制 SDK 行情到 `(TradingDay, InstrumentID)` 最新状态，记录本地 UTC epoch 微秒接收时间。主循环用单调时钟定期物化，再写 SQLite，SQLite 不进入 callback。15 秒只控制 durable snapshot 物化，不降低 callback 接收或内存更新频率，不做价格平均。
-- 首次截止时间为启动单调时间加配置间隔；每次物化与写入完成后再等待约 15 秒，不对齐自然时钟、不追补错过的窗口。每窗口最多一条以 `(TradingDay, InstrumentID)` 为单位，跨交易日分别保存。
-- 源 `TradingDay/ActionDay/UpdateTime/UpdateMillisec` 原样保留；`received_us` 属于被选中的最后一次 callback，`snapshot_us` 是物化时采集的本地 UTC epoch 微秒时间，不是源时间或 commit 时间。
-- 每窗口每合约保存最后收到的一次更新；相同内容的新 callback 也算更新；没有新 callback 不重复写。这是 sampled snapshot，不是逐笔成交，也不承诺保存所有 CTP 回调。
-- 同日更新以本地接收顺序为准，不以源时间强制排序/去重。`sequence` 表示 run 内接收次序，允许间断。系统时钟校正可能导致 epoch 时间回退，不能仅据此推断丢包。
-- 每条 snapshot 只写入其源 `TradingDay` 对应的 `YYYYMMDD.sqlite`。合法性校验包含年月日及闰年，**不拿本地自然日、登录日或 ActionDay 兜底**；非法/空日拒收并计数。登录日仅用于日志。
-- 保留至多两个交易日 × universe 的内存状态；相邻两日乱序分开保存。更旧日拒收；第三日只有在最旧日没有待物化更新时才淘汰，否则显式失败。日界前后的尾部事实不会移入新日。
-- snapshot 保留 SDK 46 个非 reserve 源字段，包括五档价格数量、成交量额、持仓、前结算/昨收盘、涨跌停、delta、均价和带价。`DBL_MAX`、`-DBL_MAX`、NaN/Inf 写 NULL；零和负值保持原值，空字符串仍为空字符串。不使用 reserve 字段作身份补全。
+源 TradingDay 分区、三类时间、15秒 dirty 物化、两日有界状态、无效浮点 NULL、单 writer、WAL/FULL、断线重订阅及停机尾部语义统一见[Collector 长期契约](../docs/contracts/collector.md)。采样保留最新接收事实，不保证逐 callback 无损或断线回补。
 
 ## 数据契约 v1
 
@@ -198,15 +184,9 @@ CLI：`--config PATH`、可重复 `--instrument CODE`（整体覆盖配置 unive
 
 `runs.stopped_us IS NULL` 表示未记录正常结束，可能是进程仍运行、异常退出或强制终止；需结合当前进程/日志判断。每个有数据写入的交易日记录该 run，没有有效行情时不创建空日数据库，启动尝试通过日志追踪。
 
-## 写入可靠性与停机
+## 停机与恢复
 
-每数据目录持有非阻塞进程锁；第二个 Collector 非零退出。文件锁只约束遵循协议的 Collector，操作人仍须遵守 C++ 唯一 writer、下游只读的约定。
-
-逐日事务、prepared statements、WAL、`synchronous=FULL`、1000ms busy timeout。提交成功后才增加 `written`。持久化出错记录 `persistence_failed` 并非零退出；跨日批次不承诺跨文件原子性，先前成功提交的日文件保持有效。
-
-Ctrl+C/SIGTERM 和定时结束会先停止 SDK 回调并 Release，再提交尾部更新，标记正常停止。正常停止会提前提交不足 15 秒的尾部窗口，因此相邻 snapshot 的间隔可能不足 15 秒。SIGKILL/崩溃可能丢失尚在内存或未提交的窗口；默认窗口延长后，潜在未持久化时间相应增加，慢写入时还可能更长；已提交事务通过 SQLite 恢复。磁盘很慢时多次 callback 会合并进后续 snapshot；不建设额外无界队列。SQLite 事务 durability 仍取决于操作系统与磁盘正确落实同步。
-
-SDK 自动重连；重连后重新登录、重新订阅。初次连接/登录超时退出；首次登录后的断线保持进程运行，等待 SDK 恢复，登录失败有间隔地重试。本地订阅调用拒绝会重试；前置明确订阅失败或响应超时标记 `failed`，此 session 不盲目重试无效合约，配置修正后重启或下次连接重新订阅。CTP 不提供本程序所需的断线历史回补。
+Ctrl+C/SIGTERM 和定时结束先 Release SDK 再提交尾部，SIGKILL/崩溃可能丢未提交窗口；持久化失败明确非零退出。故障检查、备份与隔离恢复按[运行与恢复规程](../docs/operations.md)。不要删除 WAL 或修改 Raw 来消除错误。
 
 ## 健康检查
 
@@ -252,8 +232,8 @@ with sqlite3.connect(path.as_uri() + "?mode=ro", uri=True, timeout=1) as db:
 
 ## AU / AG 与夜盘验收
 
-多市场设计、参考年历与任务见 [Market Session 设计](../docs/Market_Calendar_Session_Design_CN.md)。`python3 query/market_calendar.py --exchange SHFE --product AU --at '2026-09-07T23:30:00+08:00'` 可在仓库根目录独立查询，日历不进入 C++ callback 或物化链路。
+多市场设计与参考年历见 [Market Session 设计](../docs/contracts/market-session.md)。`python3 query/market_calendar.py --exchange SHFE --product AU --at '2026-09-07T23:30:00+08:00'` 可在仓库根目录独立查询，日历不进入 C++ callback 或物化链路。
 
 跨自然日离线回归：构建Collector后，在仓库根目录执行 `query/.venv/bin/python tests/night_session_smoke.py`。该测试只对临时子进程加载合成SDK，覆盖AU/AG夜盘、00:00、日盘、下一TradingDay、CFFEX共存、重连、正常停止及同日追加；源时间压缩，显式100ms测试间隔不改变生产默认15秒。正式采集禁止设置测试SDK的 `LD_PRELOAD` 或 `DM_TEST_SCENARIO`。
 
-实盘结果及仍需补验的跨零点连续运行见 [本次验收记录](../docs/Market_Session_SHFE_Acceptance_CN.md)。官方清单完整、订阅成功、真实callback、持续写入及跨日正确是不同证据，不应相互替代。
+实盘结果及仍需补验的跨零点连续运行见 [本次验收记录](../docs/archive/acceptance/Market_Session_SHFE_Acceptance_CN.md)。官方清单完整、订阅成功、真实callback、持续写入及跨日正确是不同证据，不应相互替代。

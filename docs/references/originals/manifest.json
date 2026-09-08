@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "artifacts": [
+    {
+      "path": "csc-ctp-mvp-questions-and-replies.docx",
+      "sha256": "c61a22d9ae0d47bb610ed0f5aa2c2bd9551b91f58179e26941ee2f1a28306c74",
+      "source_commit": "fb25dc91d65772a157ee886f251a1a0f0ec5945b",
+      "source_path": "experiments/ctp/中信建投期货_CTP行情API咨询问题清单_MVP.docx",
+      "description": "Original broker questions and replies restored byte-for-byte from Git; not a new consultation."
+    },
+    {
+      "path": "ctp-6.7.9P1-api-manual.chm",
+      "sha256": "44796fb95ab86e5a0fbc88f5bb4e82cd480d8b6c4727a36751e4b60c6db625e5",
+      "source_commit": "fb25dc91d65772a157ee886f251a1a0f0ec5945b",
+      "source_path": "experiments/ctp/6.7.9P1API接口说明.chm",
+      "description": "Historical vendor API help, recovered byte-for-byte; not the active SDK contract."
+    }
+  ]
+}

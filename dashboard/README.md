@@ -1,5 +1,7 @@
 # React 采集看板
 
+[系统架构](../docs/architecture.md) · [MVP 汇报页目标](../docs/mvp.md) · [验收矩阵](../docs/acceptance.md) · [Harness](../harness/README.md)
+
 独立 React/Vite 项目。Python 只提供 JSON；生产镜像由 Nginx 提供页面，并将同源 `/api/` 转发到 `query:8000`。前端不挂载 SQLite、CTP 配置或 Docker socket。
 
 当前 WSL 原生部署使用 `./collector/scripts/native.sh up`，Windows 打开 **http://localhost:8101**。页面增加 CFFEX 各品种/月的覆盖统计，展示清单来源和过期状态、订阅失败及已订阅暂无推送的区别。

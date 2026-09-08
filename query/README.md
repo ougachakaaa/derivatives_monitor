@@ -1,5 +1,7 @@
 # 只读查询后端
 
+[系统架构](../docs/architecture.md) · [只读契约](../docs/contracts/read-path.md) · [验收矩阵](../docs/acceptance.md) · [Harness](../harness/README.md)
+
 FastAPI + Uvicorn；Python 3.12，Poetry 2.2.1 管理独立环境与 `poetry.lock`。只提供 JSON/OpenAPI，不提供 React 或其他静态资源。
 
 从本目录开发运行（先安装 Python 3.12 和 Poetry）：
@@ -46,7 +48,7 @@ python3 query/market_calendar.py --exchange SHFE --product AU --at '2026-09-07T2
 
 ## Market State Read Model（Python 契约 v1）
 
-`market_state.py` 提供 `Universe`、`Scope`、`MarketStateReader`，不需要启动 HTTP 或调度任务。它是后续 Analytics 的 Raw 读取边界；本阶段不包含 IV/Skew/Basis。完整语义见 [设计基线](../docs/Market_State_Read_Model_Design_CN.md)。
+`market_state.py` 提供 `Universe`、`Scope`、`MarketStateReader`，不需要启动 HTTP 或调度任务。它是 Analytics 的 Raw 读取边界；当前尚未实现 IV/Skew/Basis。完整语义见 [设计基线](../docs/contracts/market-state.md)。
 
 ```python
 from datetime import datetime
