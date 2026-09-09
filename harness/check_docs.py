@@ -16,6 +16,41 @@ from docker_boundaries import BOUNDARIES, FORBIDDEN_SAMPLES
 
 ROOT = Path(__file__).resolve().parents[1]
 
+REQUIRED_PATHS = (
+    'README.md',
+    'AGENTS.md',
+    'docs/README.md',
+    'docs/mvp.md',
+    'docs/design.md',
+    'docs/architecture.md',
+    'docs/acceptance.md',
+    'docs/operations.md',
+    'docs/references/README.md',
+    'docs/archive/README.md',
+    'harness/README.md',
+    'harness/live-acceptance-template.md',
+    'compose.yaml',
+    'scripts/deploy.sh',
+    *(f'docs/contracts/{name}.md' for name in
+      ('collector', 'read-path', 'market-state', 'market-session', 'deployment', 'analytics-skew')),
+    'docs/contracts/analytics-skew-v1.json',
+    'docs/references/analytics-skew-sources.md',
+    'harness/fixtures/analytics-skew-v1.json',
+)
+
+# These production entrypoints are not image inputs, so the Docker boundary
+# manifest cannot supply them to the dependency-direction check.
+NON_IMAGE_PRODUCTION_INPUTS = (
+    'compose.yaml',
+    'scripts/deploy.sh',
+    'collector/scripts/native.py',
+    'collector/scripts/native.sh',
+    'collector/scripts/universe.py',
+)
+
+EXPERIMENT_PATH = re.compile(r'(?<![A-Za-z0-9_-])experiments[/\\]')
+EXPERIMENT_IMPORT = re.compile(r'^\s*(?:from|import)\s+experiments(?:\.|\s|$)')
+
 
 def docker_included(relative, rules):
     included = True
@@ -31,26 +66,60 @@ def docker_included(relative, rules):
     return included
 
 
+def production_dependency_errors(root=ROOT, boundaries=BOUNDARIES):
+    """Reject formal build/runtime inputs that depend on experiment-owned paths."""
+    errors = []
+    inputs = set(NON_IMAGE_PRODUCTION_INPUTS)
+    for service, declared_inputs in boundaries.items():
+        for relative in declared_inputs:
+            if Path(relative).parts[:1] == ('experiments',):
+                errors.append(
+                    f'{service} Docker input is experiment-owned: {relative}; formal images must only '
+                    'consume production-owned inputs (docs/architecture.md, docs/contracts/deployment.md)'
+                )
+            if '/tests/' not in relative and '/third_party/' not in relative \
+                    and not relative.endswith('Dockerfile.dockerignore') \
+                    and not relative.startswith('harness/'):
+                inputs.add(relative)
+
+    for relative in sorted(inputs):
+        path = root / relative
+        if not path.is_file():
+            continue
+        try:
+            lines = path.read_text(errors='replace').splitlines()
+        except OSError as error:
+            errors.append(f'{relative}: production dependency input unavailable: {error}')
+            continue
+        for line_number, line in enumerate(lines, 1):
+            stripped = line.lstrip()
+            if stripped.startswith(('//', '/*', '*', '<!--')) \
+                    or (stripped.startswith('#') and not stripped.startswith('#include')):
+                continue
+            if EXPERIMENT_PATH.search(line) or EXPERIMENT_IMPORT.search(line):
+                errors.append(
+                    f'{relative}:{line_number}: production dependency points into experiments/; '
+                    'move the dependency to a production-owned path '
+                    '(docs/architecture.md, docs/contracts/deployment.md)'
+                )
+    return errors
+
+
 def check(root=ROOT):
     errors = []
-    required = ['README.md', 'AGENTS.md', 'docs/README.md', 'docs/mvp.md',
-                'docs/architecture.md', 'docs/acceptance.md', 'docs/operations.md',
-                'docs/references/README.md', 'docs/archive/README.md',
-                'harness/README.md', 'harness/live-acceptance-template.md', 'compose.yaml',
-                'scripts/deploy.sh']
-    required += ['docs/contracts/' + name + '.md' for name in
-                 ('collector', 'read-path', 'market-state', 'market-session', 'deployment', 'analytics-skew')]
-    required += ['docs/contracts/analytics-skew-v1.json', 'docs/references/analytics-skew-sources.md',
-                 'harness/fixtures/analytics-skew-v1.json']
-    for relative in required:
+    for relative in REQUIRED_PATHS:
         if not (root / relative).is_file():
             errors.append('Missing document: ' + relative)
     if (root / 'docs/tasks').exists():
-        errors.append('Process specs must not return under docs/tasks; maintain the durable design.')
+        errors.append('Deprecated process specs must not return under docs/tasks; '
+                      'use the durable authority map in docs/README.md')
     if (root / 'collector/compose.yaml').exists():
-        errors.append('System Compose file must be owned at repository root')
+        errors.append('Deprecated collector/compose.yaml exists; system Compose is owned by '
+                      'compose.yaml (docs/contracts/deployment.md)')
     if (root / 'collector/scripts' / 'deploy.sh').exists():
-        errors.append('System deployment entrypoint must be owned at repository root')
+        errors.append('Deprecated collector/scripts/deploy.sh exists; system deployment is owned by '
+                      'scripts/deploy.sh (docs/contracts/deployment.md)')
+    errors.extend(production_dependency_errors(root))
     files = [root / p for p in ('README.md', 'AGENTS.md', 'collector/README.md',
                                'query/README.md', 'query/calendars/README.md', 'dashboard/README.md')]
     files += list((root / 'docs').rglob('*.md')) + list((root / 'harness').rglob('*.md'))
@@ -111,7 +180,7 @@ def main():
     for error in errors:
         print('FAIL:', error)
     if not errors:
-        print('PASS: maintained links, design entrypoints, hashes and per-image Docker allowlists')
+        print('PASS: maintained links, authority entrypoints, dependency direction, hashes and per-image Docker allowlists')
         print('Scope: offline structural checks; no external URL availability, Markdown anchors or business correctness claim.')
     return int(bool(errors))
 

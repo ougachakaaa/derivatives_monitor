@@ -19,7 +19,7 @@
 
 | Harness 检查 | 覆盖 | 不能证明 |
 |---|---|---|
-| `docs` | 文档链接/长期入口、参考原件与 SDK 哈希、构建白名单必要输入 | 业务语义正确或实盘可用 |
+| `docs` | 文档链接/authority 入口、正式构建与运行依赖方向、参考原件与 SDK 哈希、构建白名单必要输入 | 业务语义正确、实现状态措辞或实盘可用 |
 | `analytics-contract` | 七项冻结状态、策略/oracle哈希、固定数值样本与独立float64对照；G3设计基线 | 生产行为、真实输入可用性或实盘对账 |
 | `analytics` | 独立 contract 检查加生产核心、真实临时 SQLite→Market State→Analytics→Skew HTTP 的 TEST DOUBLE 回归；固定revision、哈希、质量/历史/缺口、离线包导入 | 真实官方日参考包、页面闭环或真实时点对账 |
 | `offline` | 构建、7项 CTest、Query（含生产 Analytics 核心）、Universe、部署替身、SQLite CLI、React 测试与构建；G2/G5/G6 工程基础 | 真实网络/浏览器/容器、官方参考/实盘 Analytics、三日运行 |

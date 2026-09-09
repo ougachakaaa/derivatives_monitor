@@ -17,7 +17,7 @@ python3 harness/run.py docker
 
 | Profile | 前提与动作 |
 |---|---|
-| `docs` | 检查维护文档的本地文件链接、设计入口、原件/SDK 哈希和必要 Docker 白名单；不访问外网，不验证 Markdown 锚点 |
+| `docs` | 检查维护文档的本地文件链接与 authority 入口、正式构建/运行不得反向依赖 `experiments/`、原件/SDK 哈希和必要 Docker 白名单；不访问外网，不验证 Markdown 锚点 |
 | `analytics-contract` | 仅标准库；核对七项冻结状态、策略/生成器哈希，使用float64二分与固定独立oracle核对价格/IV/delta/远期/两翼；不运行生产Analytics |
 | `analytics` | 在 `analytics-contract` 基础上，用 `query/.venv` 运行生产 Analytics 及 Skew HTTP 切片正常、异常和边界回归；不读取实盘、不证明官方参考可用 |
 | `offline` | CMake/G++/SQLite 开发库、Python 3.12 的 `query/.venv`、Linux Node 22.12+/npm/已安装前端依赖、SQLite CLI；重新 configure/build Release，执行 CTest、Query、Universe、deploy 替身、verify 真 SQLite CLI、React 和构建 |
@@ -27,6 +27,8 @@ python3 harness/run.py docker
 | `docker` | Docker Engine + Compose v2、Bash；通过仓库根 Compose 构建并隔离测试三容器，再执行 Collector 生命周期测试；可能下载基础镜像/依赖，默认自动清理本次专用容器/镜像 |
 
 除了 `docs` 外均先运行 harness 自测。`docker` 包含 packaging 检查；基础镜像仓库不可达时可单独运行 packaging，不能据此宣称完整容器验收通过。各 profile 独立，选择与修改相关的范围；需要完整工程证据时分别运行 offline、browser、docker。浏览器 profile 的 read-path 已含 native HTTP，不必为同一版本重复运行 native。真实行情和人工使用/对账/恢复/性能门槛用[现场模板](live-acceptance-template.md)记录，不包含在任何自动 profile 中。
+
+`docs` 只执行可确定的结构检查。依赖方向检查限定于正式镜像输入清单及根/原生运行入口；历史 archive、说明文字、测试和 experiment 局部内容不参与判定。实现状态措辞、Design/Architecture 分工和业务语义仍需按文档 authority 人工审查。
 
 所有命令和日志写到被 Git 忽略的 `artifacts/harness/<UTC>-<profile>-<id>/`。`result.json` 保存 HEAD、dirty 状态、平台、命令/工作目录、退出码、时长、日志 SHA-256、工作树补丁及未跟踪源码哈希。只应提交脱敏验收摘要，不提交行情或配置。报告的 `mvp_complete` 始终 false；归档时同时保留对应源码版本/补丁，否则 dirty tree 报告不能复现。
 
