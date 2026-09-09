@@ -14,7 +14,7 @@
 
 v1 Rule 只支持一个标量与常量阈值的 `< / <= / > / >=` 比较。阈值必须有限且不是布尔值，unit 必须与 Feature 单位完全一致；不隐式换算、不用显示舍入或额外容差判断。请求时刻由 runtime 每轮注入，不属于静态 Rule。
 
-Rule Engine 只消费通用 Feature envelope，不能读 Raw、调用金融公式或依赖 Skew/MO/IM 字段。Feature ID、scope/parameters 必须与本次请求一致。schema/身份/单位/时间或值不合法的响应为 UNKNOWN，不能做比较。
+Rule Engine 只消费通用 Feature envelope，不能读 Raw、调用金融公式或依赖 Skew/MO/IM 字段。Feature ID、parameters 和 scope 中请求指定的字段必须与本次请求一致；响应补充的实际逻辑交易日属于 provider 的结果，不要求出现在静态请求中。schema/身份/单位/时间或值不合法的响应为 UNKNOWN，不能做比较。
 
 只有 `status=OK`、有限 value、`historical=false`、`current_usable=true` 且采样身份/时间成立的响应可得到 MATCH 或 NOT_MATCH。输入是否当前可用由 provider 按指标契约决定；Monitoring 不以 healthz、HTTP 200、非 null 或通用 Market State usable 替代它。请求失败、超时、休市、历史、陈旧、不可算及不可解释响应均为 UNKNOWN，并记录原因。
 
@@ -32,7 +32,7 @@ Rule Engine 只消费通用 Feature envelope，不能读 Raw、调用金融公�
 
 transition 序号从 0 开始，只在两种有效判断之间切换时递增；初始基线、UNKNOWN、重复满足不递增。每个规则版本独立编号。
 
-UNKNOWN 更新诊断及缺口，不替换最近有效状态/证据和采样位置。恢复后的有效 Evaluation 关闭缺口：`NOT_MATCH → UNKNOWN → MATCH` 生成带缺口说明的 Event；`MATCH → UNKNOWN → MATCH` 不重复生成。缺口保存起止观测时间和原因，不声称完整记录全部失败请求。进程重启亦记录从上次持久评估到恢复评估的未观测间隔。
+UNKNOWN 更新诊断及缺口，不替换最近有效状态/证据和采样位置。恢复后被接受的新有效 Evaluation 关闭缺口（重复/旧位置不关闭）：`NOT_MATCH → UNKNOWN → MATCH` 生成带缺口说明的 Event；`MATCH → UNKNOWN → MATCH` 不重复生成。缺口保存起止观测时间和原因，不声称完整记录全部失败请求。进程重启亦记录从上次持久评估到恢复评估的未观测间隔。
 
 crossing 只表示两次有效观测之间发现条件由不满足变为满足。Event 必须保留两端时间和值，不能把检测时间说成市场精确穿越时间，也不能声称捕获了间隔内所有 crossing。
 

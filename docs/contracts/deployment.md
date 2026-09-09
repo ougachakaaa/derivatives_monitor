@@ -2,6 +2,16 @@
 
 目标为本地 Linux x86-64 / WSL。Collector、Query、Dashboard 三个独立项目；仓库根 `compose.yaml` 定义三服务的系统级 runtime composition，原生 systemd 和 Docker Compose 是两种部署方式，不同时写同一个 Raw 目录。命令与排障见[Collector 手册](../../collector/README.md)和[运行与恢复](../operations.md)。
 
+## Monitoring v1 可选前台进程（已冻结，待实现）
+
+当前三服务部署保持不变。平行扩展增加一个独立本地 Python 前台进程，入口实现在后续 milestone 交付；不修改 Compose/systemd 或平行 developer runner，不自动启动/停止/重启现有组件。当前进度见 [Acceptance](../acceptance.md)，目标模块见 [Architecture](../architecture.md)。
+
+Monitoring 仅通过 Query HTTP 消费 Feature；不读取 Raw、不导入 Query 内部模块、不挂载行情、Collector 配置、flow、CTP 凭据或管理 socket。Query 不可达时记录输入不可用，不管理 Query 生命周期。Collector 对所有下游均无启动/健康依赖，Query 和 Dashboard 也不要求 Monitoring 运行。
+
+使用独立 application state 目录及用户本地 Rule/target 配置；目录不能位于 Collector 的 DataDirectory（包括使用自定义 Raw 路径时），不能通过复制或清理 Raw 来初始化。停止/升级保留 application SQLite，不自动清库或迁移未知 schema。target 秘密通过环境引用，日志和事件不输出其值。状态、单实例锁、事务及恢复的精确要求见 [Monitoring Contract](monitoring.md)。
+
+正常停止仅结束本次 Monitoring 自有循环与资源；网络调用有界，不影响其他进程。不增加外网入站 HTTP 服务、持久服务管理器或通知服务；出站 webhook 属于用户配置的通知渠道。真实运行与通知验证另行取证，本契约不授权通过启动/重启真实服务验证文档修改。
+
 ## 数据与隔离
 
 - 宿主 `collector/data/`、`collector/flow/` 的生命周期独立于服务/镜像/构建。没有数据迁移，也不是容器临时层；不得用清理镜像或项目目录的动作删除历史数据。

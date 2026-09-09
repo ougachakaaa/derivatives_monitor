@@ -1,6 +1,6 @@
 # MVP Analytics / Skew contract v1
 
-状态：**FROZEN / CORE IMPLEMENTED**，2026-09-08；契约 ID `mo-skew-25d-v1`。本文件冻结七项设计，机器常量见[策略文件](analytics-skew-v1.json)。这是当前 MVP 的唯一 Analytics 定义；生产数值核心位于 `query/analytics.py`，审核参考包导入与 HTTP 已实现，页面及真实对账仍待完成。实现不意味着实盘验收完成。
+状态：**FROZEN / CORE IMPLEMENTED**，2026-09-08；契约 ID `mo-skew-25d-v1`。本文件冻结七项设计，机器常量见[策略文件](analytics-skew-v1.json)。这是当前单月 Skew MVP 的唯一 Analytics 定义；生产数值核心位于 `query/analytics.py`。参考导入、HTTP、页面及真实对账的当前实现/验证状态统一见 [Acceptance](../acceptance.md)，实现不意味着实盘验收完成。平行 [Feature 查询](features.md)复用本契约，不改变任何冻结数值或质量要求。
 
 | 决定 | v1 选择 |
 |---|---|
@@ -155,7 +155,7 @@ MO 的法律标的是中证1000指数；v1 的估值输入是该到期月的**�
 4. **必测场景**：平坦笑脸Skew=0、put翼高/低与符号/单位、非零/负利率ACT360、T的ACT365、C/P平价远期、三对不足/偏离、两翼不跨25Δ/跨度过宽/非单调、30s/5s/15s等号与超1μs、交叉/零量/错误tick/宽spread/小价格、时间价值边界、σ上下界/低vega/迭代失败、缺参考/错日期/单位、未知日历、竞价/首分钟/午休历史展示、到期日拒绝、固定revision重放及PARTIAL输入。生产实现必须补齐这些行为测试；数值向量不能替代它们。
 5. **真实独立对账**：至少10个不同估值时点，至少6个可计算（含put翼较高及非平坦情况），至少4个异常/不可用；真实市场未自然出现的异常可对真实frame复制件定点扰动，单列 SYNTHETIC_MUTATION，不宣称实盘异常。固定输入包、使用独立 QuantLib/独立选择脚本或人工表格复算；至少一个完整链逐项核对三对选择/翼端点/权重/时间跨度。真实现场样本必须由真实行情提供，不能以合成向量充数。
 
-本次冻结只证明公式和基准内部一致、决定可实现；G3 真实对账、G1/G4/G5/P1/P2 仍待实现与现场验收。独立 oracle、合约选择及规则的测试映射见[Harness](../../harness/README.md)。
+契约冻结只证明公式和基准内部一致、决定可实现，不替代真实业务验收。G1–G6/P1/P2 的当前实现与证据缺口统一见 [Acceptance](../acceptance.md)；独立 oracle、合约选择及规则的测试映射见[Harness](../../harness/README.md)。
 
 ## 9. 变更规则与依据
 
@@ -182,4 +182,4 @@ MO 的法律标的是中证1000指数；v1 的估值输入是该到期月的**�
 
 结果除§7字段外，将冻结的模型、delta、插值、报价阈值和 solver 常量放入 `algorithm`，并在 `reference` 给出 bundle、Universe、Calendar、产品规则与利率来源哈希。`provenance` 为每个 scope 成员保留 TradingDay、observation/run ID、received/snapshot/source time、bid/ask/mid、原 Market State quality、剔除原因、使用角色与 solver 详情；`excluded_count` 与 `eligible_count` 分开。错误不复用旧报价、旧 IV 或旧 Skew。
 
-`python3 harness/run.py analytics` 同时运行独立 contract/oracle 检查和生产核心回归。生产测试直接消费一条由真实 SQLite/`MarketStateReader.minute()` 形成的 TEST DOUBLE frame，并覆盖§8.4：平坦及两种 Skew 符号、12个独立价格/IV/delta向量、正负利率与两种日数、平价远期/三对不足/偏离、两翼失败、30秒/5秒/15秒等号及超1微秒、盘口质量、solver边界与失败、参考错误、未知日历、竞价/首分钟/午休历史、到期、固定revision重放和PARTIAL。官方参考导入、§8.5真实10时点对账、HTTP/页面和性能仍未完成，不能关闭 G3/P1/P2。
+`python3 harness/run.py analytics` 同时运行独立 contract/oracle 检查和生产核心回归。生产测试直接消费一条由真实 SQLite/`MarketStateReader.minute()` 形成的 TEST DOUBLE frame，并覆盖§8.4：平坦及两种 Skew 符号、12个独立价格/IV/delta向量、正负利率与两种日数、平价远期/三对不足/偏离、两翼失败、30秒/5秒/15秒等号及超1微秒、盘口质量、solver边界与失败、参考错误、未知日历、竞价/首分钟/午休历史、到期、固定revision重放和PARTIAL。官方参考导入、§8.5真实10时点对账、HTTP/页面及性能的当前状态统一见 [Acceptance](../acceptance.md)；工程回归不能替代 G3/P1/P2 的真实证据。

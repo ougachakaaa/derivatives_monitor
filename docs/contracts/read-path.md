@@ -3,6 +3,10 @@
 
 宿主 `collector/data/` 为已有持久目录；API 只读同一份数据，页面独立。当前操作见[Query](../../query/README.md)与[Dashboard](../../dashboard/README.md)。
 
+## Feature 查询扩展（已冻结，待实现）
+
+新增只读 `POST /api/features/evaluate`，以 JSON body 承载一次单 Feature 查询，不写规则或应用状态。请求/响应、采样身份、Skew 映射及失败语义唯一由 [Feature Contract](features.md)定义；沿用本契约本地 HTTP、Raw 只读保护和 no-store。既有 Skew GET 与 Dashboard 不迁移，Query 不依赖 Monitoring。当前实现程度见 [Acceptance](../acceptance.md)，此声明不表示 endpoint 已存在。
+
 ## 边界
 
 - 三个独立项目和容器：C++ `collector` 采集和唯一写入；Python `query` 使用 FastAPI/Uvicorn 提供只读 HTTP，Poetry 管理依赖并提交 lock；React `dashboard` 使用 Vite 构建，Nginx 提供静态资源并反向代理 `/api/` 至 query。Python 不提供 JS。

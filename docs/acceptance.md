@@ -15,6 +15,26 @@
 | P1 | 真实一天库、完整目标链、单人核心查询 P95 ≤ 2 秒 | 既有 3 秒 SQL 预算是失败上限，不是性能证据 | 取得真实官方日包后，通过业务 API 记录≥100次业务查询耗时/错误、机器与库规模、冷热条件 |
 | P2 | 活跃有效报价接收至页面显示目标 ≤ 30 秒 | 默认约15秒物化、5秒轮询、4秒前端请求超时 | 同一 observation 源/received/snapshot/显示时间配对；页面实测，待验 |
 
+## Monitoring v1 平行扩展状态
+
+2026-09-09，运行代码基线 `23672a5`，分支 `feature/realtime-monitoring-alerts`。本次仅完成 M0 设计/约束与实施交接，领域冻结提交 `5711078`；交接见 [Monitoring execution plan](monitoring-execution-plan.md)。精确要求归 [Feature](contracts/features.md)和 [Monitoring](contracts/monitoring.md) Contracts，目标结构与当前部署的区别见 [Architecture](architecture.md)。
+
+| 交付层次 | 当前状态/证据 | 缺口 |
+|---|---|---|
+| M0 设计冻结 | 产品平行边界、领域模型、依赖/ownership、状态机、事务和投递恢复已落位 authority；milestone 拆为独立 commits | 文档证据仅证明设计和结构检查，不证明业务运行 |
+| M1 Feature service / HTTP | 待实现；现有 SkewService/数值核心可复用 | 新接口及新旧语义一致性、构建输入回归未执行 |
+| M2 Rule Engine | 待实现 | 纯规则、crossing、UNKNOWN、去重及 representative TEST DOUBLE 回归未执行 |
+| M3 持久事件 / runtime | 待实现 | application SQLite、原子提交、独立进程和恢复验证未执行 |
+| M4 webhook delivery | 待实现 | 独立投递、尝试记录、有限重试和不确定性恢复验证未执行 |
+| M5 工程交付 | 待实现 | 隔离端到端与故障回归、实际运行手册待交付 |
+| 真实运行 / 通知 | 未验 | 无本扩展真实 Skew 运行、实际 webhook 接收或用户收到通知的证据；既有官方参考与真实指标缺口仍保留 |
+
+M0 文档基线检查：`artifacts/harness/20260909T152645Z-docs-a8bc6e08/result.json`（PASS）；领域文档检查：`artifacts/harness/20260909T153512Z-docs-0b2c4144/result.json`（PASS）。报告保留当时 HEAD/dirty patch、平台与日志哈希，只检查文档链接/authority 入口、既有依赖与构建边界，不验证新状态机或未来接口。
+
+完整交接文档检查：`artifacts/harness/20260909T154127Z-docs-30337ce2/result.json`（PASS），`git diff --check` 通过；人工核对仅有 Markdown 变更，业务实现、Skew 机器策略及 oracle 未变。报告后的改动仅补充此证据登记，并澄清响应 scope 的实际交易日与缺口关闭的去重边界；最终内容以 M0 两个 Git commits 为准。
+
+本次没有执行 analytics/offline/native/browser/packaging/docker，没有启动/停止真实服务、读取实盘数据或发送 webhook。basis、return、ATM IV 只有扩展性测试规划，未实现生产指标，也尚未执行这些 TEST DOUBLE 测试。原 G1–G6/P1/P2 均不因 M0 文档冻结签收。
+
 ## 本地开发入口交付状态
 
 2026-09-10：从 Git 和当前代码复核 `94ed099`（范围与契约准备）、`c4501e7`（可选行情账号回归）及 `fd8ba28`（启动命令分组）。根 `./dev` 已实现 `doctor [component]`、`up [component]`、参数边界及前台监督；不带组件的 `up` 联合启动三个组件，单组件启动统一为 `up collector/query/dashboard`，退役的顶层组件命令返回 2、给出迁移提示且不启动。长期要求见 [Deployment Contract](contracts/deployment.md#developer-runner-的生命周期边界)，实际命令见 [Operations](operations.md#前台开发会话)。任务 A 的真实 Collector 配置校验与 doctor TEST DOUBLE 回归覆盖账号字段缺省、空值、正常已填、分别过长、整体失败脱敏和无持久写入；任务 B 的 32 项 runner 回归覆盖新 help、参数位置/适用范围、旧入口零分派、单组件/联合分派及既有监督器边界。
