@@ -62,3 +62,53 @@ flowchart LR
 本地 developer runner 的职责属于开发工具层，只组合现有组件进程，不进入业务数据流，也不成为持久部署管理器。其会话所有权由 [Deployment Contract](contracts/deployment.md#developer-runner-的生命周期边界)规定；实现状态见 [Acceptance](acceptance.md)。这一边界不新增业务组件或改变上文数据所有权。
 
 `experiments/` 是探索空间，不是正式 runtime、Architecture 或 Contract 的替代来源。实验成果只有在明确纳入相应正式模块并同步 Architecture/Contract 后，才成为系统结构的一部分。
+
+## Monitoring v1 目标结构（已冻结，待实现）
+
+本节是 [MVP 平行扩展](mvp.md)的目标边界，不将现有三组件部署改称已部署四组件。当前实现/验证程度见 [Acceptance](acceptance.md)；结构变化以 additive development 落地。
+
+```mermaid
+flowchart LR
+    C[Collector] -->|唯一写入| R[(Raw)]
+    R -->|只读 Store| MS[Query Market State]
+    REF[版本化参考输入] --> MS
+    MS --> A[Query Analytics / business service]
+    REF --> A
+    A --> F[Query Feature service / HTTP]
+    A --> API[现有 Skew HTTP]
+    API --> D[Dashboard]
+    F -->|Feature JSON| M[Monitoring evaluation loop]
+    CFG[用户 Rule 配置] --> M
+    M -->|原子状态推进与事件提交| DB[(Monitoring application SQLite)]
+    DB -->|已提交 Event| N[进程内 notification loop / adapter]
+    N -->|delivery / attempts| DB
+    N --> W[Webhook 接收端]
+    W --> H[Human]
+```
+
+图中箭头表示数据流；运行调用为 Monitoring → Query HTTP，以及 Notification → 用户接收端。不存在 Collector → Analytics/Monitoring、Query → Monitoring、Rule Evaluation → Notification 复判或 Dashboard 本地规则判断的代码依赖。
+
+### 必须落地的边界与保留的实现
+
+- Market State、Feature、Conclusion、Opportunity Event 的语义分别由 [Feature](contracts/features.md)和 [Monitoring](contracts/monitoring.md) Contracts 定义；目录归属不混淆语义归属。
+- Market State、Analytics 数值核心、参考包适配和 SkewService 暂留 `query/`。新增薄 Feature service 和 HTTP 投影复用它们；现有 API 与 Dashboard 保持兼容，不迁移首页。
+- 拟新增 `monitoring/` 是独立前台进程，内含纯规则核心、application store、HTTP consumer/scheduler 和 Notification adapter。评估和投递独立循环，同进程不同职责，不要求拆成独立项目或服务。
+- Monitoring 只经 Feature HTTP 消费指标，不读 Raw、不导入 Query 内部模块、不挂载行情目录。Query 不依赖 Monitoring 启动，也不为显示指标读取规则状态。
+- Analytics/provider 不依赖 Monitoring；Notification 只消费已提交事件，不参与规则判断。任何下游错误都不能成为 Collector 停启、写入或健康的前置条件。
+- 首版不提取顶层 `analytics/`，不新增消息队列、Derived Market DB 或 distributed runtime。共享包提取以独立 Python 消费者、独立发布需求或 HTTP 性能证据为触发条件，理由见 [Design](design.md)；提取不得改变 Feature 业务语义。
+
+### 扩展数据所有权
+
+| 数据/状态 | Owner | 持久化与消费者 |
+|---|---|---|
+| Raw / Market State / ReferenceBundle | 沿用上文 Collector 与 Query 所有权 | Monitoring 无直接行情访问权；参考输入仍由独立审核流程维护 |
+| Feature 结果 | Query Analytics / provider | 按请求计算、可重建；Query API、Dashboard API 消费者和 Monitoring 可消费 |
+| rolling market window | Feature provider | 后续指标按需从 Market State 重建；可丢弃缓存，不归 Rule Engine，不成为新 Market Facts |
+| Rule configuration | 用户定义；Monitoring 应用已校验版本 | 本地 JSON，已应用版本保存至 application store；无管理 UI/热更新 |
+| Evaluation State | Monitoring | 专属 SQLite，跨重启恢复；保存最近有效证据及缺口 |
+| Opportunity Event | Monitoring | 同一 SQLite 中不可变应用事实；证据快照不取代原行情与参考 authority |
+| Delivery / Attempts | Notification 逻辑拥有 | 物理复用同一 SQLite，与 Event 独立；目标秘密只通过环境引用 |
+
+application store 是专属应用持久目录，不位于 Collector 数据目录。原子提交、去重、缺口、配置版本和投递恢复的唯一行为来源为 [Monitoring Contract](contracts/monitoring.md)，不得用物理共库推导通知可以修改事件或规则状态。
+
+目标 runtime 仅增加一个可选本地进程，不接入当前 Compose/systemd 或平行 developer runner；生命周期约束见 [Deployment Contract](contracts/deployment.md)。故障隔离是调用、进程和写所有权边界，不承诺同宿主 CPU/磁盘资源完全隔离；轮询负载与延迟需实际验证，不能以进程独立替代性能证据。
