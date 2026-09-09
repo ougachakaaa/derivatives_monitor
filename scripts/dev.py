@@ -9,8 +9,11 @@ import os
 from pathlib import Path
 import re
 import shutil
+import signal
 import socket
 import subprocess
+import threading
+import time
 from urllib.parse import urlsplit
 
 
@@ -18,6 +21,7 @@ ROOT = Path(__file__).absolute().parents[1]
 COMPONENTS = ("collector", "query", "dashboard")
 DEFAULT_QUERY_PORT = 8000
 DEFAULT_DASHBOARD_PORT = 8101
+STOP_TIMEOUT_SECONDS = 60.0
 
 
 class Report:
@@ -26,7 +30,7 @@ class Report:
         self.unknowns = 0
 
     def emit(self, level: str, component: str, message: str) -> None:
-        print(f"{level:<7} [{component}] {message}")
+        print(f"{level:<7} [{component}] {message}", flush=True)
         if level == "ERROR":
             self.blockers += 1
         elif level == "UNKNOWN":
@@ -328,10 +332,19 @@ def add_options(parser: argparse.ArgumentParser) -> None:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="dev", description="Run and diagnose repository components in a foreground development session.")
+    parser.set_defaults(config=None, data_dir=None, query_port=None, dashboard_port=None)
     subparsers = parser.add_subparsers(dest="command", metavar="COMMAND")
-    for command in COMPONENTS + ("up",):
-        child = subparsers.add_parser(command, help=f"run {command} (available in a later implementation task)")
-        add_options(child)
+    child = subparsers.add_parser("collector", help="run collector in the foreground")
+    child.add_argument("--config", metavar="PATH")
+    child = subparsers.add_parser("query", help="run query in the foreground")
+    child.add_argument("--data-dir", metavar="PATH")
+    child.add_argument("--query-port", metavar="N")
+    child = subparsers.add_parser("dashboard", help="run dashboard in the foreground")
+    child.add_argument("--dashboard-port", metavar="N")
+    child = subparsers.add_parser("up", help="run all components (available in a later implementation task)")
+    child.add_argument("--config", metavar="PATH")
+    child.add_argument("--query-port", metavar="N")
+    child.add_argument("--dashboard-port", metavar="N")
     doctor = subparsers.add_parser("doctor", help="check component-scoped local runtime prerequisites")
     doctor.add_argument("component", nargs="?", choices=COMPONENTS, help="default: all components")
     add_options(doctor)
@@ -348,6 +361,15 @@ def reject_inapplicable(parser: argparse.ArgumentParser, args: argparse.Namespac
         parser.error("doctor dashboard only accepts --dashboard-port; set QUERY_URL in the environment")
     if scope is None and args.data_dir is not None:
         parser.error("combined doctor derives the Query data directory from Collector config and does not accept --data-dir")
+
+
+def reject_start_inapplicable(parser: argparse.ArgumentParser, args: argparse.Namespace) -> None:
+    if args.command == "collector" and any((args.data_dir, args.query_port, args.dashboard_port)):
+        parser.error("collector only accepts --config")
+    if args.command == "query" and any((args.config, args.dashboard_port)):
+        parser.error("query only accepts --data-dir and --query-port")
+    if args.command == "dashboard" and any((args.config, args.data_dir, args.query_port)):
+        parser.error("dashboard only accepts --dashboard-port; set QUERY_URL in the environment")
 
 
 def doctor(args: argparse.Namespace, parser: argparse.ArgumentParser, invocation_cwd: Path) -> int:
@@ -399,6 +421,227 @@ def doctor(args: argparse.Namespace, parser: argparse.ArgumentParser, invocation
     return 0
 
 
+class ProcessSpec:
+    def __init__(self, name: str, command: list[str], cwd: Path, environment: dict[str, str]) -> None:
+        self.name = name
+        self.command = command
+        self.cwd = cwd
+        self.environment = environment
+
+
+def _runner_log(message: str) -> None:
+    try:
+        print(f"[runner] {message}", flush=True)
+    except (BrokenPipeError, OSError):
+        pass
+
+
+def _copy_output(name: str, stream) -> None:
+    try:
+        for line in stream:
+            try:
+                print(f"[{name}] {line}", end="", flush=True)
+            except (BrokenPipeError, OSError):
+                # Keep draining so a closed terminal cannot block the child.
+                continue
+    finally:
+        stream.close()
+
+
+def _group_alive(pgid: int) -> bool:
+    try:
+        os.killpg(pgid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
+
+
+def _signal_owned_group(pgid: int, signum: int) -> bool:
+    try:
+        os.killpg(pgid, signum)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        _runner_log(f"cannot signal owned process group {pgid}: permission denied")
+        return True
+    return True
+
+
+def supervise_component(spec: ProcessSpec, stop_timeout: float = STOP_TIMEOUT_SECONDS) -> int:
+    """Run one direct component entrypoint and supervise only its new process group."""
+    requested_signal: list[int] = []
+
+    def request_stop(signum, _frame) -> None:
+        if not requested_signal:
+            requested_signal.append(signum)
+
+    handled = (signal.SIGINT, signal.SIGTERM, signal.SIGHUP)
+    previous = {signum: signal.getsignal(signum) for signum in handled}
+    for signum in handled:
+        signal.signal(signum, request_stop)
+
+    process: subprocess.Popen[str] | None = None
+    output_thread: threading.Thread | None = None
+    forced = False
+    cleanup_needed = False
+    cleanup_finished = False
+    handled_signal: int | None = None
+    try:
+        if requested_signal:
+            return 128 + requested_signal[0]
+        _runner_log(f"starting {spec.name} in {spec.cwd}")
+        try:
+            process = subprocess.Popen(
+                spec.command,
+                cwd=spec.cwd,
+                env=spec.environment,
+                stdin=None,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                bufsize=1,
+                start_new_session=True,
+            )
+        except OSError as error:
+            _runner_log(f"failed to start {spec.name}: {error.__class__.__name__}")
+            return 1
+        pgid = process.pid
+        _runner_log(f"started {spec.name} pid={process.pid} pgid={pgid}")
+        assert process.stdout is not None
+        output_thread = threading.Thread(
+            target=_copy_output, args=(spec.name, process.stdout), daemon=True, name=f"dev-{spec.name}-output"
+        )
+        output_thread.start()
+
+        while process.poll() is None and not requested_signal:
+            time.sleep(0.05)
+
+        observed_returncode = process.poll()
+        if observed_returncode is None and requested_signal:
+            handled_signal = requested_signal[0]
+            _runner_log(f"received {signal.Signals(handled_signal).name}; sending SIGTERM to {spec.name}")
+            cleanup_needed = _signal_owned_group(pgid, signal.SIGTERM)
+        else:
+            # A direct entrypoint should not leave ordinary descendants behind.
+            cleanup_needed = _group_alive(pgid)
+            if cleanup_needed:
+                _runner_log(f"{spec.name} entrypoint exited; sending SIGTERM to its remaining process group")
+                _signal_owned_group(pgid, signal.SIGTERM)
+
+        if cleanup_needed:
+            deadline = time.monotonic() + stop_timeout
+            while time.monotonic() < deadline:
+                process.poll()
+                if not _group_alive(pgid):
+                    break
+                time.sleep(0.05)
+            process.poll()
+            if _group_alive(pgid):
+                forced = True
+                _runner_log(f"{spec.name} did not stop within {stop_timeout:g}s; sending SIGKILL to its owned process group")
+                _signal_owned_group(pgid, signal.SIGKILL)
+                kill_deadline = time.monotonic() + 1.0
+                while time.monotonic() < kill_deadline:
+                    process.poll()
+                    if not _group_alive(pgid):
+                        break
+                    time.sleep(0.02)
+                process.poll()
+                if _group_alive(pgid):
+                    _runner_log(f"{spec.name} process group still has unreaped members after SIGKILL")
+        cleanup_finished = True
+
+        if process.poll() is None:
+            try:
+                process.wait(timeout=max(1.0, stop_timeout))
+            except subprocess.TimeoutExpired:
+                forced = True
+                _runner_log(f"{spec.name} leader remained after group cleanup")
+        if output_thread is not None:
+            output_thread.join(timeout=1.0)
+
+        returncode = process.poll()
+        _runner_log(f"{spec.name} exited with status {returncode}")
+        if forced or returncode is None:
+            return 1
+        if handled_signal is not None:
+            return 128 + handled_signal
+        return 0 if returncode == 0 else 1
+    finally:
+        if process is not None and not cleanup_finished and _group_alive(process.pid):
+            _runner_log(f"cleaning up {spec.name} after runner failure")
+            _signal_owned_group(process.pid, signal.SIGTERM)
+            deadline = time.monotonic() + stop_timeout
+            while time.monotonic() < deadline:
+                process.poll()
+                if not _group_alive(process.pid):
+                    break
+                time.sleep(0.05)
+            process.poll()
+            if _group_alive(process.pid):
+                _signal_owned_group(process.pid, signal.SIGKILL)
+        if process is not None and process.poll() is None:
+            try:
+                process.wait(timeout=1.0)
+            except subprocess.TimeoutExpired:
+                pass
+        for signum, handler in previous.items():
+            signal.signal(signum, handler)
+
+
+def component_spec(args: argparse.Namespace, parser: argparse.ArgumentParser, invocation_cwd: Path) -> ProcessSpec:
+    reject_start_inapplicable(parser, args)
+    environment = os.environ.copy()
+    if args.command == "collector":
+        config_value = args.config if args.config is not None else str(ROOT / "collector/config.ini")
+        config = absolute_user_path(config_value, invocation_cwd)
+        return ProcessSpec(
+            "collector",
+            [str(ROOT / "collector/build/Release/bin/data_collector"), "--config", str(config)],
+            ROOT,
+            environment,
+        )
+    if args.command == "query":
+        data_value = args.data_dir if args.data_dir is not None else os.environ.get("DATA_DIR", str(ROOT / "collector/data"))
+        data_dir = absolute_user_path(data_value, invocation_cwd)
+        port = parse_port(args.query_port, "--query-port") if args.query_port is not None else env_port("QUERY_PORT", DEFAULT_QUERY_PORT, parser)
+        environment["DATA_DIR"] = str(data_dir)
+        return ProcessSpec(
+            "query",
+            [str(ROOT / "query/.venv/bin/python"), "-m", "uvicorn", "app:app", "--host", "127.0.0.1", "--port", str(port), "--no-proxy-headers"],
+            ROOT / "query",
+            environment,
+        )
+    port = parse_port(args.dashboard_port, "--dashboard-port") if args.dashboard_port is not None else env_port("DASHBOARD_PORT", DEFAULT_DASHBOARD_PORT, parser)
+    environment["QUERY_URL"] = os.environ.get("QUERY_URL", f"http://127.0.0.1:{DEFAULT_QUERY_PORT}")
+    node = shutil.which("node") or "node"
+    return ProcessSpec(
+        "dashboard",
+        [node, str(ROOT / "dashboard/node_modules/vite/bin/vite.js"), "--host", "127.0.0.1", "--port", str(port), "--strictPort"],
+        ROOT / "dashboard",
+        environment,
+    )
+
+
+def run_component(args: argparse.Namespace, parser: argparse.ArgumentParser, invocation_cwd: Path) -> int:
+    reject_start_inapplicable(parser, args)
+    diagnostic_args = argparse.Namespace(
+        component=args.command,
+        config=args.config,
+        data_dir=args.data_dir,
+        query_port=args.query_port,
+        dashboard_port=args.dashboard_port,
+    )
+    if doctor(diagnostic_args, parser, invocation_cwd) != 0:
+        _runner_log(f"{args.command} was not started because its diagnostic failed")
+        return 1
+    return supervise_component(component_spec(args, parser, invocation_cwd))
+
+
 def main(argv: list[str] | None = None) -> int:
     invocation_cwd = Path.cwd()
     parser = build_parser()
@@ -406,10 +649,12 @@ def main(argv: list[str] | None = None) -> int:
     if args.command is None:
         parser.print_help()
         return 0
-    if args.command != "doctor":
-        parser.error(f"{args.command} is reserved but is not implemented in task 2; use doctor")
     try:
-        return doctor(args, parser, invocation_cwd)
+        if args.command == "doctor":
+            return doctor(args, parser, invocation_cwd)
+        if args.command == "up":
+            parser.error("up is reserved but is not implemented in task 3; run one component or use doctor")
+        return run_component(args, parser, invocation_cwd)
     except argparse.ArgumentTypeError as error:
         parser.error(str(error))
     return 2

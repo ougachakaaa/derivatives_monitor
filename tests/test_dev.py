@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Isolated tests for task-2 developer diagnostics (all fixtures are TEST DOUBLE)."""
+"""Isolated runner diagnostics and entrypoint tests (all fixtures are TEST DOUBLE)."""
 
 from contextlib import redirect_stderr, redirect_stdout
 import io
@@ -40,16 +40,85 @@ class DevDoctorTests(unittest.TestCase):
             path.chmod(0o755)
         return path
 
-    def test_help_lists_commands_and_unimplemented_start_stops(self):
+    def test_help_lists_commands_and_unimplemented_up_stops(self):
         with tempfile.TemporaryDirectory() as temporary:
             cwd = Path(temporary)
             code, output, _ = self.run_main(["--help"], cwd=cwd)
             self.assertEqual(code, 0)
             for command in ("collector", "query", "dashboard", "up", "doctor"):
                 self.assertIn(command, output)
-            code, _, error = self.run_main(["query"], cwd=cwd)
+            code, _, error = self.run_main(["up"], cwd=cwd)
             self.assertEqual(code, 2)
-            self.assertIn("not implemented in task 2", error)
+            self.assertIn("not implemented in task 3", error)
+
+    def test_component_specs_use_direct_existing_entrypoints(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / "repo"
+            caller = Path(temporary) / "caller"
+            caller.mkdir(parents=True)
+            parser = dev.build_parser()
+            environment = {
+                "DATA_DIR": "wrong-data",
+                "QUERY_PORT": "9999",
+                "QUERY_URL": "http://127.0.0.1:17777",
+                "DASHBOARD_PORT": "9998",
+            }
+            cases = (
+                (
+                    ["collector", "--config", "selected.ini"],
+                    "collector",
+                    [str(root / "collector/build/Release/bin/data_collector"), "--config", str(caller / "selected.ini")],
+                    root,
+                ),
+                (
+                    ["query", "--data-dir", "raw", "--query-port", "18000"],
+                    "query",
+                    [str(root / "query/.venv/bin/python"), "-m", "uvicorn", "app:app", "--host", "127.0.0.1", "--port", "18000", "--no-proxy-headers"],
+                    root / "query",
+                ),
+                (
+                    ["dashboard", "--dashboard-port", "18101"],
+                    "dashboard",
+                    ["/test/node", str(root / "dashboard/node_modules/vite/bin/vite.js"), "--host", "127.0.0.1", "--port", "18101", "--strictPort"],
+                    root / "dashboard",
+                ),
+            )
+            with mock.patch.object(dev, "ROOT", root), \
+                    mock.patch.dict(os.environ, environment, clear=True), \
+                    mock.patch.object(dev.shutil, "which", return_value="/test/node"):
+                for argv, name, command, workdir in cases:
+                    with self.subTest(component=name):
+                        spec = dev.component_spec(parser.parse_args(argv), parser, caller)
+                        self.assertEqual(spec.name, name)
+                        self.assertEqual(spec.command, command)
+                        self.assertEqual(spec.cwd, workdir)
+                        if name == "query":
+                            self.assertEqual(spec.environment["DATA_DIR"], str(caller / "raw"))
+                        if name == "dashboard":
+                            self.assertEqual(spec.environment["QUERY_URL"], environment["QUERY_URL"])
+
+    def test_failed_component_diagnostic_prevents_spawn(self):
+        parser = dev.build_parser()
+        args = parser.parse_args(["collector"])
+        with mock.patch.object(dev, "doctor", return_value=1), \
+                mock.patch.object(dev, "supervise_component") as supervise:
+            code = dev.run_component(args, parser, Path("/test/caller"))
+        self.assertEqual(code, 1)
+        supervise.assert_not_called()
+
+    def test_spawn_failure_is_reported(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            spec = dev.ProcessSpec(
+                "test-double",
+                [str(Path(temporary) / "missing-entrypoint")],
+                Path(temporary),
+                os.environ.copy(),
+            )
+            output = io.StringIO()
+            with redirect_stdout(output):
+                code = dev.supervise_component(spec, stop_timeout=0.1)
+            self.assertEqual(code, 1)
+            self.assertIn("failed to start test-double", output.getvalue())
 
     def test_query_diagnostic_does_not_require_other_components(self):
         with tempfile.TemporaryDirectory() as temporary:
