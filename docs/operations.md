@@ -13,6 +13,8 @@
 
 同一数据目录只能有一个 Collector。离线测试无需启动真实服务；文档整理无需执行 up/update/stop。宿主安装步骤见各模块 README，不依赖历史报告中 `/tmp` 下的工具路径。
 
+原生 `up` 包含订阅文件配置准备、服务 enable/restart 和 timer 启动，具体备份及配置替换步骤见 [Collector 手册](../collector/README.md#原生-wsl-管理)。它与 Docker `up` 复用已有配置的行为不同；原生 `stop` 不取消服务 enable，长期禁用仍按该手册操作。本地前台入口的交付计划见 [execution plan](dev-runner-execution-plan.md)，可用状态以 [Acceptance](acceptance.md#本地开发入口交付状态) 为准。
+
 日常分别检查主循环心跳、连接/登录、逐合约订阅、最后接收/提交、源交易日和清单/日历版本。市场 CLOSED/BREAK、不活跃合约无推送、订阅失败不是同一状态。查看 `snapshot_commit` 与两次只读行数/最近时间确认推进；不要把 accepted、written 和跨 run 日行数相互比较为同一指标。
 
 ## 更新参考与软件

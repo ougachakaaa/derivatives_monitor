@@ -15,6 +15,10 @@
 | P1 | 真实一天库、完整目标链、单人核心查询 P95 ≤ 2 秒 | 既有 3 秒 SQL 预算是失败上限，不是性能证据 | 取得真实官方日包后，通过业务 API 记录≥100次业务查询耗时/错误、机器与库规模、冷热条件 |
 | P2 | 活跃有效报价接收至页面显示目标 ≤ 30 秒 | 默认约15秒物化、5秒轮询、4秒前端请求超时 | 同一 observation 源/received/snapshot/显示时间配对；页面实测，待验 |
 
+## 本地开发入口交付状态
+
+2026-09-09：developer runner 的设计已确定，长期要求已落位 [Deployment Contract](contracts/deployment.md#developer-runner-的生命周期边界)，交付拆分见 [execution plan](dev-runner-execution-plan.md)。根 `./dev`、诊断、子进程监督及联合启动均待实现；没有 runner 工程或现场运行证据。本次只更新文档，不改变 native/Docker 实现，也不签收 G5/G6。文档结构检查不能替代后续进程生命周期、只读消费及部署边界验收。
+
 ## 工程 harness 与门槛映射
 
 | Harness 检查 | 覆盖 | 不能证明 |

@@ -54,7 +54,7 @@ collector/build/Release/bin/data_collector --config collector/config.ini
 
 CLI 提供 `--config PATH`、可重复的 `--instrument CODE`、`--run-seconds N`、`--check-config` 和 `--help`。完整取值约束、优先级、采样及停止语义以 [Collector Contract](../docs/contracts/collector.md) 为准。
 
-部署脚本不会重写已有有效配置。需要调整旧配置时先正常停止 Collector，显式修改配置并保留原数据目录；不要把配置变更当作 schema 迁移。
+Docker 部署脚本复用已有配置；原生 `up` 的订阅文件配置准备见下节。需要手工调整旧配置时先正常停止 Collector，显式修改配置并保留原数据目录；不要把配置变更当作 schema 迁移。
 
 ## 原生 WSL 管理
 
@@ -69,6 +69,8 @@ CLI 提供 `--config PATH`、可重复的 `--instrument CODE`、`--run-seconds N
 ```
 
 `up` 校验依赖和配置、刷新 Universe，并管理 Collector、Query、Dashboard 三个用户服务；`update` 可手工刷新公开清单。系统级生命周期、定时更新、重启及数据保护规则见 [Deployment Contract](../docs/contracts/deployment.md) 和 [Operations](../docs/operations.md)。
+
+原生 `up` 会将已有配置备份到 `collector/tmp/native-backups/`，校验候选配置后将 `InstrumentsFile` 设为 `data/universe/current/instruments.txt` 并替换配置文件；它不是只读检查或单纯前台启动。该命令还会启用并重启三个用户服务、启动 Universe timer；`stop` 停止服务和 timer，但不取消 enable。
 
 Windows 浏览器默认访问 **http://localhost:8101**，FastAPI 文档为 **http://localhost:8000/docs**。WSL 或 Windows 停止、睡眠时采集不会继续。若需长期禁用自动启动：
 
@@ -87,7 +89,7 @@ systemctl --user disable derivatives-monitor-{collector,query,dashboard}.service
 | 命令 | 用途 |
 |---|---|
 | `./scripts/deploy.sh up` | 首次配置、构建、预检并后台启动；更新代码后也使用此命令 |
-| `./scripts/deploy.sh logs` | 跟随 Collector 日志 |
+| `./scripts/deploy.sh logs` | 跟随 Collector、Query、Dashboard 三服务日志 |
 | `./scripts/deploy.sh status` | 查看三服务状态、重启次数和采集健康摘要 |
 | `./scripts/deploy.sh stop` | 正常停止并保留数据 |
 | `./scripts/deploy.sh verify YYYYMMDD` | 在隔离容器中只读检查指定交易日 |

@@ -65,7 +65,7 @@ KEEP_RUNNING=1 bash tests/read_path_docker_smoke.sh
 
 ## 常见问题
 
-- **8101 端口占用**：停止占用进程，或在完整 Docker 部署时设置 `DASHBOARD_PORT`；Vite 开发端口固定为 8101。
+- **8101 端口占用**：本地 Vite 默认使用 8101，可用 `npm run dev -- --port 18101` 显式调整；严格端口模式不会自动换端口。完整 Docker 部署使用 `DASHBOARD_PORT`，原生 systemd 当前固定为 8101。已有部署的停止操作使用对应管理入口。
 - **页面显示 Query 请求失败**：先直接访问 Query `/healthz` 和 `/docs`，再检查 `QUERY_URL` 或 Nginx 代理。
 - **页面没有 MO 月份**：检查 `/api/coverage` 的返回和 Collector Universe；不要在前端生成合约。
 - **Skew 不可用或显示历史结果**：保留 API 返回的 reason、时间和参考身份，按 Query README 及相应 Contract 排查，不在浏览器中补值。
