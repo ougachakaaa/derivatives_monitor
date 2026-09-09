@@ -54,6 +54,12 @@ WAL 策略：活跃数据库从只读挂载读取现存 WAL/SHM；离线且没�
 
 公共可选参数：`month=YYMM`（否则用 `SKEW_TARGET_MONTH`，不自动换月）、`at=带时区ISO时间`（默认请求时钟，作为 Market State `evaluated_at` / Analytics `requested_at`）、非负整数 `raw_revision`、`bundle_id`。后两者用于固定输入回放，不是 SQL 或文件路径。`at` 显式传入时是在该评估时刻下重建；`current_usable` 也是相对此时刻的判断。实际盯盘省略 `at`。历史分钟估值与 quote age 仍以 minute end 为准。参数未知、重复、类型错误、无时区、非整分钟、MO 月格式错误、day/minute 不匹配、未来分钟或超出可见 revision 返回400。
 
+### React 汇报投影
+
+Dashboard 的首屏业务投影只消费上述 JSON：按 coverage 中的 MO 月份显式选择 `month`，展示 latest 的对象、`skew_25d_vp`、`valuation_at`、`historical/current_usable`、`quality`和 `reasons`，展示 series 直接返回的 `baseline/change_vp/points`，并用 minute 接口完成指定分钟回看。图表只对 API 数值做显示缩放，不求 IV、delta、forward 或 Skew，不对失败分钟补点。
+
+latest 请求失败会同时清空当前值和旧序列；series 单独失败会清空变化与走势，但可保留本次已成功 latest 响应并明确标注。历史回看不复用当前日变化，`SYNTHETIC` 参考包在首屏显式标记 `TEST DOUBLE`。Collector/CTP/coverage/database/session 诊断保留在折叠区，不与 Skew 业务可用性混为一个状态。
+
 最新值不消费 Market State `latest()` 的盘后陈旧标志，而是复用 Calendar periods 定位并调用 `reader.minute(..., stale_after_us=30000000)`。首分钟未封口返回 WAITING_FOR_MINUTE；BREAK/CLOSED/竞价只选择最近结束的连续分钟并明确 historical。缺数据不搜索更旧行情；日历下一 trading_day 与实际历史分钟 day 分开返回。UNKNOWN 返回 CALENDAR_UNKNOWN，无猜测时间。
 
 单点返回 `schema_version=1`、契约/算法版本、业务 scope（exchange/product/month/trading_day）、minute、valuation_at/effective_as_of、requested_at/evaluated_at、session、historical/current_usable/reconstructed/display_age_us、status/reasons、`skew_25d_vp` 和 `unit=vol_point`。`quality` 保留 Market State 完整性及 expected/observed/usable/missing/stale/invalid 计数；Analytics eligible/excluded 与计算原因单独表达。原始 Raw rows、内部 scope 清单、表结构和本地路径不公开。

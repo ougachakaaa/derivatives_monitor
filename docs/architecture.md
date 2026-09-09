@@ -13,10 +13,10 @@ flowchart LR
     A --> API[FastAPI JSON]
     RAW -->|只读诊断| API
     CAL --> API
-    API -.-> UI[独立 React：汇报视图待实现]
+    API --> UI[独立 React 汇报视图]
 ```
 
-实线为已有路径，虚线为待实现的业务路径。Market State、Analytics 核心、审核参考包离线导入及 Skew HTTP API 已实现；生产官方包和真实对账尚待验收。Calendar 可脱离 Raw/HTTP 独立使用。
+图中是已实现的业务路径。Market State、Analytics 核心、审核参考包离线导入、Skew HTTP API 及 React 汇报首页已实现；生产官方包、真实对账与日常使用验收尚待取证。Calendar 可脱离 Raw/HTTP 独立使用。
 
 ## 职责与所有权
 

@@ -1,6 +1,6 @@
 # 设计与证据入口
 
-本目录是项目的长期设计记录（system of record）。只维护一套 MVP 目标与架构；代码、测试和证据用于验证其实现程度。当前 MVP **尚未收尾**；[Analytics / Skew 七项契约](contracts/analytics-skew.md)已冻结，数值核心、只读参考包适配和 Skew JSON 查询已实现；真实业务验收仍待完成。
+本目录是项目的长期设计记录（system of record）。只维护一套 MVP 目标与架构；代码、测试和证据用于验证其实现程度。当前 MVP **尚未收尾**；[Analytics / Skew 七项契约](contracts/analytics-skew.md)已冻结，数值核心、只读参考包适配、Skew JSON 查询和 React 业务汇报首页已实现；真实业务验收仍待完成。
 
 | 阅读顺序 | 文档 | 回答的问题 |
 |---|---|---|

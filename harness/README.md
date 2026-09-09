@@ -38,7 +38,7 @@ python3 harness/run.py docker
 
 - `collector/tests/`：采集/存储/生命周期、配置、清单、部署/验收器与 Collector 容器。
 - `query/tests/`：真实 SQLite 只读、API、Calendar、Universe coverage、Market State、生产 Analytics 核心、Skew HTTP 及只读参考包适配。
-- `dashboard/tests/`：React 组件和实际浏览器交互。
+- `dashboard/tests/`：React 组件与实际浏览器交互；Skew 场景明确为 TEST DOUBLE，覆盖当前值、当日变化、历史分钟、PARTIAL/STALE/UNAVAILABLE 及 API 断线清值。
 - `tests/`：跨 C++/SQLite/HTTP/容器的集成场景。
 - `harness/tests/`：结果分类、缺依赖/超时、模拟环境隔离、打包白名单回归。
 
