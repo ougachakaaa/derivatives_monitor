@@ -40,16 +40,17 @@ class DevDoctorTests(unittest.TestCase):
             path.chmod(0o755)
         return path
 
-    def test_help_lists_commands_and_unimplemented_up_stops(self):
+    def test_help_lists_commands_and_up_help(self):
         with tempfile.TemporaryDirectory() as temporary:
             cwd = Path(temporary)
             code, output, _ = self.run_main(["--help"], cwd=cwd)
             self.assertEqual(code, 0)
             for command in ("collector", "query", "dashboard", "up", "doctor"):
                 self.assertIn(command, output)
-            code, _, error = self.run_main(["up"], cwd=cwd)
-            self.assertEqual(code, 2)
-            self.assertIn("not implemented in task 3", error)
+            code, output, error = self.run_main(["up", "--help"], cwd=cwd)
+            self.assertEqual((code, error), (0, ""))
+            self.assertIn("--config", output)
+            self.assertNotIn("--data-dir", output)
 
     def test_component_specs_use_direct_existing_entrypoints(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -101,7 +102,8 @@ class DevDoctorTests(unittest.TestCase):
         parser = dev.build_parser()
         args = parser.parse_args(["collector"])
         with mock.patch.object(dev, "doctor", return_value=1), \
-                mock.patch.object(dev, "supervise_component") as supervise:
+                mock.patch.object(dev, "supervise_component") as supervise, \
+                redirect_stdout(io.StringIO()):
             code = dev.run_component(args, parser, Path("/test/caller"))
         self.assertEqual(code, 1)
         supervise.assert_not_called()

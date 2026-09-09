@@ -14,7 +14,9 @@ import socket
 import subprocess
 import threading
 import time
+from urllib.error import HTTPError, URLError
 from urllib.parse import urlsplit
+from urllib.request import build_opener, HTTPRedirectHandler, ProxyHandler
 
 
 ROOT = Path(__file__).absolute().parents[1]
@@ -22,6 +24,7 @@ COMPONENTS = ("collector", "query", "dashboard")
 DEFAULT_QUERY_PORT = 8000
 DEFAULT_DASHBOARD_PORT = 8101
 STOP_TIMEOUT_SECONDS = 60.0
+HTTP_CHECK_TIMEOUT_SECONDS = 10.0
 
 
 class Report:
@@ -429,6 +432,20 @@ class ProcessSpec:
         self.environment = environment
 
 
+class ProcessState:
+    def __init__(self, spec: ProcessSpec, process: subprocess.Popen[str], output_thread: threading.Thread) -> None:
+        self.spec = spec
+        self.process = process
+        self.pgid = process.pid
+        self.output_thread = output_thread
+        self.exit_reported = False
+        self.term_sent = False
+        self.stop_deadline: float | None = None
+        self.forced = False
+        self.force_deadline: float | None = None
+        self.cleanup_finished = False
+
+
 def _runner_log(message: str) -> None:
     try:
         print(f"[runner] {message}", flush=True)
@@ -469,8 +486,127 @@ def _signal_owned_group(pgid: int, signum: int) -> bool:
     return True
 
 
-def supervise_component(spec: ProcessSpec, stop_timeout: float = STOP_TIMEOUT_SECONDS) -> int:
-    """Run one direct component entrypoint and supervise only its new process group."""
+def _spawn_component(spec: ProcessSpec) -> ProcessState | None:
+    _runner_log(f"starting {spec.name} in {spec.cwd}")
+    try:
+        process = subprocess.Popen(
+            spec.command,
+            cwd=spec.cwd,
+            env=spec.environment,
+            stdin=None,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            bufsize=1,
+            start_new_session=True,
+        )
+    except OSError as error:
+        _runner_log(f"failed to start {spec.name}: {error.__class__.__name__}")
+        return None
+    _runner_log(f"started {spec.name} pid={process.pid} pgid={process.pid}")
+    assert process.stdout is not None
+    output_thread = threading.Thread(
+        target=_copy_output, args=(spec.name, process.stdout), daemon=True, name=f"dev-{spec.name}-output"
+    )
+    output_thread.start()
+    return ProcessState(spec, process, output_thread)
+
+
+class _NoRedirect(HTTPRedirectHandler):
+    def redirect_request(self, request, file_pointer, code, message, headers, new_url):
+        return None
+
+
+def _http_reachable(url: str, timeout: float) -> bool:
+    opener = build_opener(ProxyHandler({}), _NoRedirect())
+    try:
+        with opener.open(url, timeout=timeout) as response:
+            return 200 <= response.status < 400
+    except (HTTPError, URLError, OSError, TimeoutError):
+        return False
+
+
+def _startup_http_phase(
+    states: list[ProcessState],
+    checks: list[tuple[str, str]],
+    requested_signal: list[int],
+    timeout: float,
+) -> None:
+    if not checks or requested_signal:
+        return
+    _runner_log("starting one bounded HTTP reachability phase; this does not check business readiness")
+    by_name = {state.spec.name: state for state in states}
+    pending = dict(checks)
+    deadline = time.monotonic() + timeout
+    while pending and not requested_signal and time.monotonic() < deadline:
+        for name, url in list(pending.items()):
+            state = by_name.get(name)
+            if state is None:
+                _runner_log(f"WARNING {name} HTTP check skipped because its process did not start")
+                pending.pop(name)
+                continue
+            if state.process.poll() is not None:
+                _runner_log(f"WARNING {name} HTTP check stopped because its process exited")
+                pending.pop(name)
+                continue
+            remaining = max(0.01, deadline - time.monotonic())
+            if _http_reachable(url, min(0.25, remaining)):
+                _runner_log(f"{name} HTTP is reachable at {url}; process ownership and business readiness are separate")
+                pending.pop(name)
+        if pending and not requested_signal:
+            time.sleep(0.05)
+    if requested_signal:
+        _runner_log("HTTP startup phase interrupted by the session stop request")
+        return
+    for name, url in pending.items():
+        _runner_log(f"WARNING {name} HTTP was not reachable at {url} during the bounded startup check; session status is unchanged")
+
+
+def _begin_stop(state: ProcessState, stop_timeout: float, reason: str) -> None:
+    if state.term_sent or not _group_alive(state.pgid):
+        return
+    _runner_log(f"{reason}; sending SIGTERM to {state.spec.name}")
+    _signal_owned_group(state.pgid, signal.SIGTERM)
+    state.term_sent = True
+    state.stop_deadline = time.monotonic() + stop_timeout
+
+
+def _cleanup_states(states: list[ProcessState], stop_timeout: float) -> bool:
+    """Best-effort simultaneous cleanup used only for runner failure paths."""
+    active = [state for state in states if _group_alive(state.pgid)]
+    for state in active:
+        _begin_stop(state, stop_timeout, "runner failure cleanup")
+    deadline = time.monotonic() + stop_timeout
+    while any(_group_alive(state.pgid) for state in active) and time.monotonic() < deadline:
+        for state in active:
+            state.process.poll()
+        time.sleep(0.05)
+    forced = False
+    for state in active:
+        state.process.poll()
+        if _group_alive(state.pgid):
+            forced = True
+            state.forced = True
+            _runner_log(f"{state.spec.name} did not stop during runner failure cleanup; sending SIGKILL")
+            _signal_owned_group(state.pgid, signal.SIGKILL)
+    for state in states:
+        if state.process.poll() is None:
+            try:
+                state.process.wait(timeout=1.0)
+            except subprocess.TimeoutExpired:
+                forced = True
+    return forced
+
+
+def supervise_components(
+    specs: list[ProcessSpec],
+    http_checks: list[tuple[str, str]] | None = None,
+    stop_timeout: float = STOP_TIMEOUT_SECONDS,
+    http_timeout: float = HTTP_CHECK_TIMEOUT_SECONDS,
+) -> int:
+    """Supervise direct component entrypoints without coupling their lifecycles."""
     requested_signal: list[int] = []
 
     def request_stop(signum, _frame) -> None:
@@ -482,115 +618,84 @@ def supervise_component(spec: ProcessSpec, stop_timeout: float = STOP_TIMEOUT_SE
     for signum in handled:
         signal.signal(signum, request_stop)
 
-    process: subprocess.Popen[str] | None = None
-    output_thread: threading.Thread | None = None
-    forced = False
-    cleanup_needed = False
-    cleanup_finished = False
+    states: list[ProcessState] = []
+    failed = False
+    normal_finish = False
     handled_signal: int | None = None
     try:
-        if requested_signal:
-            return 128 + requested_signal[0]
-        _runner_log(f"starting {spec.name} in {spec.cwd}")
-        try:
-            process = subprocess.Popen(
-                spec.command,
-                cwd=spec.cwd,
-                env=spec.environment,
-                stdin=None,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                text=True,
-                encoding="utf-8",
-                errors="replace",
-                bufsize=1,
-                start_new_session=True,
-            )
-        except OSError as error:
-            _runner_log(f"failed to start {spec.name}: {error.__class__.__name__}")
-            return 1
-        pgid = process.pid
-        _runner_log(f"started {spec.name} pid={process.pid} pgid={pgid}")
-        assert process.stdout is not None
-        output_thread = threading.Thread(
-            target=_copy_output, args=(spec.name, process.stdout), daemon=True, name=f"dev-{spec.name}-output"
-        )
-        output_thread.start()
+        for spec in specs:
+            if requested_signal:
+                break
+            state = _spawn_component(spec)
+            if state is None:
+                failed = True
+            else:
+                states.append(state)
 
-        while process.poll() is None and not requested_signal:
+        _startup_http_phase(states, http_checks or [], requested_signal, http_timeout)
+
+        while True:
+            now = time.monotonic()
+            for state in states:
+                returncode = state.process.poll()
+                if returncode is not None and not state.exit_reported:
+                    state.exit_reported = True
+                    _runner_log(f"{state.spec.name} exited with status {returncode}")
+                    if handled_signal is None and returncode != 0:
+                        failed = True
+                    if _group_alive(state.pgid):
+                        _begin_stop(state, stop_timeout, f"{state.spec.name} entrypoint exited with controlled descendants remaining")
+
+            if requested_signal and handled_signal is None:
+                handled_signal = requested_signal[0]
+                _runner_log(f"received {signal.Signals(handled_signal).name}; stopping all owned components")
+                for state in states:
+                    _begin_stop(state, stop_timeout, "user ended the development session")
+
+            for state in states:
+                state.process.poll()
+                group_alive = _group_alive(state.pgid)
+                if not group_alive:
+                    state.cleanup_finished = True
+                elif state.term_sent and not state.forced \
+                        and state.stop_deadline is not None and now >= state.stop_deadline:
+                    state.forced = True
+                    failed = True
+                    _runner_log(f"{state.spec.name} did not stop within {stop_timeout:g}s; sending SIGKILL to its owned process group")
+                    _signal_owned_group(state.pgid, signal.SIGKILL)
+                    state.force_deadline = now + 1.0
+                elif state.forced and state.force_deadline is not None and now >= state.force_deadline:
+                    state.cleanup_finished = True
+                    _runner_log(f"{state.spec.name} process group still has unreaped members after SIGKILL")
+
+            if all(state.cleanup_finished for state in states):
+                break
             time.sleep(0.05)
 
-        observed_returncode = process.poll()
-        if observed_returncode is None and requested_signal:
-            handled_signal = requested_signal[0]
-            _runner_log(f"received {signal.Signals(handled_signal).name}; sending SIGTERM to {spec.name}")
-            cleanup_needed = _signal_owned_group(pgid, signal.SIGTERM)
-        else:
-            # A direct entrypoint should not leave ordinary descendants behind.
-            cleanup_needed = _group_alive(pgid)
-            if cleanup_needed:
-                _runner_log(f"{spec.name} entrypoint exited; sending SIGTERM to its remaining process group")
-                _signal_owned_group(pgid, signal.SIGTERM)
-
-        if cleanup_needed:
-            deadline = time.monotonic() + stop_timeout
-            while time.monotonic() < deadline:
-                process.poll()
-                if not _group_alive(pgid):
-                    break
-                time.sleep(0.05)
-            process.poll()
-            if _group_alive(pgid):
-                forced = True
-                _runner_log(f"{spec.name} did not stop within {stop_timeout:g}s; sending SIGKILL to its owned process group")
-                _signal_owned_group(pgid, signal.SIGKILL)
-                kill_deadline = time.monotonic() + 1.0
-                while time.monotonic() < kill_deadline:
-                    process.poll()
-                    if not _group_alive(pgid):
-                        break
-                    time.sleep(0.02)
-                process.poll()
-                if _group_alive(pgid):
-                    _runner_log(f"{spec.name} process group still has unreaped members after SIGKILL")
-        cleanup_finished = True
-
-        if process.poll() is None:
-            try:
-                process.wait(timeout=max(1.0, stop_timeout))
-            except subprocess.TimeoutExpired:
-                forced = True
-                _runner_log(f"{spec.name} leader remained after group cleanup")
-        if output_thread is not None:
-            output_thread.join(timeout=1.0)
-
-        returncode = process.poll()
-        _runner_log(f"{spec.name} exited with status {returncode}")
-        if forced or returncode is None:
+        for state in states:
+            state.process.poll()
+            if not state.exit_reported:
+                state.exit_reported = True
+                returncode = state.process.poll()
+                _runner_log(f"{state.spec.name} exited with status {returncode}")
+                if handled_signal is None and returncode not in (0, None):
+                    failed = True
+            state.output_thread.join(timeout=1.0)
+        normal_finish = True
+        if failed:
             return 1
         if handled_signal is not None:
             return 128 + handled_signal
-        return 0 if returncode == 0 else 1
+        return 0
     finally:
-        if process is not None and not cleanup_finished and _group_alive(process.pid):
-            _runner_log(f"cleaning up {spec.name} after runner failure")
-            _signal_owned_group(process.pid, signal.SIGTERM)
-            deadline = time.monotonic() + stop_timeout
-            while time.monotonic() < deadline:
-                process.poll()
-                if not _group_alive(process.pid):
-                    break
-                time.sleep(0.05)
-            process.poll()
-            if _group_alive(process.pid):
-                _signal_owned_group(process.pid, signal.SIGKILL)
-        if process is not None and process.poll() is None:
-            try:
-                process.wait(timeout=1.0)
-            except subprocess.TimeoutExpired:
-                pass
+        if not normal_finish:
+            _cleanup_states(states, stop_timeout)
         for signum, handler in previous.items():
             signal.signal(signum, handler)
+
+
+def supervise_component(spec: ProcessSpec, stop_timeout: float = STOP_TIMEOUT_SECONDS) -> int:
+    return supervise_components([spec], stop_timeout=stop_timeout)
 
 
 def component_spec(args: argparse.Namespace, parser: argparse.ArgumentParser, invocation_cwd: Path) -> ProcessSpec:
@@ -627,6 +732,43 @@ def component_spec(args: argparse.Namespace, parser: argparse.ArgumentParser, in
     )
 
 
+def up_specs(args: argparse.Namespace, parser: argparse.ArgumentParser, invocation_cwd: Path) -> tuple[list[ProcessSpec], list[tuple[str, str]]]:
+    config_value = args.config if args.config is not None else str(ROOT / "collector/config.ini")
+    config = absolute_user_path(config_value, invocation_cwd)
+    data_dir, _ = collector_paths(config)
+    query_port = parse_port(args.query_port, "--query-port") if args.query_port is not None else env_port("QUERY_PORT", DEFAULT_QUERY_PORT, parser)
+    dashboard_port = parse_port(args.dashboard_port, "--dashboard-port") if args.dashboard_port is not None else env_port("DASHBOARD_PORT", DEFAULT_DASHBOARD_PORT, parser)
+    base_environment = os.environ.copy()
+
+    collector = ProcessSpec(
+        "collector",
+        [str(ROOT / "collector/build/Release/bin/data_collector"), "--config", str(config)],
+        ROOT,
+        base_environment.copy(),
+    )
+    query_environment = base_environment.copy()
+    query_environment["DATA_DIR"] = str(data_dir)
+    query = ProcessSpec(
+        "query",
+        [str(ROOT / "query/.venv/bin/python"), "-m", "uvicorn", "app:app", "--host", "127.0.0.1", "--port", str(query_port), "--no-proxy-headers"],
+        ROOT / "query",
+        query_environment,
+    )
+    dashboard_environment = base_environment.copy()
+    dashboard_environment["QUERY_URL"] = f"http://127.0.0.1:{query_port}"
+    dashboard = ProcessSpec(
+        "dashboard",
+        [(shutil.which("node") or "node"), str(ROOT / "dashboard/node_modules/vite/bin/vite.js"), "--host", "127.0.0.1", "--port", str(dashboard_port), "--strictPort"],
+        ROOT / "dashboard",
+        dashboard_environment,
+    )
+    checks = [
+        ("query", f"http://127.0.0.1:{query_port}/healthz"),
+        ("dashboard", f"http://127.0.0.1:{dashboard_port}/"),
+    ]
+    return [collector, query, dashboard], checks
+
+
 def run_component(args: argparse.Namespace, parser: argparse.ArgumentParser, invocation_cwd: Path) -> int:
     reject_start_inapplicable(parser, args)
     diagnostic_args = argparse.Namespace(
@@ -642,6 +784,25 @@ def run_component(args: argparse.Namespace, parser: argparse.ArgumentParser, inv
     return supervise_component(component_spec(args, parser, invocation_cwd))
 
 
+def run_up(args: argparse.Namespace, parser: argparse.ArgumentParser, invocation_cwd: Path) -> int:
+    diagnostic_args = argparse.Namespace(
+        component=None,
+        config=args.config,
+        data_dir=None,
+        query_port=args.query_port,
+        dashboard_port=args.dashboard_port,
+    )
+    if doctor(diagnostic_args, parser, invocation_cwd) != 0:
+        _runner_log("no components were started because the combined diagnostic failed")
+        return 1
+    try:
+        specs, checks = up_specs(args, parser, invocation_cwd)
+    except OSError as error:
+        _runner_log(f"could not derive the combined component paths after validation ({error.__class__.__name__})")
+        return 1
+    return supervise_components(specs, http_checks=checks)
+
+
 def main(argv: list[str] | None = None) -> int:
     invocation_cwd = Path.cwd()
     parser = build_parser()
@@ -653,7 +814,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "doctor":
             return doctor(args, parser, invocation_cwd)
         if args.command == "up":
-            parser.error("up is reserved but is not implemented in task 3; run one component or use doctor")
+            return run_up(args, parser, invocation_cwd)
         return run_component(args, parser, invocation_cwd)
     except argparse.ArgumentTypeError as error:
         parser.error(str(error))

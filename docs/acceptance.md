@@ -17,7 +17,7 @@
 
 ## 本地开发入口交付状态
 
-2026-09-09：developer runner 的设计已确定，长期要求已落位 [Deployment Contract](contracts/deployment.md#developer-runner-的生命周期边界)，交付拆分见 [execution plan](dev-runner-execution-plan.md)。任务 2 已实现根 `./dev` 的 help、参数边界和组件级 `doctor`；任务 3 已实现三个组件的直接前台启动及本次进程组监督。标准库隔离测试使用 TEST DOUBLE，覆盖组件依赖隔离、入口/cwd/虚拟环境与路径参数、配置失败脱敏、端口、正常/异常退出、INT/TERM/HUP、60 秒生产宽限常量和缩时行为、超时强制清理、正常受控后代清理、外部进程不受影响及诊断无持久写入。联合 `up`、启动期 HTTP 检查和完整隔离闭环仍待后续任务实现；没有真实 CTP 或现场运行证据。本次不改变 native/Docker 实现，也不签收 G5/G6。文档结构与 TEST DOUBLE 监督测试不能替代后续联合生命周期、只读消费及部署边界验收。
+2026-09-09：developer runner 的设计已确定，长期要求已落位 [Deployment Contract](contracts/deployment.md#developer-runner-的生命周期边界)，交付拆分见 [execution plan](dev-runner-execution-plan.md)。任务 2–4 已实现根 `./dev` 的 help、参数边界、组件级 `doctor`、三个组件直接前台启动和联合 `up`；联合入口从已校验 Collector 配置派生 Query 数据目录、从有效 Query 端口派生 Dashboard 代理，并以独立进程组管理本次会话。标准库隔离测试使用 TEST DOUBLE，覆盖组件依赖隔离、入口/cwd/虚拟环境与路径参数、配置失败脱敏、端口与联合环境冲突、预检失败零启动、正常/异常及部分 spawn 失败、同伴继续运行、INT/TERM/HUP、60 秒生产宽限常量和缩时行为、超时强制清理、正常受控后代清理、外部进程不受影响、启动期信号及一次性 HTTP 超时只警告。实际 C++/SQLite→Uvicorn→Vite 的 `./dev` 隔离闭环及 offline 接入仍待任务 5；没有真实 CTP 或现场运行证据。本次不改变 native/Docker 实现，也不签收 G5/G6。文档结构与 TEST DOUBLE 监督测试不能替代完整联合生命周期、只读消费及部署边界验收。
 
 ## 工程 harness 与门槛映射
 
