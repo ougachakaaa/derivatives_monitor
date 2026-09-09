@@ -1,11 +1,18 @@
 # Reviewed market reference calendars
 
-`2026.json` is a versioned reference dataset compiled from the exchange notices linked in its `sources`. It explicitly lists 242 trading days for each exchange and the natural date on which each SHFE trading day's night session starts. `null` means no preceding night session. Weekend government make-up workdays remain exchange holidays. Ordinary Friday night belongs to Monday; the following Sunday has no night session. This is not a market-data source.
+本目录保存随 Query 发布、经过审核的版本化交易日历。它是参考输入，不是行情来源；交易日、夜盘归属、Session 状态、UNKNOWN 和 source TradingDay 的精确语义只由 [Market Session Contract](../../docs/contracts/market-session.md) 定义。
 
-Coverage is limited to the declared year. The regular product profiles reflect the official rules reviewed on 2026-09-07, not an archive of historical intrayear rule changes or contract-specific eligibility. In particular a product's OPEN state does not imply that an expiring bond contract still trades that afternoon. Quote expectation means product-level continuous trading only; it never guarantees an individual instrument update.
+## 更新日历
 
-To update: consult each exchange's annual notice, special closure/night-cancellation announcements and current trading-hour rules; edit the explicit exchange day lists/night anchors; add the authoritative source URL and bump `reviewed_on`/`version`. Temporary exchange closures remove that exchange's day; correct affected later night anchors as well. Cancel only a night by setting its destination trading day's `night_start` to null. Never apply government working-day substitutions or generate candidate trading days at runtime.
+1. 核对各交易所年度休市公告、临时休市/夜盘取消公告及当前交易时间规则。
+2. 从现有文件创建候选版本，更新显式交易日、night anchor、来源 URL、`reviewed_on` 和 `version`；不要覆盖旧版本或在运行时生成候选交易日。
+3. 验证候选文件：
 
-Validate the candidate with `python3 query/market_calendar.py --validate <candidate>` and run calendar tests before committing. Publish reviewed files through the ordinary code release (or stage a replacement in the same directory and atomically rename it after validation). Keep previous versions in Git. Query reads files on each request, so an atomic replacement takes effect on the next poll; a code/profile release requires restarting Query. A failed candidate validation must leave the existing file untouched. No calendar update stops or starts Collector.
+   ```bash
+   python3 query/market_calendar.py --validate /path/to/candidate.json
+   query/.venv/bin/python -m unittest discover -s query/tests -p 'test_calendar.py' -v
+   ```
 
-Missing, malformed or out-of-range files yield UNKNOWN. After the last known session, an unknown next-year trading day is not guessed. CLOSED's `trading_day` points to the next known session; `latest_session` carries the previous session's own logical trading day. These are interpretations, never replacements for CTP `TradingDay` in SQLite. The first covered year's latest session may be null because the previous year is not loaded.
+4. 审核通过后随普通代码发布提交。若维护独立 Calendar 目录，先在同一目录暂存并验证，再原子替换；验证失败时保留当前文件不动。
+
+查询示例与 `MARKET_CALENDAR_DIR` 配置见 [Query README](../README.md)。日历更新不会启动、停止或修改 Collector；系统操作见 [Operations](../../docs/operations.md)。
