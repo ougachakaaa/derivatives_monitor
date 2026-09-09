@@ -30,7 +30,9 @@ REQUIRED_PATHS = (
     'harness/README.md',
     'harness/live-acceptance-template.md',
     'compose.yaml',
+    'dev',
     'scripts/deploy.sh',
+    'scripts/dev.py',
     *(f'docs/contracts/{name}.md' for name in
       ('collector', 'read-path', 'market-state', 'market-session', 'deployment', 'analytics-skew')),
     'docs/contracts/analytics-skew-v1.json',
@@ -42,7 +44,9 @@ REQUIRED_PATHS = (
 # manifest cannot supply them to the dependency-direction check.
 NON_IMAGE_PRODUCTION_INPUTS = (
     'compose.yaml',
+    'dev',
     'scripts/deploy.sh',
+    'scripts/dev.py',
     'collector/scripts/native.py',
     'collector/scripts/native.sh',
     'collector/scripts/universe.py',

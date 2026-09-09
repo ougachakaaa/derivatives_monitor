@@ -19,6 +19,7 @@ secrets.*
 *.swo
 *~
 .cache/
+__pycache__/
 tmp/
 temp/
 
