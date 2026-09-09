@@ -1,18 +1,38 @@
-# 设计与证据入口
+# 长期文档入口
 
-本目录是项目的长期设计记录（system of record）。只维护一套 MVP 目标与架构；代码、测试和证据用于验证其实现程度。当前 MVP **尚未收尾**；[Analytics / Skew 七项契约](contracts/analytics-skew.md)已冻结，数值核心、只读参考包适配、Skew JSON 查询和 React 业务汇报首页已实现；真实业务验收仍待完成。
+本目录按信息职责维护项目的长期 system of record。每类事实只有一个主要 authority；其他文档应链接它，而不是复制一套容易漂移的描述。代码和测试是当前实现证据，不自动改变产品、设计或契约。
 
-| 阅读顺序 | 文档 | 回答的问题 |
+## Authority hierarchy
+
+这些文档不是按“后一份覆盖前一份”排序，而是各自回答不同问题。内容冲突时，先按问题类型回到对应 authority：
+
+| Authority | 唯一负责 | 不负责 |
 |---|---|---|
-| 1 | [MVP 范围](mvp.md) | 给谁用、解决什么问题、做到哪里停止 |
-| 2 | [系统架构](architecture.md) | 模块职责、依赖方向、数据所有权与未实现部分 |
-| 3 | [Collector](contracts/collector.md)、[只读 API](contracts/read-path.md)、[Market State](contracts/market-state.md)、[日历和清单](contracts/market-session.md)、[部署](contracts/deployment.md)、[Analytics / Skew](contracts/analytics-skew.md) | 不可破坏的契约和故障语义 |
-| 4 | [验收矩阵](acceptance.md)、[Harness](../harness/README.md) | 每个收尾条件如何证明，哪些还没证明 |
-| 5 | [运行与恢复](operations.md) | 如何部署、检查、备份和恢复 |
-| 6 | [外部参考](references/README.md) | 券商咨询与回复原件、SDK 来源、官方规则 |
+| [MVP](mvp.md) | 产品目标、MVP scope、完成边界 | 当前实现状态、精确接口与运行步骤 |
+| [Design](design.md) | 长期设计原则、关键取舍及 rationale | 当前模块清单、精确参数与接口字段 |
+| [Architecture](architecture.md) | 当前组件职责、数据流、依赖方向、数据所有权和模块边界 | 取舍理由、精确行为与验收结论 |
+| [`contracts/`](contracts/) | 精确行为、不变量、接口及失败语义 | 实现进度、操作教程 |
+| [Acceptance](acceptance.md) | 当前实现/验证程度、证据及缺口 | 定义产品或设计 |
+| [Operations](operations.md) | 运行、维护、恢复和实际操作说明 | 定义架构或业务契约 |
+| 模块 README | build / run / usage / examples / troubleshooting | 第二套 Architecture 或 Contract |
 
-[Collector 手册](../collector/README.md)、[Query 手册](../query/README.md)、[Dashboard 手册](../dashboard/README.md)保留可执行命令及模块用法。详细契约由上表对应文档负责，不在各处维护不同版本的设计。
+[外部参考](references/README.md)保存来源、版本与原件，不会自动成为项目决定；[历史归档](archive/README.md)只保存过去观察，不证明当前状态。Harness 是验证与证据入口，不定义产品行为。
 
-文档状态用词：**已实现**要有代码，**已验证**要说明版本、环境、数据来源与证据，**待实现/待验**不能省略。验收矩阵记录当前状态；[历史验收归档](archive/README.md)只保留过去观察，不是运行手册或新的设计要求。
+## 渐进式阅读
 
-维护规则：修改行为时同步更新唯一对应契约；修改目标时更新 MVP 和验收条件；日志及大体积行情留在被忽略的证据目录，Git 保存脱敏结论与可定位证据。外部参考保存原件/出处/版本/哈希，与项目自身的设计决定分开。旧过程 specs 已从工作树移除，可从 Git 历史追溯。
+新人先读 [MVP](mvp.md)，再用 [Design](design.md)理解取舍、用 [Architecture](architecture.md)定位当前结构。开始具体工作后，只加载对应的 Contract 和模块 README；判断“现在做到哪里”时再读 [Acceptance](acceptance.md)，执行部署、维护或恢复时再读 [Operations](operations.md)。Agent 还须先遵守根 [AGENTS.md](../AGENTS.md)。
+
+精确契约入口：
+
+- [Collector](contracts/collector.md)
+- [Read Path](contracts/read-path.md)
+- [Market State](contracts/market-state.md)
+- [Calendar / Universe](contracts/market-session.md)
+- [Deployment](contracts/deployment.md)
+- [Analytics / Skew v1](contracts/analytics-skew.md)及其[机器策略](contracts/analytics-skew-v1.json)
+
+可执行模块手册：[Collector](../collector/README.md)、[Query](../query/README.md)、[Dashboard](../dashboard/README.md)。验证入口和证据语义见 [Harness](../harness/README.md)。
+
+## 维护约定
+
+修改信息时只更新其 authority，并检查引用它的入口是否仍准确。文档状态用词中，“已实现”必须有代码证据，“已验证”必须说明版本、环境、数据来源与证据；“待实现/待验”不得省略。当前结论统一登记到 Acceptance，不回填为设计定义。旧过程 specs 不再维护，可从 Git 历史追溯。

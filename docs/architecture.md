@@ -1,59 +1,62 @@
-# MVP 系统架构
+# 当前系统架构
 
-本项目保存市场事实，再在只读边界之外解释市场。Raw 日库是已采样行情事实的权威记录；它不代表未保留的 tick。仓库文档是设计、约束、来源与验收结论的权威入口。
+本文回答“系统现在是什么结构”：组件职责、数据流、依赖方向、数据所有权和模块边界。选择这些边界的原因见[长期设计原则](design.md)，产品边界见 [MVP](mvp.md)，精确行为与失败语义只由对应 [Contracts](contracts/) 定义。本文不记录实现完成度；当前代码与验证缺口见[验收矩阵](acceptance.md)。
 
 ```mermaid
 flowchart LR
     CTP[CTP Market Data SDK] --> C[C++ Collector]
-    C -->|唯一写入| RAW[(按源 TradingDay 的 SQLite)]
+    C -->|唯一写入| RAW[(Raw 日 SQLite)]
     RAW -->|只读 Store| MS[Python Market State]
-    CAL[版本化日历与显式历史 Universe] --> MS
-    MS --> A[Analytics：IV / Skew 核心]
-    REF[已冻结契约的版本化审核参考包] --> A
+    CAL[版本化 Calendar 与 Universe] --> MS
+    MS --> A[Analytics：IV / Skew]
+    REF[版本化审核参考包] --> A
     A --> API[FastAPI JSON]
     RAW -->|只读诊断| API
     CAL --> API
     API --> UI[独立 React 汇报视图]
 ```
 
-图中是已实现的业务路径。Market State、Analytics 核心、审核参考包离线导入、Skew HTTP API 及 React 汇报首页已实现；生产官方包、真实对账与日常使用验收尚待取证。Calendar 可脱离 Raw/HTTP 独立使用。
+## 组件职责
 
-## 职责与所有权
-
-| 组件/记录 | 负责 | 依赖和禁止事项 |
+| 组件 | 当前职责 | 边界 |
 |---|---|---|
-| `collector/` C++ | SDK 生命周期、精确代码订阅、内存 latest、15 秒 dirty 物化、日库、心跳/覆盖诊断 | 无 Python/Browser/HTTP 运行依赖；callback 不写 SQLite；不计算 IV/Skew，不发现合约 |
-| `collector/data/YYYYMMDD.sqlite` | schema v1 的 dataset/runs/snapshots；长期市场事实 | C++ 唯一 writer；同日重启追加；不为页面新增表/索引，不建第二份权威 Raw |
-| `collector/scripts/universe.py` | 公开合约清单、来源原响应、不可变 generation、原子 current | Python 标准库管理工具；不写行情；清单变化时由 native 正常重启 Collector |
-| `query/market_calendar.py` | 参考日历、产品时段与逻辑交易日解释 | 不改源 TradingDay，不决定采集启停；缺参考返回 UNKNOWN |
-| `query/storage.py` / `app.py` | 只读数据库访问、诊断 JSON 与有界查询 | WAL/目录锁协议；不提供静态 JS，不控制 Collector |
-| `query/market_state.py` | 单合约/产品/月/链的 as-of、minute、latest、质量与 revision | 显式 Universe、日历和时钟；不猜完整链、不补行情、不做定价 |
-| `query/skew_service.py` / `skew_references.py` | 最新封口分钟、固定 revision 日序列、分钟回看、审核参考包导入与哈希校验 | 经 Market State 读取；参考不在请求中联网；API 不暴露 Raw frame、SQL 或文件路径 |
-| `query/analytics.py` | 由单个 Market State minute frame 及显式 ReferenceBundle 计算 IV/Skew和追溯结果 | 纯 Python 下游；不访问 Raw SQL/网络；不影响采集；MVP 不引入 Derived SQLite 或常驻调度器 |
-| `dashboard/` | 独立 React 页面；生产 Nginx 静态服务和同源 API 代理 | 无 SQLite、凭据、flow、Docker socket 挂载；不在浏览器另写一套权威指标公式 |
-| `harness/` 与模块测试 | 可重复回归、证据范围与收尾门槛映射 | 测试 SDK 仅用于隔离测试；无实盘启动或配置修改 |
+| CTP Market Data SDK | 提供外部行情回调与连接生命周期 | 是 Collector 的上游外部依赖，不是下游应用接口 |
+| `collector/` | 接收行情、维护最新内存状态并物化 Raw；管理采集侧连接、订阅和运行诊断 | Raw 的唯一 writer；不计算业务指标，不依赖 Query 或 Dashboard |
+| Raw 日 SQLite | 保存 Collector 实际物化的行情事实、运行身份与时间来源 | 由 Collector 拥有；所有下游只读，不为页面或算法建立第二套事实 |
+| `collector/scripts/universe.py` | 生成和发布版本化合约清单参考 | 不写行情；清单是解释/订阅输入，不替代 CTP 行情事实 |
+| `query/market_calendar.py` | 提供版本化交易日历、产品时段和逻辑交易日解释 | 不改写源 TradingDay，不控制采集启停 |
+| `query/storage.py` / `app.py` | 只读访问 Raw，并提供诊断 JSON | 不写 Raw，不托管前端静态应用，不管理 Collector |
+| `query/market_state.py` | 将 Raw、显式 Universe 和 Calendar 组合为可追溯的 point/minute/latest 市场状态 | 是 Analytics 的行情读取边界；不定价，不猜完整链 |
+| `query/analytics.py` | 从 Market State frame 和显式参考输入计算 IV / Skew | 不直接访问 Raw SQL、网络或浏览器状态；结果属于可重建派生值 |
+| `query/skew_service.py` / `skew_references.py` | 选择业务时间切片、固定读取上下文并投影 Skew JSON | 通过 Market State 和审核参考包工作，不暴露内部存储结构 |
+| `dashboard/` | 构建独立 React 汇报页面，并在生产中由 Nginx 提供静态资源及 API 代理 | 只消费 JSON；不读 SQLite，不维护另一套指标公式 |
+| `compose.yaml` / `scripts/deploy.sh` | 组成和管理仓库级三服务 Docker runtime | 属于系统 integration layer；服务内部构建和运行输入仍由各模块拥有 |
+| `harness/` 与模块测试 | 组织回归并记录验证证据 | 不定义产品行为，也不进入生产数据路径 |
 
-`experiments/` 是探索空间，不得成为正式 runtime 或 build dependency。CTP SDK 及其 CMake 适配归 `collector/` 所有；实验客户端可以依赖 Collector 的正式第三方依赖与构建设施。实验 coverage harness 与产品验收 harness 各自独立。
+## 数据流与依赖方向
 
-## 稳定边界
+1. Collector 从 SDK 接收行情并把实际物化结果写入按源交易日组织的 Raw 日库。
+2. Query 的只读 Store 从同一 Raw 目录取得事实；Market State 再结合显式 Universe 与 Calendar 形成稳定的下游读取模型。
+3. Analytics 只消费 Market State frame 和独立审核参考包。业务 service 负责时间切片、读取身份固定及 JSON 投影。
+4. FastAPI 提供 JSON；Dashboard 通过 API 展示业务结果和诊断，不跨过 API 访问数据文件。
 
-1. **采集独立**：Python 停止、浏览器关闭时仍接收并提交；部署管理器使用 Python 不等于 C++ ingestion 依赖 Python。
-2. **事实与派生分离**：Raw 保存 46 个非 reserve 源字段及接收/物化/run 身份；无效浮点写 NULL。Analytics 不纠正或覆盖 Raw。
-3. **时间可解释**：仅合法源 TradingDay 决定文件。ActionDay、源 UpdateTime、本地 received_us、snapshot_us 各自保留。夜盘自然日期不决定分区。
-4. **采样诚实**：默认 15000ms、只物化 dirty、同窗口保留最后接收；不承诺逐 callback 无损、硬实时或断线回补；无新 callback 不写新行情。
-5. **只读安全**：活跃库使用 WAL，离线 immutable 必须持目录共享锁且无非空 WAL。活跃 Collector 采集另一日而旧日缺 sidecar 时明确 503，不能绕过锁或删除 WAL。
-6. **健康分层**：进程心跳、连接登录、订阅、实际接收、数据质量、市场时段分别展示；休市或冷门合约不推送不能直接推断进程故障。
-7. **本地与持久化**：Linux x86-64/WSL；服务生命周期与数据分离；宿主回环默认 8101/8000。配置、日志、flow 与数据不进入镜像；不增加交易或外网暴露。
-8. **构建与编排所有权**：Collector、Query、Dashboard 保持仓库根 build context，但各自由模块内的 `Dockerfile.dockerignore` 维护 deny-by-default allowlist；新增仓库文件默认不可见。单服务 Dockerfile、镜像内 runtime tooling 与输入策略归对应服务；仓库根 `compose.yaml` 和 `scripts/deploy.sh` 归系统 integration layer。Collector native tooling 仍独立位于 `collector/scripts/`。
+正式依赖只沿图中箭头向下游移动。Dashboard、Analytics、Query 或参考数据故障不会形成反向调用来控制 Collector；部署工具协调生命周期，但不进入行情 callback 或 Raw 写入路径。
 
-详细不变量分别由 [Collector](contracts/collector.md)、[Read Path](contracts/read-path.md)、[Market State](contracts/market-state.md)、[Calendar/Universe](contracts/market-session.md)、[Deployment](contracts/deployment.md)定义。下游的七项数学/参考/同步/验证决定已在[Analytics / Skew v1](contracts/analytics-skew.md)冻结。
+## 数据所有权
 
-## 业务输出与回看设计
+| 数据/记录 | Owner | 允许的消费者 |
+|---|---|---|
+| Raw 行情日库与采集运行诊断 | Collector | Query 只读访问；运维工具按契约检查或备份 |
+| Universe generations 与源响应 | Universe 管理工具 | Collector 订阅入口、Market State、coverage 与审核流程 |
+| Calendar 版本 | Query 参考数据模块 | Market State、业务 service、coverage 与运维检查 |
+| Analytics ReferenceBundle | 独立审核/导入流程 | Analytics 及其只读适配层 |
+| IV / Skew 响应 | Analytics / business service | API 与 Dashboard；当前不是第二份持久化事实库 |
+| 验收日志和现场证据 | Harness / 验收流程 | Acceptance 引用；不进入 runtime |
 
-Analytics 输出应携带 scope、实际 trading_day、effective_as_of、evaluated_at、historical、quality、不可计算原因，以及输入 observation ID、raw_revision、Universe/Calendar 版本、模型参数与算法版本。指标为空时保留原因；不得产生替代价格。报价 usable 只是基础质量，IV 求解须做自己的可计算性验证。
+数据集的精确 schema、锁、版本、时间、质量、选择和错误规则不在本表重复，分别见 [Collector](contracts/collector.md)、[Read Path](contracts/read-path.md)、[Market State](contracts/market-state.md)、[Calendar / Universe](contracts/market-session.md)、[Deployment](contracts/deployment.md)及 [Analytics / Skew v1](contracts/analytics-skew.md)。
 
-分钟回看复用 Market State 的固定 revision 语义；sealed 只是分钟结束，不保证迟到写入不会改变默认重建。复现结果必须保留相同 append-only Raw、明确历史清单和参考版本。现有当前清单不得自动用于历史计算。MVP 先采用按请求计算；是否需要缓存必须由真实性能证据驱动，缓存始终是可丢弃派生值。
+## Runtime 与模块边界
 
-汇报首页的业务对象、Skew 水平/变化、数据时间/质量位于首屏；服务、覆盖、行数等诊断按需展开。切换月份或分钟后清楚显示对象；错误清除对应有效状态，历史结果不得披上当前时间。
+正式 runtime 由独立的 C++ Collector、Python Query/FastAPI 和 React/Nginx Dashboard 组成。原生管理与 Docker Compose 是两套部署入口；它们共享上述组件边界，但具体进程、挂载、端口、构建输入和生命周期规则由 [Deployment Contract](contracts/deployment.md)定义，实际命令见 [Operations](operations.md)及模块 README。
 
-Skew 已冻结为 [25Δ Put−Call / Black-76 / 同月平价隐含远期](contracts/analytics-skew.md)，折现使用前一CFFEX日3M Shibor的显式单利代理；数值核心与 JSON 查询已实现，真实市场对账待验。历史日缺 sidecar 的只读限制暂作为显式操作限制保留；若实际回看流程必须停采而无法满足可用性门槛，应在同一只读边界内另行设计解决，不能把 503 算验收成功。
+`experiments/` 是探索空间，不是正式 runtime、Architecture 或 Contract 的替代来源。实验成果只有在明确纳入相应正式模块并同步 Architecture/Contract 后，才成为系统结构的一部分。

@@ -6,26 +6,12 @@
 
 - 业务闭环：选定 **MO 一个到期月**，查看 Skew 当前水平、当日分钟变化和指定分钟回看；同时看到数据时间、质量与不能计算的原因。
 - 现有采集范围保留：CFFEX IF/IH/IC/IM、TS/TF/T/TL、IO/HO/MO，以及 SHFE AU/AG 期货。分析不要求同时扩展至所有品种/月。
-- C++ → Raw SQLite → Python Market State → Analytics → JSON → React 汇报页。Analytics 核心、审核参考包离线导入、JSON API 及 React 业务汇报首页已实现；真实官方日包和 G4 三次日常使用仍待验收。
-- 独立采集、只读消费、真实 TradingDay、时间/质量语义和本地部署边界见[架构与契约](architecture.md)。这次文档整理不改变这些边界。
+- 业务结果通过[当前系统架构](architecture.md)定义的采集、只读解释、分析、JSON 和汇报页面闭环交付；当前实现及证据缺口只在[验收矩阵](acceptance.md)登记。
+- 长期取舍理由见[设计原则](design.md)，精确数据、时间、质量、分析与部署行为由对应 [Contracts](contracts/) 定义。
 
-## 已冻结的 Analytics / Skew 口径
+## 业务指标边界
 
-2026-09-08 冻结 **`mo-skew-25d-v1`**。七项决定的唯一完整定义见[Analytics / Skew contract](contracts/analytics-skew.md)，固定常量见[机器策略](contracts/analytics-skew-v1.json)。
-
-| 决定 | 冻结结果 |
-|---|---|
-| Skew definition | 25Δ Put IV − 25Δ Call IV，vol points；未折现 forward delta，σ按abs(delta)线性插值，不外推 |
-| Pricing model | Black-76，European premium-style，ACT/365F真实秒数年化 |
-| Underlying semantics | 同月三个近ATM C/P对的平价隐含远期中位数；不把IM或现货猜值代入 |
-| Reference parameters | 官方已验证挂牌/到期日与产品规则；前一CFFEX日3M Shibor、flat simple ACT360折现；显式不可变日参考包，缺失拒绝 |
-| Quote synchronization | 封口连续分钟、双边mid，age≤30秒、C/P差≤5秒、所有实际输入跨度≤15秒 |
-| IV solver contract | 有界二分、价格边界/time value/vega门槛、固定精度及失败状态 |
-| Independent validation | 固定QuantLib/mpmath独立oracle、入库数值样本与硬误差阈值；之后至少10个真实时点对账 |
-
-到期日不计算新Skew；竞价/休市只显示明确历史分钟，不混入当前值。不自动换月。完整上市清单是必须输入，部分Raw缺失只有在全部所需节点有效时才允许带PARTIAL标签产出指标。来源与近似假设均在契约中明示，禁止静默补零利率或旧行情。
-
-**契约、数值核心、审核参考包导入、HTTP 业务切片与 React 汇报首页已实现并经 TEST DOUBLE 工程回归；真实官方日包、10时点对账和 G4 三次日常使用尚未验收。** 这不改变下面的六项产品收尾条件。
+MVP 使用 **`mo-skew-25d-v1`** 作为唯一 Skew 指标定义。模型、远期、参考输入、时间选择、报价质量、数值求解、失败语义和验证容差的唯一完整来源是 [Analytics / Skew Contract](contracts/analytics-skew.md)及其[机器策略](contracts/analytics-skew-v1.json)；本文件只规定该指标必须支撑上述单月观察闭环，不复制其算法。
 
 ## 六个收尾条件
 
@@ -36,7 +22,7 @@
 5. **恢复可靠**：断线重连、异常退出后重启、Query 独立停启通过；健康失效及时显示，已提交数据保留；完成一次真实数据备份恢复并验证历史查询。
 6. **可以交付**：固定验收版本；在声明支持的部署方式上可复现部署；启动/停止/更新/恢复说明齐全；阻断问题清零，其余限制可查。原生和 Docker 的证据分开记录。
 
-性能门槛：固定机器、真实一天数据、单人使用，核心查询 P95 ≤ 2 秒；至少 100 次成功请求并记录错误数，不能把失败请求从报告中隐藏。持续活跃且输入可用时，默认 15 秒采样 + 5 秒轮询的页面接收至显示延迟目标 ≤ 30 秒；分别记录源、接收、物化与显示时间。这是待实测目标，非现有性能保证。
+性能门槛：固定机器、真实一天数据、单人使用，核心查询 P95 ≤ 2 秒；至少 100 次成功请求并记录错误数，不能把失败请求从报告中隐藏。持续活跃且输入可用时，在 Contracts 定义的默认采样与页面轮询配置下，页面接收至显示延迟目标 ≤ 30 秒；分别记录源、接收、物化与显示时间。这是待实测目标，非现有性能保证。
 
 “核心查询”包括当前/指定分钟 Skew 及当天变化；已有 health/snapshot 接口通过不替代 Skew 业务查询性能验收。验收样本需覆盖完整目标月链及积累一天后的库，不能仅测空库。
 
@@ -44,6 +30,6 @@
 
 错交易日、丢已提交数据、错误/不可追溯指标、旧数据假装当前、频繁人工修复、缺真实业务验收，均阻止收尾。测试全绿只证明已覆盖的工程条件。
 
-更多品种分析、更多指标、复杂图表、自动告警、交易/策略/回测、云部署/认证、WebSocket、Dev Container 不纳入本版。Python/Node 仅在兼容性或验收阻塞时升级；依赖锁文件继续保留。数据目前已经在宿主持久 bind mount，无需为了 MVP 迁移存储。
+更多品种分析、更多指标、复杂图表、自动告警、交易/策略/回测、云部署/认证、WebSocket、Dev Container 不纳入本版。
 
 当前状态及证据缺口见[验收矩阵](acceptance.md)。这里定义目标，不将底座验收完成改称整个产品完成。
