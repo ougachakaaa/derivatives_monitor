@@ -1,6 +1,6 @@
 # CTP Linux C++ 行情客户端
 
-该目录使用官方 `v6.7.13_20260225` Linux x86-64 Market Data SDK，构建和运行原生 Linux C++ 行情客户端。构建所需的最小 SDK 已置于仓库中，不需要再解压完整官方包。
+该目录保留原生 Linux C++ 行情客户端、接入验证记录和技术探索文档。实验客户端使用 Collector 正式拥有的 `v6.7.13_20260225` Linux x86-64 Market Data SDK 与 CMake 适配，不需要再解压完整官方包；正式模块不反向依赖本目录。
 
 券商提供的前置地址、行情范围、频率和接入边界见 [中信建投期货 CTP 行情接入信息](docs/csc-futures-ctp-market-data-access.md)。
 
@@ -15,14 +15,13 @@ ctp/
 │   └── scripts/
 │       ├── build.sh
 │       └── run.sh
-├── docs/                             # 券商接入信息和项目边界
-└── sdk/v6.7.13_20260225/             # Linux 行情 SDK 最小构建集
+└── docs/                             # 券商接入信息和项目边界
 ```
 
-保留的 SDK 文件为：
+Collector 保留的 SDK 文件为：
 
 ```text
-sdk/v6.7.13_20260225/
+../../collector/third_party/ctp/v6.7.13_20260225/
 ├── MANIFEST.txt
 └── linux64/mdapi/
     ├── ThostFtdcMdApi.h
@@ -31,7 +30,7 @@ sdk/v6.7.13_20260225/
     └── thostmduserapi_se.so
 ```
 
-`MANIFEST.txt` 保留官方原包文件名、SHA-256、SDK 版本和平台信息。三份厂商头文件的中文原为 GB18030 编码，且仅出现在注释中；仓库版已转为 UTF-8，转码前后的哈希均记录在清单中。未保留 Windows DLL/LIB、Trader API、中间压缩包和不参与当前客户端构建或运行的错误码 XML。
+[`MANIFEST.txt`](../../collector/third_party/ctp/v6.7.13_20260225/MANIFEST.txt) 保留官方原包文件名、SHA-256、SDK 版本和平台信息。三份厂商头文件的中文原为 GB18030 编码，且仅出现在注释中；仓库版已转为 UTF-8，转码前后的哈希均记录在清单中。未保留 Windows DLL/LIB、Trader API、中间压缩包和不参与当前客户端构建或运行的错误码 XML。
 
 ## 环境要求
 

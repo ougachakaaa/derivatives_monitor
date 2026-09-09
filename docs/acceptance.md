@@ -23,8 +23,8 @@
 | `offline` | 构建、7项 CTest、Query（含生产 Analytics 核心）、Universe、部署替身、SQLite CLI、React 测试与构建；G2/G5/G6 工程基础 | 真实网络/浏览器/容器、官方参考/实盘 Analytics、三日运行 |
 | `native` | 合成 C++→SQLite→真实 HTTP、独立停启、SIGKILL 失效；合成夜盘分区；G2/G5 | 真实行情与真实跨午夜 |
 | `browser` | 原生闭环加 Chromium 页面/网络恢复；G2/G4 的现有页面部分 | 汇报页的用户体验或真实接收延迟 |
-| `packaging` | 实际 Docker scratch COPY、必要模块/日历/SDK 字节、运行目录排除；G6 打包边界 | runtime 镜像启动、实际挂载和生命周期 |
-| `docker` | 两个隔离容器 smoke，镜像构建、RW/RO 挂载、恢复与持久化；G5/G6 | 真实 CTP、Windows 浏览器或三日运行 |
+| `packaging` | 三个 Dockerfile-specific allowlist 的实际 scratch context、各镜像精确输入集合及必要模块/日历/SDK 字节；G6 打包边界 | runtime 镜像启动、实际挂载和生命周期 |
+| `docker` | 仓库级部署边界、根 Compose 的三服务构建与隔离 smoke、RW/RO 挂载、恢复与持久化；G5/G6 | 真实 CTP、Windows 浏览器或三日运行 |
 
 用法和依赖见[Harness](../harness/README.md)。每次运行产生 PASS/FAIL/NOT_RUN 和命令日志，任一未执行不计全通过。人工门槛永远不由 `offline` 成功自动关闭。
 

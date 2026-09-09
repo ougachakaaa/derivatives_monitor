@@ -7,7 +7,7 @@
 
 - 唯一闭环：CTP → C++ Collector → 每交易日 SQLite。Python、Browser、HTTP、策略、交易、现货指数、IV/基差计算均不进入采集链路。
 - Collector 是数据目录的唯一 writer；下游以 SQLite `mode=ro` 读取市场事实。运行目录与持久数据目录可分别配置，重启不得截断旧数据。
-- 演进现有 C++17/Linux SDK 接入：复用 INI、固定字段校验、日志与 SDK 构建规则；保留实验 demo 的 CSV 探测用途。新增 `collector/` 独立入口，不复制 SDK、不引入服务框架、消息队列或 Python runtime。
+- 演进现有 C++17/Linux SDK 接入：`collector/` 自有 INI、固定字段校验、日志、SDK 构建规则与最小第三方 SDK；保留实验 demo 的 CSV 探测用途，实验代码可依赖正式模块。不引入服务框架、消息队列或 Python runtime。
 - 合约 universe 来自配置、`InstrumentsFile` 或重复的 `--instrument` 参数，精确代码、去重、非空。C++ 不做合约发现；独立公开清单程序负责 CFFEX 与 SHFE AU/AG 期货发现和更新，原生管理器在清单变化时正常重启 Collector。
 
 ## 数据与采样不变量
@@ -33,4 +33,4 @@
 - 实盘连接、真实订阅和真实持续行情分别记录证据。前置不可达或非交易时段只能报告已验证的部分，不以空库、登录成功或模拟行情冒充实盘闭环。
 - 下游实时读使用短事务，活跃 WAL 数据不得仅复制 `.sqlite` 主文件或设 `immutable=1`。历史文件在正常关闭且无读事务占用时可独立拷贝；否则使用 SQLite backup。
 
-技术依据：[本仓库 SDK](../../experiments/ctp/sdk/v6.7.13_20260225/linux64/mdapi/ThostFtdcMdApi.h)、[SQLite WAL](https://www.sqlite.org/wal.html)、[同步级别](https://www.sqlite.org/pragma.html#pragma_synchronous)、[只读 URI](https://www.sqlite.org/uri.html)。
+技术依据：[本仓库 SDK](../../collector/third_party/ctp/v6.7.13_20260225/linux64/mdapi/ThostFtdcMdApi.h)、[SQLite WAL](https://www.sqlite.org/wal.html)、[同步级别](https://www.sqlite.org/pragma.html#pragma_synchronous)、[只读 URI](https://www.sqlite.org/uri.html)。

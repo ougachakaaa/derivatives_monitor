@@ -1,3 +1,6 @@
+FROM scratch AS context-audit
+COPY . /
+
 FROM node:22-bookworm-slim AS build
 WORKDIR /app
 COPY dashboard/package.json dashboard/package-lock.json ./

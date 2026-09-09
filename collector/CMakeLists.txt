@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 project(derivatives_collector LANGUAGES CXX)
-include(../experiments/ctp/common/ctp_sdk.cmake)
+include(cmake/ctp_sdk.cmake)
 include(CTest)
 find_package(SQLite3 3.24 REQUIRED)
 add_library(collector_storage src/storage.cpp)

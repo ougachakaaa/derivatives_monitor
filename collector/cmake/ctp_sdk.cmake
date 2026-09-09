@@ -1,4 +1,4 @@
-set(CTP_COMMON_DIR "${CMAKE_CURRENT_LIST_DIR}")
+set(CTP_COMMON_DIR "${CMAKE_CURRENT_LIST_DIR}/../include")
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "This target requires native Linux")
 endif()
@@ -8,7 +8,7 @@ if(NOT CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|amd64|AMD64)$")
 endif()
 
 set(CTP_SDK_ROOT
-    "${CMAKE_CURRENT_LIST_DIR}/../sdk/v6.7.13_20260225/linux64/mdapi"
+    "${CMAKE_CURRENT_LIST_DIR}/../third_party/ctp/v6.7.13_20260225/linux64/mdapi"
     CACHE PATH "Path to the bundled CTP Linux market-data SDK")
 
 set(CTP_LINK_MODE "AUTO" CACHE STRING

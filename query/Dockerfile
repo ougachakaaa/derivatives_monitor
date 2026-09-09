@@ -1,3 +1,6 @@
+FROM scratch AS context-audit
+COPY . /
+
 FROM python:3.12-slim-bookworm AS build
 ENV POETRY_VIRTUALENVS_IN_PROJECT=true PIP_DISABLE_PIP_VERSION_CHECK=1
 WORKDIR /app

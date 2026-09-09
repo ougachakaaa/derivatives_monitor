@@ -33,7 +33,7 @@ flowchart LR
 | `dashboard/` | 独立 React 页面；生产 Nginx 静态服务和同源 API 代理 | 无 SQLite、凭据、flow、Docker socket 挂载；不在浏览器另写一套权威指标公式 |
 | `harness/` 与模块测试 | 可重复回归、证据范围与收尾门槛映射 | 测试 SDK 仅用于隔离测试；无实盘启动或配置修改 |
 
-`experiments/` 暂不整理。正式 Collector 构建继续引用其 `ctp/common` 与 `ctp/sdk`，这是现有构建依赖，不是新增运行服务。实验 coverage harness 与产品验收 harness 各自独立。
+`experiments/` 是探索空间，不得成为正式 runtime 或 build dependency。CTP SDK 及其 CMake 适配归 `collector/` 所有；实验客户端可以依赖 Collector 的正式第三方依赖与构建设施。实验 coverage harness 与产品验收 harness 各自独立。
 
 ## 稳定边界
 
@@ -44,6 +44,7 @@ flowchart LR
 5. **只读安全**：活跃库使用 WAL，离线 immutable 必须持目录共享锁且无非空 WAL。活跃 Collector 采集另一日而旧日缺 sidecar 时明确 503，不能绕过锁或删除 WAL。
 6. **健康分层**：进程心跳、连接登录、订阅、实际接收、数据质量、市场时段分别展示；休市或冷门合约不推送不能直接推断进程故障。
 7. **本地与持久化**：Linux x86-64/WSL；服务生命周期与数据分离；宿主回环默认 8101/8000。配置、日志、flow 与数据不进入镜像；不增加交易或外网暴露。
+8. **构建与编排所有权**：Collector、Query、Dashboard 保持仓库根 build context，但各自由模块内的 `Dockerfile.dockerignore` 维护 deny-by-default allowlist；新增仓库文件默认不可见。单服务 Dockerfile、镜像内 runtime tooling 与输入策略归对应服务；仓库根 `compose.yaml` 和 `scripts/deploy.sh` 归系统 integration layer。Collector native tooling 仍独立位于 `collector/scripts/`。
 
 详细不变量分别由 [Collector](contracts/collector.md)、[Read Path](contracts/read-path.md)、[Market State](contracts/market-state.md)、[Calendar/Universe](contracts/market-session.md)、[Deployment](contracts/deployment.md)定义。下游的七项数学/参考/同步/验证决定已在[Analytics / Skew v1](contracts/analytics-skew.md)冻结。
 

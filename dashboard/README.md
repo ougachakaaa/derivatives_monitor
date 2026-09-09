@@ -6,7 +6,7 @@
 
 当前 WSL 原生部署使用 `./collector/scripts/native.sh up`，Windows 打开 **http://localhost:8101**。页面增加 CFFEX 各品种/月的覆盖统计，展示清单来源和过期状态、订阅失败及已订阅暂无推送的区别。
 
-Docker 全栈部署，在仓库根目录执行 `./collector/scripts/deploy.sh up`，浏览器打开 **http://localhost:8101**。后端直接访问 **http://localhost:8000/docs**。两个 HTTP 端口都只绑定宿主回环地址。
+Docker 全栈部署，在仓库根目录执行 `./scripts/deploy.sh up`，浏览器打开 **http://localhost:8101**。后端直接访问 **http://localhost:8000/docs**。两个 HTTP 端口都只绑定宿主回环地址。
 
 本地前端开发需要 Node 22.12+：
 

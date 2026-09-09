@@ -1,6 +1,7 @@
 /collector/scripts/*.sh text eol=lf
 /collector/tests/*.sh text eol=lf
 /collector/Dockerfile text eol=lf
-/collector/compose.yaml text eol=lf
+/compose.yaml text eol=lf
+/scripts/*.sh text eol=lf
 
 tests/*.sh text eol=lf

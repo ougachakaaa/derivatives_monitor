@@ -3,7 +3,7 @@ services:
     image: derivatives-monitor-collector:local
     platform: linux/amd64
     build:
-      context: ..
+      context: .
       dockerfile: collector/Dockerfile
       target: runtime
     user: "${COLLECTOR_UID:?Run scripts/deploy.sh}:${COLLECTOR_GID:?Run scripts/deploy.sh}"
@@ -43,7 +43,7 @@ services:
     image: derivatives-monitor-query:local
     platform: linux/amd64
     build:
-      context: ..
+      context: .
       dockerfile: query/Dockerfile
       target: runtime
     user: "${COLLECTOR_UID:?Run scripts/deploy.sh}:${COLLECTOR_GID:?Run scripts/deploy.sh}"
@@ -75,7 +75,7 @@ services:
     image: derivatives-monitor-dashboard:local
     platform: linux/amd64
     build:
-      context: ..
+      context: .
       dockerfile: dashboard/Dockerfile
       target: runtime
     user: "${COLLECTOR_UID:?Run scripts/deploy.sh}:${COLLECTOR_GID:?Run scripts/deploy.sh}"

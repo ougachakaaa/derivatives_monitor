@@ -1,3 +1,6 @@
+FROM scratch AS context-audit
+COPY . /
+
 FROM ubuntu:24.04 AS build
 
 RUN apt-get update \
@@ -5,9 +8,10 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /src
-COPY experiments/ctp/common/ experiments/ctp/common/
-COPY experiments/ctp/sdk/ experiments/ctp/sdk/
 COPY collector/CMakeLists.txt collector/config.example.ini collector/
+COPY collector/cmake/ collector/cmake/
+COPY collector/include/ collector/include/
+COPY collector/third_party/ collector/third_party/
 COPY collector/src/ collector/src/
 COPY collector/tests/ collector/tests/
 
