@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "scope": {"id": "collector", "root": "collector", "parent": "repo", "entrypoint": "collector/README.md", "status": "existing"},
+  "documents": [{"path": "collector/README.md", "role": "entrypoint"}],
+  "claims": [],
+  "claim_references": [
+    {"claim": "collector.runtime-contract", "path": "collector/README.md"},
+    {"claim": "repository.raw-boundary", "path": "collector/README.md"},
+    {"claim": "repository.deployment-contract", "path": "collector/README.md"}
+  ]
+}

@@ -1,3 +1,5 @@
+<a id="collector-runtime-contract"></a>
+
 # Collector 长期契约
 
 
@@ -13,6 +15,8 @@
 ## 行情接入与可选账号字段
 
 正式 Collector 仅使用 MdApi；交易接口能力边界见 [MVP](../mvp.md#行情接入能力边界)。`UserID` 和 `Password` 为可选行情接入字段，允许缺省或空值，不将其非空作为行情配置有效的前提。已有值按原 MdApi 请求流程处理，不删除字段、不改写配置，不移除 `ReqUserLogin` 或现有连接/登录/订阅失败诊断。已填写值仍遵守 SDK 字段长度等安全约束。空值被本地接受不证明任意前置均允许匿名接入，真实接入结果由 MdApi 响应表达。
+
+<a id="raw-shared-boundary"></a>
 
 ## 数据与采样不变量
 

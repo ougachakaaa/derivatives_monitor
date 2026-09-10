@@ -1,3 +1,7 @@
+<a id="read-path-http-contract"></a>
+<a id="query-read-contract"></a>
+<a id="dashboard-read-contract"></a>
+
 # 最小 Python 只读层与 JS 看板约束
 
 

@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "scope": {"id": "harness", "root": "harness", "parent": "repo", "entrypoint": "harness/README.md", "status": "existing"},
+  "documents": [
+    {"path": "harness/README.md", "role": "contract"},
+    {"path": "harness/live-acceptance-template.md", "role": "reference"}
+  ],
+  "claims": [
+    {"id": "harness.evidence-contract", "definition": {"path": "harness/README.md", "anchor": "harness-evidence-contract"}, "constrained_scopes": ["harness"], "migration_exception": "harness-contract-to-s7"}
+  ],
+  "claim_references": [],
+  "migration_exceptions": [
+    {"id": "harness-contract-to-s7", "claim": "harness.evidence-contract", "current_path": "harness/README.md", "target_path": "harness/CONTRACT.md", "target_scope": "harness", "exit_stage": "S7"}
+  ]
+}

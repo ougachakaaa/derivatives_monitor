@@ -112,3 +112,15 @@ React 组件 7 项通过，覆盖当前 Skew、当日变化、完整性与 TEST 
 文档检查 `python3 harness/run.py docs` 为 PASS，报告 `artifacts/harness/20260910T154722Z-docs-5407522d/result.json`，记录 `351003e` 加 freeze 工作树；报告后的修改仅收紧导航/排版与登记证据。`python3 -m unittest discover -s harness/tests -p test_docs.py -v` 实际执行 3 项，全部通过；`git diff --check` 通过。对本次七个 Markdown 文件逐一离线检查本地链接及显式/标题锚点，并人工核对治理只在 docs README 定义、归属只在 Architecture 定义、执行步骤只在 ExecPlan，目标路径不冒充现存 authority。提交前再次执行 docs/diff 检查。
 
 范围审查只包含这七份文档；与 `351003e` 比较业务 Contracts、生产代码、oracle/fixtures、实验和参考原件无 diff。未运行 analytics/offline/native/browser/packaging/docker，不改变上文 G1–G6/P1/P2、Feature 或 Monitoring 的业务证据状态。M0 交付在本节所属独立 commit 中结束，S1–S8 留待新 session 明确授权。
+
+<a id="semantic-authority-m1"></a>
+
+## Repository semantic embedding：scoped authority validation / M1（S1）
+
+2026-09-11，从 `main@e67a9b0` 的干净工作树恢复并核对另一 worktree 仍为 `feature/realtime-monitoring-alerts@351003e`。本阶段只实现 S1：为现有 repository、Collector、Collector tools、Query、Calendar reference、Dashboard 与 Harness scope 建立 version 1 关系登记；尚无目录的 Monitoring 仅在父登记标为 `frozen_pending`。现行中央业务定义未迁移，所有局部目标均以具名 exception 记录当前路径、目标路径、目标 scope 和 S2–S7 退出阶段。
+
+离线检查现验证登记版本、scope 树与 smallest-common-scope、入口可达、文档角色、显式锚点、claim 唯一定义/引用、证据与计划不得定义 authority、精确重复规范段落、具名迁移例外，以及 Python/include/build 输入的跨 scope 依赖；保留现有原件/SDK 哈希、正式 runtime 不依赖 experiments 和 Docker 白名单检查。15 项临时 TEST DOUBLE 仓库自测覆盖正向继承、跨平台路径及上述主要负向边界，并已加入 `docs` profile。
+
+本阶段只修改机器导航、离线 Harness、导航/状态说明并为现行定义增加不改变正文的显式锚点。未移动或改写 Contract 规则，未修改生产代码、Skew 策略、golden/oracle、参考原件、SDK 或 experiments；M2/S2 及后续迁移未执行。自动 PASS 只证明登记与确定性结构约束，不证明自然语言语义等价、业务实现或现场验收。
+
+`python3 harness/run.py docs` 为 PASS，报告 `artifacts/harness/20260910T161215Z-docs-cbb04f60/result.json` 记录 `e67a9b0` 加 S1 工作树，两个步骤均实际执行；报告后的修改仅登记本证据。完整 `harness/tests` 共 29 项及 `git diff --check` 在提交前另行通过。

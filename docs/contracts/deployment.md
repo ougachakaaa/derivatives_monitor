@@ -1,3 +1,7 @@
+<a id="repository-deployment-contract"></a>
+<a id="collector-lifecycle-contract"></a>
+<a id="monitoring-lifecycle-contract"></a>
+
 # 部署长期契约
 
 目标为本地 Linux x86-64 / WSL。Collector、Query、Dashboard 三个独立项目；仓库根 `compose.yaml` 定义三服务的系统级 runtime composition，原生 systemd 和 Docker Compose 是两种部署方式，不同时写同一个 Raw 目录。命令与排障见[Collector 手册](../../collector/README.md)和[运行与恢复](../operations.md)。

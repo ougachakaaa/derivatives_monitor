@@ -1,3 +1,5 @@
+<a id="repository-operations"></a>
+
 # 运行、维护与恢复
 
 本文件只提供运行、维护、故障处理与恢复规程，不定义系统结构或业务行为。当前结构见 [Architecture](architecture.md)，精确部署和读写边界见 [Contracts](contracts/)。

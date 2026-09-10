@@ -12,6 +12,7 @@ from pathlib import Path
 import re
 from urllib.parse import unquote
 
+from authority import authority_errors
 from docker_boundaries import BOUNDARIES, FORBIDDEN_SAMPLES
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -25,6 +26,7 @@ REQUIRED_PATHS = (
     'docs/architecture.md',
     'docs/acceptance.md',
     'docs/operations.md',
+    'docs/semantic-embedding-execplan.md',
     'docs/references/README.md',
     'docs/archive/README.md',
     'harness/README.md',
@@ -34,7 +36,8 @@ REQUIRED_PATHS = (
     'scripts/deploy.sh',
     'scripts/dev.py',
     *(f'docs/contracts/{name}.md' for name in
-      ('collector', 'read-path', 'market-state', 'market-session', 'deployment', 'analytics-skew')),
+      ('collector', 'read-path', 'market-state', 'market-session', 'deployment', 'analytics-skew',
+       'features', 'monitoring')),
     'docs/contracts/analytics-skew-v1.json',
     'docs/references/analytics-skew-sources.md',
     'harness/fixtures/analytics-skew-v1.json',
@@ -124,6 +127,7 @@ def check(root=ROOT):
         errors.append('Deprecated collector/scripts/deploy.sh exists; system deployment is owned by '
                       'scripts/deploy.sh (docs/contracts/deployment.md)')
     errors.extend(production_dependency_errors(root))
+    errors.extend(authority_errors(root, BOUNDARIES))
     files = [root / p for p in ('README.md', 'AGENTS.md', 'collector/README.md',
                                'query/README.md', 'query/calendars/README.md', 'dashboard/README.md')]
     files += list((root / 'docs').rglob('*.md')) + list((root / 'harness').rglob('*.md'))
@@ -184,8 +188,8 @@ def main():
     for error in errors:
         print('FAIL:', error)
     if not errors:
-        print('PASS: maintained links, authority entrypoints, dependency direction, hashes and per-image Docker allowlists')
-        print('Scope: offline structural checks; no external URL availability, Markdown anchors or business correctness claim.')
+        print('PASS: scoped authority registration, links/anchors, claims, dependencies, hashes and Docker allowlists')
+        print('Scope: offline structural checks; no external URL availability or business correctness claim.')
     return int(bool(errors))
 
 

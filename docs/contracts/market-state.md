@@ -1,3 +1,5 @@
+<a id="query-market-state-contract"></a>
+
 # Minute Market Frame / Latest Market State
 
 

@@ -1,3 +1,7 @@
+<a id="repository-system-architecture"></a>
+<a id="query-internal-architecture"></a>
+<a id="monitoring-internal-architecture"></a>
+
 # 当前系统架构
 
 本文回答“系统现在是什么结构”：组件职责、数据流、依赖方向、数据所有权和模块边界。选择这些边界的原因见[长期设计原则](design.md)，产品边界见 [MVP](mvp.md)，精确行为与失败语义只由对应 [Contracts](contracts/) 定义。本文不记录实现完成度；当前代码与验证缺口见[验收矩阵](acceptance.md)。
@@ -206,4 +210,4 @@ application store 是专属应用持久目录，不位于 Collector 数据目录
 
 claim 按可独立修改的接口或规则组划分，不为每句话建 ID。Markdown 与机器策略各自登记职责：Skew 已有机器字段值以原 JSON 为机器 authority，Markdown 解释含义，重复数值展示只作为受一致性检查的投影。登记不能制造第二套规则或把 evidence/ExecPlan 注册为规范。
 
-该登记及其检查尚待实现；具体检查、迁移例外与关闭条件只在 [ExecPlan](semantic-embedding-execplan.md)安排。此处不要求当前工作树已有未来文件。
+登记从根 [`.authority.json`](../.authority.json) 开始，局部 scope 由各自同名文件登记；冻结待实现且尚无目录的 scope 只在父登记中声明，不预建空目录。离线检查实现位于 `harness/authority.py`，迁移例外与关闭条件仍只由 [ExecPlan](semantic-embedding-execplan.md)安排；当前完成状态见 [Acceptance](acceptance.md#semantic-authority-m1)。

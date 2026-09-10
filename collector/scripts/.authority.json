@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "scope": {
+    "id": "collector-tools",
+    "root": "collector/scripts",
+    "parent": "collector",
+    "entrypoint": "collector/README.md",
+    "status": "existing",
+    "entrypoint_migration": {"current_path": "collector/README.md", "target_path": "collector/scripts/README.md", "exit_stage": "S3"}
+  },
+  "documents": [],
+  "claims": [],
+  "claim_references": [
+    {"claim": "collector-tools.universe-contract", "path": "collector/README.md"},
+    {"claim": "repository.market-session", "path": "collector/README.md"}
+  ]
+}

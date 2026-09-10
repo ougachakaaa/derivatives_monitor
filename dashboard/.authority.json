@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "scope": {"id": "dashboard", "root": "dashboard", "parent": "repo", "entrypoint": "dashboard/README.md", "status": "existing"},
+  "documents": [{"path": "dashboard/README.md", "role": "entrypoint"}],
+  "claims": [],
+  "claim_references": [
+    {"claim": "dashboard.read-contract", "path": "dashboard/README.md"},
+    {"claim": "dashboard.skew-contract", "path": "dashboard/README.md"},
+    {"claim": "repository.deployment-contract", "path": "dashboard/README.md"}
+  ]
+}

@@ -34,7 +34,8 @@ def build_steps():
 def profiles(profile):
     checks = [step('docs', [sys.executable, ROOT / 'harness/check_docs.py'])]
     if profile == 'docs':
-        return checks
+        return checks + [step('docs-authority-tests', [sys.executable, '-m', 'unittest',
+                              'harness.tests.test_authority', '-v'])]
     checks += [step('harness-tests', [sys.executable, '-m', 'unittest', 'discover', '-s', 'harness/tests', '-v'])]
     if profile == 'analytics-contract':
         return checks + [step('analytics-contract', [sys.executable, 'harness/check_analytics_contract.py'])]

@@ -1,3 +1,7 @@
+<a id="repository-design-principles"></a>
+<a id="query-design-rationale"></a>
+<a id="monitoring-design-rationale"></a>
+
 # 长期设计原则与取舍
 
 本文回答“为什么这样设计，以及系统演进时应守住什么”。产品目标和停止边界由 [MVP](mvp.md)定义，当前组件结构由 [Architecture](architecture.md)描述，任何精确行为、参数、接口和失败语义以对应 [Contract](contracts/) 为准，当前实现与验证程度见 [Acceptance](acceptance.md)。

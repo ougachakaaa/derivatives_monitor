@@ -1,3 +1,7 @@
+<a id="query-skew-contract"></a>
+<a id="query-reference-bundle-contract"></a>
+<a id="dashboard-skew-contract"></a>
+
 # MVP Analytics / Skew contract v1
 
 状态：**FROZEN / CORE IMPLEMENTED**，2026-09-08；契约 ID `mo-skew-25d-v1`。本文件冻结七项设计，机器常量见[策略文件](analytics-skew-v1.json)。这是当前单月 Skew MVP 的唯一 Analytics 定义；生产数值核心位于 `query/analytics.py`。参考导入、HTTP、页面及真实对账的当前实现/验证状态统一见 [Acceptance](../acceptance.md)，实现不意味着实盘验收完成。平行 [Feature 查询](features.md)复用本契约，不改变任何冻结数值或质量要求。

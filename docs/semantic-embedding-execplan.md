@@ -1,6 +1,6 @@
 # Repository semantic embedding：ExecPlan
 
-日期：2026-09-10。执行基线：`main@351003e`，`feature/realtime-monitoring-alerts` worktree 同 HEAD，freeze 开始时两个工作树均干净。本文承接已确认的完整迁移计划；**当前 session 只交付 semantic freeze / M0（原计划 S0），交付后停止。S1–S8 未获本 session 执行授权。** 此 M0 与 Monitoring 业务计划的 M0 不是同一阶段。
+日期：2026-09-10。冻结基线：`main@351003e`，`feature/realtime-monitoring-alerts` worktree 同 HEAD，freeze 开始时两个工作树均干净。Semantic freeze / M0（原计划 S0）已由 `e67a9b0` 交付；后续 session 仍必须以用户明确指定的单一阶段为边界。此 M0 与 Monitoring 业务计划的 M0 不是同一阶段。
 
 本文只拥有执行顺序、验证、恢复、停止与计划生命周期，不拥有长期规则。治理唯一见 [docs README](README.md#authority-rules)，目标布局/归属唯一见 [Architecture mapping](architecture.md#authority-mapping)，机器导航关系见 [Architecture](architecture.md#authority-registration)。业务仍以各现行 Contract 为准；阶段实现与验证状态唯一登记 [Acceptance](acceptance.md#semantic-freeze)，不从本表推断完成程度。
 
@@ -25,7 +25,7 @@
 - Query README 缺少已实现 Feature 用法；生产模块没有局部 AGENTS。后续局部迁移时补齐。
 - Universe 工具跨目录导入 Calendar，native 管理三个服务。禁止把采集 runtime 的隔离误写为整个 collector 目录的零 Query 依赖。
 - [实验 AGENTS](../experiments/data_coverage/AGENTS.md)、[SPEC](../experiments/data_coverage/SPEC.md)、[README](../experiments/data_coverage/README.md)存在部分证据规则重复，但只作为案例和发现保留，本次不治理实验内容。
-- 当前 docs 检查通过不证明目标完成：它不校验锚点、claim 唯一性、scope 或自动发现模块文档，必需路径也未列 Feature/Monitoring。
+- M0 时的 docs 检查不校验锚点、claim 唯一性、scope 或自动发现模块文档，必需路径也未列 Feature/Monitoring；S1 将这些缺口纳入登记、自测和 docs profile，但自动检查仍不证明自然语言业务等价。
 
 不完整 Raw schema、coverage schema、配置规格不在本迁移中补造。新发现的语义冲突先记录相应 authority，不能按代码或新文档日期机械裁决。
 
@@ -47,9 +47,15 @@
 
 每阶段按[归属 mapping](architecture.md#authority-mapping)细化到段落/规则组，记录所有移出内容的去向。迁移在同一提交中移动定义、删除源处重复、更新消费者链接及检查；不能通过先复制再等待未来清理获得 locality。模块读取入口一旦落地，父入口必须指向它。
 
-本次 M0 的目标路径仅写为文字或代码格式；所有可点击链接指向现存来源。后续阶段才创建有真实内容的文件，不预建空的 .authority.json 或 Monitoring 文档。
+M0 的目标路径仅写为文字或代码格式；S1 创建现有 scope 的关系登记，并在父登记中声明尚无目录的 frozen-pending scope。S2–S7 才创建对应的长期内容文件，不预建空 Monitoring 文档。
 
-## 3. 后续 Harness 工作规格
+### S1 reconciliation 清单
+
+S1 以 `main@e67a9b0` 的干净工作树为实际基线。根登记逐项列出当前定义、稳定锚点、受约束 scope、唯一目标及 S2–S7 退出阶段；局部登记只连接当前入口和所依赖 claim，不复制业务正文。当前中央定义继续有效，尚未发生业务 authority 迁移。
+
+检查器保留并区分 `collector/scripts/universe.py` 到 Query Calendar 的工具依赖、Query 镜像到 Harness golden fixture 的构建输入，以及父 scope 使用现有 child 工具/参考文件的输入；Monitoring 只作为 frozen-pending scope 登记，不创建目录或运行入口。Feature/Monitoring 当前 Contracts 已进入必需路径检查，M0 已发现的 Read Path 状态措辞冲突仍留待 S2，未用 S1 改写业务语义。
+
+## 3. Harness 工作规格
 
 按 [机器导航职责](architecture.md#authority-registration)实现同版本 `.authority.json`。claim 粒度是独立接口/规则组，登记只承载路径和关系，不能存业务正文。S1 建检查与迁移前登记，S8 拒绝最终旧位置；中间例外必须可枚举且逐项退出。
 
@@ -67,7 +73,7 @@
 
 区分生产、工具、测试、实验依赖，不能用全目录循环检测代替语义。保持 Docker 输入/SDK/原件既有保护，不为文档扩大镜像白名单。实验内部不接受生产 authority lint；父入口链接仍须有效。历史正文不要求改为当前词汇，历史链接检查与旧 authority 禁令分开。
 
-docs profile 后续加入文档检查器自测，仍仅标准库、离线、无真实服务副作用。M0 只在 Harness README 标明当前检查范围与治理来源，不提前实现以上功能。
+S1 起 docs profile 包含文档检查器负向自测，仍仅标准库、离线、无真实服务副作用。S8 再移除全部临时例外并启用最终旧路径禁令。
 
 自动检查不能证明所有自然语言业务等价。claim/相同段落检查以外，必须人工核对逐项 mapping；不得以 embedding 相似度阈值作为正确性判据。本计划不交付向量库或索引服务。
 

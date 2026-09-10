@@ -1,3 +1,5 @@
+<a id="repository-documentation-governance"></a>
+
 # 长期文档入口
 
 本文件是 repository documentation governance 的唯一规则来源；[Architecture](architecture.md#knowledge-topology)拥有目标布局和 authority mapping，[ExecPlan](semantic-embedding-execplan.md)只安排迁移执行与完成条件。当前业务定义仍由下方链接的既有 Contracts 拥有，冻结目标不表示迁移已经完成。
@@ -41,6 +43,8 @@ Parent scope 只负责自身 scope 的语义、跨直接子级的 invariant，�
 目前仍使用下面的中央地址；逐项迁移后的唯一地址按 [mapping](architecture.md#authority-mapping)切换。未来路径以代码格式表示，不链接不存在文件、不预建占位文档。每项迁移必须同时移动定义、删除重复并更新导航，旧位置不能成为第二 authority。
 
 仓库级状态与操作：[Acceptance](acceptance.md) · [Operations](operations.md)。
+
+机器可读的 scope、claim、导航、迁移例外与依赖关系从根 [`.authority.json`](../.authority.json) 开始；JSON 只登记关系，业务正文仍由下列文档负责。
 
 精确契约入口：
 
