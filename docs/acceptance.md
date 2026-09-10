@@ -99,3 +99,16 @@ M1 没有实现或测试 Rule Engine、application SQLite、Monitoring runtime�
 React 组件 7 项通过，覆盖当前 Skew、当日变化、完整性与 TEST DOUBLE 标记、PARTIAL、STALE、UNAVAILABLE、指定分钟回看、Skew API 断线清值/恢复以及诊断独立失效；`npm run build` 通过。`browser` 结果为 `artifacts/harness/20260909T005859Z-browser-2446e812/result.json`（PASS），在实际 Chromium 中覆盖同样的 Skew TEST DOUBLE 状态、移动端无整页溢出，并保留真实临时 C++ → SQLite → FastAPI 诊断路径。`packaging` 结果为 `artifacts/harness/20260909T005808Z-packaging-957813a7/result.json`（PASS），证明 Dashboard 生产构建输入仍符合镜像 allowlist。
 
 这些数值和参考均为 TEST DOUBLE，没有已审核的真实官方日包、真实完整 MO 月链或人工日常使用记录。因此本节只表明汇报页工程行为可回归，**不签收 G4**。
+
+
+<a id="semantic-freeze"></a>
+
+## Repository semantic embedding：semantic freeze / M0
+
+2026-09-10，实施前复核 `main@351003e` 与同 HEAD 的 monitoring worktree，工作树干净。本阶段只冻结[治理规则](README.md#authority-rules)、[目标 topology / mapping](architecture.md#knowledge-topology)和[迁移 ExecPlan](semantic-embedding-execplan.md)；对应原迁移计划 S0，与 Monitoring 业务 M0 不同。
+
+现有中央业务 Contracts 仍为当前定义，目标模块文档尚未迁移。S1–S8（scope 检查器、根/模块迁移、最终强制治理）均未执行；生产代码、业务 Contract、策略、oracle、实验、SDK 和原件保持不变。新 checks 尚未实现，不把 docs PASS 作为 scope/唯一性自动验证或 MVP 通过。
+
+文档检查 `python3 harness/run.py docs` 为 PASS，报告 `artifacts/harness/20260910T154722Z-docs-5407522d/result.json`，记录 `351003e` 加 freeze 工作树；报告后的修改仅收紧导航/排版与登记证据。`python3 -m unittest discover -s harness/tests -p test_docs.py -v` 实际执行 3 项，全部通过；`git diff --check` 通过。对本次七个 Markdown 文件逐一离线检查本地链接及显式/标题锚点，并人工核对治理只在 docs README 定义、归属只在 Architecture 定义、执行步骤只在 ExecPlan，目标路径不冒充现存 authority。提交前再次执行 docs/diff 检查。
+
+范围审查只包含这七份文档；与 `351003e` 比较业务 Contracts、生产代码、oracle/fixtures、实验和参考原件无 diff。未运行 analytics/offline/native/browser/packaging/docker，不改变上文 G1–G6/P1/P2、Feature 或 Monitoring 的业务证据状态。M0 交付在本节所属独立 commit 中结束，S1–S8 留待新 session 明确授权。

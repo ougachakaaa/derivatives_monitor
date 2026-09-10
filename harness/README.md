@@ -28,7 +28,7 @@ python3 harness/run.py docker
 
 除了 `docs` 外均先运行 harness 自测。`docker` 包含 packaging 检查；基础镜像仓库不可达时可单独运行 packaging，不能据此宣称完整容器验收通过。各 profile 独立，选择与修改相关的范围；需要完整工程证据时分别运行 offline、browser、docker。浏览器 profile 的 read-path 已含 native HTTP，不必为同一版本重复运行 native。真实行情和人工使用/对账/恢复/性能门槛用[现场模板](live-acceptance-template.md)记录，不包含在任何自动 profile 中。
 
-`docs` 只执行可确定的结构检查。依赖方向检查限定于正式镜像输入清单及根/原生运行入口；历史 archive、说明文字、测试和 experiment 局部内容不参与判定。实现状态措辞、Design/Architecture 分工和业务语义仍需按文档 authority 人工审查。
+`docs` 只执行可确定的结构检查。文档治理由[repository authority 规则](../docs/README.md#authority-rules)定义；当前固定中央路径是迁移前地址检查，不是永久 topology 要求。目标布局与切换关系见 [mapping](../docs/architecture.md#authority-mapping)，检查器扩展留待 [ExecPlan](../docs/semantic-embedding-execplan.md)后续阶段；本阶段尚未实现 scope、claim 唯一性、锚点或局部入口自动发现。依赖方向检查限定于正式镜像输入清单及根/原生运行入口；历史 archive、说明文字、测试和 experiment 局部内容不参与判定。实现状态措辞、Design/Architecture 分工和业务语义仍需按文档 authority 人工审查。
 
 所有命令和日志写到被 Git 忽略的 `artifacts/harness/<UTC>-<profile>-<id>/`。`result.json` 保存 HEAD、dirty 状态、平台、命令/工作目录、退出码、时长、日志 SHA-256、工作树补丁及未跟踪源码哈希。只应提交脱敏验收摘要，不提交行情或配置。报告的 `mvp_complete` 始终 false；归档时同时保留对应源码版本/补丁，否则 dirty tree 报告不能复现。
 

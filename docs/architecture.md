@@ -112,3 +112,98 @@ flowchart LR
 application store 是专属应用持久目录，不位于 Collector 数据目录。原子提交、去重、缺口、配置版本和投递恢复的唯一行为来源为 [Monitoring Contract](contracts/monitoring.md)，不得用物理共库推导通知可以修改事件或规则状态。
 
 目标 runtime 仅增加一个可选本地进程，不接入当前 Compose/systemd 或平行 developer runner；生命周期约束见 [Deployment Contract](contracts/deployment.md)。故障隔离是调用、进程和写所有权边界，不承诺同宿主 CPU/磁盘资源完全隔离；轮询负载与延迟需实际验证，不能以进程独立替代性能证据。
+
+<a id="knowledge-topology"></a>
+
+## Repository knowledge architecture：冻结目标
+
+本节拥有 documentation topology 和语义归属 mapping；治理规则唯一见[文档入口](README.md#authority-rules)。这是冻结的目标，不描述已完成迁移。当前仍由上文和现有中央 Contracts 提供结构/业务 authority；实施状态见 [Acceptance](acceptance.md#semantic-freeze)，执行顺序见 [ExecPlan](semantic-embedding-execplan.md)。
+
+现状为根 AGENTS/README → docs 入口 → 中央 Design/Architecture/Contracts/Acceptance/Operations，生产模块主要只有 README；Harness 有局部验证入口；实验区已有逐层 SPEC/REFERENCE 组织。中央文档混合跨模块与模块内部语义，必须按规则组分配归属，不能整份按文件名搬迁。
+
+目标文件如下；未列出的对称文件不创建。根 DESIGN/ARCHITECTURE 将承接当前 docs 下对应文件的 repository-level 内容；本节随 Architecture 一起迁移，不保留中央副本。
+
+```text
+/
+├─ AGENTS.md / README.md / DESIGN.md / ARCHITECTURE.md / .authority.json
+├─ docs/
+│  ├─ README.md / mvp.md / acceptance.md / operations.md
+│  ├─ contracts/
+│  │  ├─ raw-boundary.md / read-path.md / market-session.md
+│  │  └─ features.md / deployment.md
+│  ├─ references/
+│  └─ archive/
+├─ collector/
+│  ├─ AGENTS.md / README.md / ARCHITECTURE.md / CONTRACT.md / .authority.json
+│  └─ scripts/
+│     └─ AGENTS.md / README.md / CONTRACT.md / .authority.json
+├─ query/
+│  ├─ AGENTS.md / README.md / DESIGN.md / ARCHITECTURE.md
+│  ├─ CONTRACT.md / ACCEPTANCE.md / .authority.json
+│  ├─ contracts/
+│  │  ├─ market-state.md / analytics-skew.md / analytics-skew-v1.json
+│  │  └─ references.md
+│  ├─ references/analytics-skew-sources.md
+│  └─ calendars/README.md / .authority.json
+├─ dashboard/
+│  └─ AGENTS.md / README.md / CONTRACT.md / ACCEPTANCE.md / .authority.json
+├─ monitoring/
+│  ├─ AGENTS.md / README.md / DESIGN.md / ARCHITECTURE.md
+│  └─ CONTRACT.md / ACCEPTANCE.md / .authority.json
+├─ harness/
+│  ├─ AGENTS.md / README.md / CONTRACT.md / .authority.json
+│  └─ 原有实现、测试、oracle、fixtures
+└─ experiments/（原位保留）
+```
+
+`query/contracts/` 是扁平 Query 的文档分卷，不是代码子模块；Calendar 解释算法仍归 Query，`query/calendars/` 只拥有参考文件维护入口。`collector/scripts/` 是现有真实工具 scope。根 `scripts/` 当前承担 repository integration，由系统 Operations/Deployment 导航，不另加空文档。
+
+已冻结的 Monitoring 设计足以支持后续建立非空文档 scope，README 初期只导航设计和状态；没有实现时不提供虚构运行命令。不预建 rules/notification/storage 子目录，不创建顶层 analytics 包。
+
+依赖归属必须区分工具与采集 runtime：`collector/scripts/universe.py` 实际导入 `query/market_calendar.py`，这不等于 C++ 采集依赖 Query 服务。native 管理器虽位于 Collector 目录却管理三个服务，其系统生命周期语义属于根。本迁移不移动这些代码，也不扩大已有合法依赖。
+
+实验入口为 [CTP](../experiments/ctp/README.md) 和 [Data Coverage](../experiments/data_coverage/README.md)。后者已有 AGENTS/DESIGN/SPEC → 数据类型 SPEC → 来源 REFERENCE/coverage/templates，是 progressive disclosure 案例；本次不更改其内容、命名、样本或局部规则。
+
+<a id="authority-mapping"></a>
+
+## Current → target authority mapping
+
+本表是归属与导航 authority，不复制业务规则。左列是迁移前可读取的真实来源，右列是冻结目标。尚未执行时以左列定义为准；每项迁移原子切换链接与定义，再将本表更新为现行归属导航，移除已无用途的旧来源说明。执行状态不在本表维护。
+
+| 当前来源 / 语义范围 | 唯一目标及拆分边界 |
+|---|---|
+| [根 AGENTS](../AGENTS.md)、[docs 入口](README.md) | 根 AGENTS 工作纪律及导航；docs README 治理规则。根不列全仓领域必读清单 |
+| [Design](design.md) §1–8 | 跨模块原则到根 DESIGN；Analytics 按请求计算等局部理由到 Query DESIGN |
+| Design §9 | HTTP 共享、拆包触发和反向依赖理由留根；薄 provider 组织理由到 Query DESIGN |
+| Design §10 | 机会记录/通知恢复内部取舍到 Monitoring DESIGN；与 Market Facts 的跨模块边界留根并引用 |
+| 本文当前架构 | 根 ARCHITECTURE 保留一级模块、跨模块流、当前/目标 runtime；Query 内部文件关系与 Monitoring 循环/存储结构下放各自 ARCHITECTURE |
+| [Collector Contract](contracts/collector.md) | callback、采样、session、配置、重连、提交、停止到 collector/CONTRACT.md；Raw 共享读写、锁、诊断协议到 docs/contracts/raw-boundary.md |
+| [Read Path](contracts/read-path.md)：边界/健康/SQLite | 系统挂载与生命周期归 Deployment；共享 Raw/心跳协议归 raw-boundary；公共 HTTP 保留 read-path；Query 内部读取要求归 query/CONTRACT.md |
+| Read Path：Skew | HTTP 参数、wire shape、状态映射保留根 read-path；分钟选择、series 计算引用 Query Skew，删除重复定义 |
+| Read Path：React | 布局、轮询、失败清值、显示精度、历史与当前视图交互归 dashboard/CONTRACT.md |
+| [Market Session](contracts/market-session.md) | Calendar/Universe 跨模块版本、时间、交接协议留根；来源抓取/发布行为到 collector/scripts/CONTRACT.md；Query 内部 Calendar/coverage 适配到 query/CONTRACT.md；页面时段表到 Dashboard |
+| [Market State](contracts/market-state.md) | query/contracts/market-state.md；引用根 Raw/Calendar 协议，去掉重复采集事实 |
+| [Skew](contracts/analytics-skew.md) | query/contracts/analytics-skew.md；纯页面规则到 Dashboard；审核包布局/导入/读取适配到 query/contracts/references.md；§10 历史记录与 §11 实现/测试证据到 query/ACCEPTANCE.md，保留 §11 的真实接口规范，不能整节删除 |
+| [Skew 策略](contracts/analytics-skew-v1.json)、[来源说明](references/analytics-skew-sources.md) | query/contracts/analytics-skew-v1.json、query/references/analytics-skew-sources.md；共享原件档案不动 |
+| [Feature](contracts/features.md) | 通用 envelope、身份/采样键、时间、错误、版本、消费者与窗口归属边界留根；registry/provider 内部要求到 Query CONTRACT；Skew 映射留根单一定义并引用 Query 数值契约 |
+| [Monitoring](contracts/monitoring.md) | monitoring/CONTRACT.md 拥有规则、crossing、UNKNOWN、配置、事务、恢复、投递；跨模块访问和生命周期引用根，删除重复约束 |
+| [Deployment](contracts/deployment.md) | 保留真实跨组件约束；Collector 自身停机引用 Collector；Monitoring 自有锁/重试引用 Monitoring |
+| [Collector README](../collector/README.md) | 配置用法保留，已有规范归局部 Contract；三服务部署教程到根 Operations；工具命令到 scripts README |
+| [Query README](../query/README.md)、[Dashboard README](../dashboard/README.md) | 保留实际用法、故障定位并增加本级导航；Query 增加已实现 Feature 用法 |
+| [Calendar README](../query/calendars/README.md) | 保留参考数据维护步骤，不承接 Query 解释算法 |
+| [Acceptance](acceptance.md) | G1–G6/P1/P2、跨进程/部署/runner 证据留根；Query/Dashboard/Monitoring 局部记录原样迁入各自 ACCEPTANCE，根只链接，不复制进度 |
+| [Operations](operations.md) | 系统组合、部署、备份恢复保留根；模块操作归所属 README，根导航而不重复步骤 |
+| [Harness README](../harness/README.md) | 用法/依赖保留；PASS/FAIL/NOT_RUN、证据身份和结果边界归 harness/CONTRACT.md，工作指导归 harness/AGENTS.md |
+| [Monitoring execution plan](monitoring-execution-plan.md) | 仍为独立一次性交接；只更新链接与恢复说明，不成为规则定义，不因文档迁移执行业务里程碑 |
+| [References](references/README.md)、[Archive](archive/README.md) | 共享原件、历史正文留原位；调整活动链接；局部 Skew 来源按上项迁移 |
+| Experiments | 沿用既有局部 authority；根只导航，内部重复问题另行处理 |
+
+<a id="authority-registration"></a>
+
+## 目标机器导航
+
+受管理 scope 的 `.authority.json` 只保存关系，不保存业务正文：版本、scope ID/物理根/parent/入口、现有或冻结待实现状态、文档路径与角色；唯一 claim ID、定义路径及稳定显式锚点、受约束 scopes；引用/证据/参考关系；允许的跨 scope 代码依赖及根约束来源。
+
+claim 按可独立修改的接口或规则组划分，不为每句话建 ID。Markdown 与机器策略各自登记职责：Skew 已有机器字段值以原 JSON 为机器 authority，Markdown 解释含义，重复数值展示只作为受一致性检查的投影。登记不能制造第二套规则或把 evidence/ExecPlan 注册为规范。
+
+该登记及其检查尚待实现；具体检查、迁移例外与关闭条件只在 [ExecPlan](semantic-embedding-execplan.md)安排。此处不要求当前工作树已有未来文件。
