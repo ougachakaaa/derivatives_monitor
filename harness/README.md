@@ -20,7 +20,7 @@ python3 harness/run.py docker
 | `docs` | 检查维护文档的本地文件链接与 authority 入口、正式构建/运行不得反向依赖 `experiments/`、原件/SDK 哈希和必要 Docker 白名单；不访问外网，不验证 Markdown 锚点 |
 | `analytics-contract` | 仅标准库；核对七项冻结状态、策略/生成器哈希，使用float64二分与固定独立oracle核对价格/IV/delta/远期/两翼；不运行生产Analytics |
 | `analytics` | 在 `analytics-contract` 基础上，用 `query/.venv` 运行生产 Analytics 及 Skew HTTP 切片正常、异常和边界回归；不读取实盘、不证明官方参考可用 |
-| `offline` | CMake/G++/SQLite 开发库、Python 3.12 的 `query/.venv`、Linux Node 22.12+/npm/已安装前端依赖、SQLite CLI；重新 configure/build Release，执行 CTest、Query、Universe、deploy 替身、verify 真 SQLite CLI、React 和构建 |
+| `offline` | CMake/G++/SQLite 开发库、Python 3.12 的 `query/.venv`、Linux Node 22.12+/npm/已安装前端依赖、SQLite CLI；重新 configure/build Release，执行 CTest、developer runner 隔离测试及实际 `./dev` TEST DOUBLE 链路、Query、Universe、deploy 替身、verify 真 SQLite CLI、React 和构建 |
 | `native` | 原生编译及 query 依赖；重新构建后运行合成夜盘与真实 HTTP 独立停启测试，临时数据/随机端口 |
 | `browser` | native 前提，加 Linux Node/前端依赖、Playwright Chromium 及系统库；合成夜盘与含浏览器的原生闭环 |
 | `packaging` | Docker Engine；分别以三个正式 Dockerfile 的 `context-audit` scratch stage 导出实际上下文，逐字节核对每个镜像的精确输入集合；无需拉取基础镜像，不证明 runtime 镜像可运行 |
@@ -41,7 +41,7 @@ python3 harness/run.py docker
 - `collector/tests/`：采集/存储/生命周期、配置、清单、部署/验收器与 Collector 容器。
 - `query/tests/`：真实 SQLite 只读、API、Calendar、Universe coverage、Market State、生产 Analytics 核心、Skew HTTP 及只读参考包适配。
 - `dashboard/tests/`：React 组件与实际浏览器交互；Skew 场景明确为 TEST DOUBLE，覆盖当前值、当日变化、历史分钟、PARTIAL/STALE/UNAVAILABLE 及 API 断线清值。
-- `tests/`：跨 C++/SQLite/HTTP/容器的集成场景。
+- `tests/`：跨 C++/SQLite/HTTP/容器的集成场景，包括临时目录和随机端口上的实际 `./dev` TEST DOUBLE 链路。
 - `harness/tests/`：结果分类、缺依赖/超时、模拟环境隔离、打包白名单回归。
 
 TEST DOUBLE 不等于真实 CTP；100ms 合成场景不等于生产 15 秒调度，后者由专门 CTest 验证。历史成功次数不写死在 runner 中；正式验收仍要审查每项测试覆盖的契约。

@@ -37,7 +37,9 @@ MULTI_SUPERVISOR = textwrap.dedent(
         command = [str(root / 'missing')] if mode == 'missing' else [
             sys.executable, str(root / 'component.py'), mode, str(workdir)
         ]
-        specs.append(ProcessSpec(name, command, workdir, os.environ.copy()))
+        specs.append(ProcessSpec(
+            name, command, workdir, os.environ.copy(), clean_exit_ok=name not in sys.argv[6].split(',')
+        ))
     checks = json.loads(sys.argv[3])
     raise SystemExit(supervise_components(
         specs,
@@ -194,13 +196,13 @@ class UpLifecycleTests(unittest.TestCase):
                 pass
         self.temporary.cleanup()
 
-    def launch(self, modes, checks=(), stop_timeout=1.0, http_timeout=0.15):
+    def launch(self, modes, checks=(), stop_timeout=1.0, http_timeout=0.15, unexpected=()):
         environment = os.environ.copy()
         environment["PYTHONDONTWRITEBYTECODE"] = "1"
         runner = subprocess.Popen(
             [
                 sys.executable, "-c", MULTI_SUPERVISOR, str(self.root), ",".join(modes),
-                json.dumps(checks), str(stop_timeout), str(http_timeout),
+                json.dumps(checks), str(stop_timeout), str(http_timeout), ",".join(unexpected),
             ],
             cwd=ROOT,
             env=environment,
@@ -255,6 +257,22 @@ class UpLifecycleTests(unittest.TestCase):
         self.assertIn("collector exited with status 9", output)
         self.assertEqual(output.count("starting collector"), 1)
         self.forget_stopped(query_pid)
+
+    def test_unexpected_clean_downstream_exit_marks_failure_without_stopping_companions(self):
+        runner = self.launch(("counter", "normal", "counter"), unexpected=("query",))
+        collector_pid = self.remember("collector")
+        dashboard_pid = self.remember("dashboard")
+        wait_for(self.root / "collector/count")
+        wait_for(self.root / "dashboard/count")
+        first = int((self.root / "collector/count").read_text())
+        time.sleep(0.2)
+        self.assertGreater(int((self.root / "collector/count").read_text()), first)
+        self.assertIsNone(runner.poll())
+        runner.send_signal(signal.SIGTERM)
+        code, output = self.finish(runner)
+        self.assertEqual(code, 1)
+        self.assertIn("query exited unexpectedly; recording session failure", output)
+        self.forget_stopped(collector_pid, dashboard_pid)
 
     def test_signal_during_http_startup_stops_all_owned_components(self):
         checks = [

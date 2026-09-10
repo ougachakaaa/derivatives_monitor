@@ -17,7 +17,9 @@
 
 ## 本地开发入口交付状态
 
-2026-09-09：developer runner 的设计已确定，长期要求已落位 [Deployment Contract](contracts/deployment.md#developer-runner-的生命周期边界)，交付拆分见 [execution plan](dev-runner-execution-plan.md)。任务 2–4 已实现根 `./dev` 的 help、参数边界、组件级 `doctor`、三个组件直接前台启动和联合 `up`；联合入口从已校验 Collector 配置派生 Query 数据目录、从有效 Query 端口派生 Dashboard 代理，并以独立进程组管理本次会话。标准库隔离测试使用 TEST DOUBLE，覆盖组件依赖隔离、入口/cwd/虚拟环境与路径参数、配置失败脱敏、端口与联合环境冲突、预检失败零启动、正常/异常及部分 spawn 失败、同伴继续运行、INT/TERM/HUP、60 秒生产宽限常量和缩时行为、超时强制清理、正常受控后代清理、外部进程不受影响、启动期信号及一次性 HTTP 超时只警告。实际 C++/SQLite→Uvicorn→Vite 的 `./dev` 隔离闭环及 offline 接入仍待任务 5；没有真实 CTP 或现场运行证据。本次不改变 native/Docker 实现，也不签收 G5/G6。文档结构与 TEST DOUBLE 监督测试不能替代完整联合生命周期、只读消费及部署边界验收。
+2026-09-10：developer runner 任务 2–5 已实现根 `./dev` 的 help、参数边界、组件级 `doctor`、三个组件直接前台启动、联合 `up` 和离线工程闭环；长期要求见 [Deployment Contract](contracts/deployment.md#developer-runner-的生命周期边界)，交付拆分见 [execution plan](dev-runner-execution-plan.md)。联合入口从已校验 Collector 配置派生 Query 数据目录、从有效 Query 端口派生 Dashboard 代理，并以独立进程组管理本次会话。标准库隔离测试覆盖组件依赖隔离、入口/cwd/虚拟环境与路径参数、配置失败脱敏、端口与联合环境冲突、预检失败零启动、正常/异常及部分 spawn 失败、同伴继续运行、INT/TERM/HUP、60 秒生产宽限常量和缩时行为、超时强制清理、正常受控后代及 harness 超时下嵌套进程组清理、外部进程不受影响、启动期信号及一次性 HTTP 超时只警告。
+
+实际 `./dev` TEST DOUBLE smoke 使用临时配置/data/flow、随机端口和替身 SDK，经过真实 Collector → SQLite → Uvicorn → Vite，验证 Query 共享 Raw、Dashboard 代理、下游退出不停止 Collector、会话清理、重启保留并追加数据，以及 writer/端口冲突不影响既有进程。`offline` 报告 `artifacts/harness/20260910T032523Z-offline-a1d836cb/result.json` 中 docs、harness-tests、configure/build、CTest、developer runner tests/smoke、Query、Universe 和 deploy 为 PASS；宿主缺 `sqlite3` CLI，verify 为 NOT_RUN，并使该报告整体为 NOT_RUN、后续 React/build 未在该 profile 中执行。没有真实 CTP、浏览器或 Docker 证据；本次不改变 native/Docker 实现，也不签收 G5/G6。TEST DOUBLE 闭环和监督测试不能替代现场数据恢复及最终部署验收。
 
 ## 工程 harness 与门槛映射
 
@@ -26,7 +28,7 @@
 | `docs` | 文档链接/authority 入口、正式构建与运行依赖方向、参考原件与 SDK 哈希、构建白名单必要输入 | 业务语义正确、实现状态措辞或实盘可用 |
 | `analytics-contract` | 七项冻结状态、策略/oracle哈希、固定数值样本与独立float64对照；G3设计基线 | 生产行为、真实输入可用性或实盘对账 |
 | `analytics` | 独立 contract 检查加生产核心、真实临时 SQLite→Market State→Analytics→Skew HTTP 的 TEST DOUBLE 回归；固定revision、哈希、质量/历史/缺口、离线包导入 | 真实官方日参考包、页面闭环或真实时点对账 |
-| `offline` | 构建、7项 CTest、Query（含生产 Analytics 核心）、Universe、部署替身、SQLite CLI、React 测试与构建；G2/G5/G6 工程基础 | 真实网络/浏览器/容器、官方参考/实盘 Analytics、三日运行 |
+| `offline` | 构建、7项 CTest、developer runner 隔离测试与实际 `./dev` TEST DOUBLE Collector→SQLite→Uvicorn→Vite 生命周期、Query（含生产 Analytics 核心）、Universe、部署替身、SQLite CLI、React 测试与构建；G2/G5/G6 工程基础 | 真实网络/浏览器/容器、官方参考/实盘 Analytics、三日运行 |
 | `native` | 合成 C++→SQLite→真实 HTTP、独立停启、SIGKILL 失效；合成夜盘分区；G2/G5 | 真实行情与真实跨午夜 |
 | `browser` | 原生诊断闭环加 Chromium；Skew TEST DOUBLE 覆盖当前/变化/历史/PARTIAL/STALE/UNAVAILABLE/API断线与移动布局 | 真实 Skew 业务值、30秒理解、3次日常使用或真实接收延迟 |
 | `packaging` | 三个 Dockerfile-specific allowlist 的实际 scratch context、各镜像精确输入集合及必要模块/日历/SDK 字节；G6 打包边界 | runtime 镜像启动、实际挂载和生命周期 |

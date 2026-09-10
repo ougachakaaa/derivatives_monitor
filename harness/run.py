@@ -53,6 +53,12 @@ def profiles(profile):
     checks += build_steps()
     if profile == 'offline':
         checks += [step('ctest', ['ctest', '--test-dir', BUILD, '--output-on-failure']),
+                   step('dev-runner-tests', [sys.executable, '-m', 'unittest', 'discover',
+                                             '-s', 'tests', '-p', 'test_dev*.py', '-v']),
+                   step('dev-runner-smoke', [sys.executable, 'tests/dev_runner_smoke.py'],
+                        requires=[BUILD / 'bin/data_collector', BUILD / 'libfake_md.so',
+                                  PYTHON, 'node', ROOT / 'dashboard/node_modules/vite/bin/vite.js'],
+                        timeout=180),
                    step('query', [PYTHON, '-m', 'unittest', 'discover', '-s', 'tests', '-v'], ROOT / 'query'),
                    step('universe', [sys.executable, '-m', 'unittest', 'discover', '-s', 'collector/tests', '-p', 'test_*.py', '-v']),
                    step('deploy', [sys.executable, 'collector/tests/deploy_test.py']),

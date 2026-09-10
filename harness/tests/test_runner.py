@@ -1,7 +1,10 @@
 """Ensure evidence cannot turn missing, skipped, failing or timed-out checks green."""
 from pathlib import Path
+import os
+import signal
 import sys
 import tempfile
+import time
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -35,6 +38,41 @@ class EvidenceTest(unittest.TestCase):
         result = self.execute('import time; time.sleep(5)', timeout=.1)
         self.assertEqual(result['status'], 'FAIL')
         self.assertIn('TimeoutError', result['reason'])
+
+    def test_timeout_cleans_runner_controlled_child_group(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            marker = Path(tmp) / 'child.pid'
+            child = (
+                "import os,signal,time; "
+                f"open({str(marker)!r},'w').write(str(os.getpid())); "
+                "signal.signal(signal.SIGTERM, lambda *_: (_ for _ in ()).throw(SystemExit(0))); "
+                "time.sleep(30)"
+            )
+            supervisor = (
+                "import os,sys; from pathlib import Path; "
+                "from scripts.dev import ProcessSpec, supervise_component; "
+                f"spec=ProcessSpec('fixture',[sys.executable,'-c',{child!r}],Path.cwd(),os.environ.copy()); "
+                "raise SystemExit(supervise_component(spec,stop_timeout=1))"
+            )
+            result = run_step(step('nested-timeout', [sys.executable, '-c', supervisor],
+                                   cwd=Path(__file__).resolve().parents[2], timeout=.5), Path(tmp))
+            self.assertEqual(result['status'], 'FAIL')
+            self.assertIn('TimeoutError', result['reason'])
+            self.assertTrue(marker.exists())
+            pid = int(marker.read_text())
+            deadline = time.monotonic() + 3
+            while time.monotonic() < deadline:
+                try:
+                    os.kill(pid, 0)
+                except ProcessLookupError:
+                    break
+                time.sleep(.05)
+            else:
+                try:
+                    os.killpg(pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+                self.fail(f'runner-controlled child {pid} survived harness timeout')
 
     def test_synthetic_environment_is_not_inherited(self):
         import os

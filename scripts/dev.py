@@ -425,11 +425,19 @@ def doctor(args: argparse.Namespace, parser: argparse.ArgumentParser, invocation
 
 
 class ProcessSpec:
-    def __init__(self, name: str, command: list[str], cwd: Path, environment: dict[str, str]) -> None:
+    def __init__(
+        self,
+        name: str,
+        command: list[str],
+        cwd: Path,
+        environment: dict[str, str],
+        clean_exit_ok: bool = True,
+    ) -> None:
         self.name = name
         self.command = command
         self.cwd = cwd
         self.environment = environment
+        self.clean_exit_ok = clean_exit_ok
 
 
 class ProcessState:
@@ -641,8 +649,10 @@ def supervise_components(
                 if returncode is not None and not state.exit_reported:
                     state.exit_reported = True
                     _runner_log(f"{state.spec.name} exited with status {returncode}")
-                    if handled_signal is None and returncode != 0:
+                    if handled_signal is None and (returncode != 0 or not state.spec.clean_exit_ok):
                         failed = True
+                        if returncode == 0 and not state.spec.clean_exit_ok:
+                            _runner_log(f"{state.spec.name} exited unexpectedly; recording session failure")
                     if _group_alive(state.pgid):
                         _begin_stop(state, stop_timeout, f"{state.spec.name} entrypoint exited with controlled descendants remaining")
 
@@ -678,8 +688,10 @@ def supervise_components(
                 state.exit_reported = True
                 returncode = state.process.poll()
                 _runner_log(f"{state.spec.name} exited with status {returncode}")
-                if handled_signal is None and returncode not in (0, None):
+                if handled_signal is None and (returncode not in (0, None) or not state.spec.clean_exit_ok):
                     failed = True
+                    if returncode == 0 and not state.spec.clean_exit_ok:
+                        _runner_log(f"{state.spec.name} exited unexpectedly; recording session failure")
             state.output_thread.join(timeout=1.0)
         normal_finish = True
         if failed:
@@ -720,6 +732,7 @@ def component_spec(args: argparse.Namespace, parser: argparse.ArgumentParser, in
             [str(ROOT / "query/.venv/bin/python"), "-m", "uvicorn", "app:app", "--host", "127.0.0.1", "--port", str(port), "--no-proxy-headers"],
             ROOT / "query",
             environment,
+            clean_exit_ok=False,
         )
     port = parse_port(args.dashboard_port, "--dashboard-port") if args.dashboard_port is not None else env_port("DASHBOARD_PORT", DEFAULT_DASHBOARD_PORT, parser)
     environment["QUERY_URL"] = os.environ.get("QUERY_URL", f"http://127.0.0.1:{DEFAULT_QUERY_PORT}")
@@ -729,6 +742,7 @@ def component_spec(args: argparse.Namespace, parser: argparse.ArgumentParser, in
         [node, str(ROOT / "dashboard/node_modules/vite/bin/vite.js"), "--host", "127.0.0.1", "--port", str(port), "--strictPort"],
         ROOT / "dashboard",
         environment,
+        clean_exit_ok=False,
     )
 
 
@@ -753,6 +767,7 @@ def up_specs(args: argparse.Namespace, parser: argparse.ArgumentParser, invocati
         [str(ROOT / "query/.venv/bin/python"), "-m", "uvicorn", "app:app", "--host", "127.0.0.1", "--port", str(query_port), "--no-proxy-headers"],
         ROOT / "query",
         query_environment,
+        clean_exit_ok=False,
     )
     dashboard_environment = base_environment.copy()
     dashboard_environment["QUERY_URL"] = f"http://127.0.0.1:{query_port}"
@@ -761,6 +776,7 @@ def up_specs(args: argparse.Namespace, parser: argparse.ArgumentParser, invocati
         [(shutil.which("node") or "node"), str(ROOT / "dashboard/node_modules/vite/bin/vite.js"), "--host", "127.0.0.1", "--port", str(dashboard_port), "--strictPort"],
         ROOT / "dashboard",
         dashboard_environment,
+        clean_exit_ok=False,
     )
     checks = [
         ("query", f"http://127.0.0.1:{query_port}/healthz"),
