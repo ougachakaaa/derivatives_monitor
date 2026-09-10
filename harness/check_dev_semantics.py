@@ -18,7 +18,12 @@ def credentials():
     if not binary.is_file():
         print('NOT_RUN credentials: Collector Release build missing')
         return 2
-    for fields in ('', 'UserID=\nPassword=\n'):
+    accepted = (
+        ('omitted', ''),
+        ('empty', 'UserID=\nPassword=\n'),
+        ('filled', 'UserID=TEST_USER\nPassword=TEST_DOUBLE_PASSWORD\n'),
+    )
+    for label, fields in accepted:
         with tempfile.TemporaryDirectory(prefix='dm-semantics-') as folder:
             config = Path(folder) / 'config.ini'
             content = ('# TEST DOUBLE: configuration only; no connection\n[config]\n'
@@ -28,12 +33,36 @@ def credentials():
             result = invoke('doctor', 'collector', '--config', str(config))
             output = result.stdout + result.stderr
             if result.returncode or 'userid' in output.lower() or 'password' in output.lower():
-                print('FAIL credentials: optional fields must not become diagnostic items')
+                print(f'FAIL credentials: {label} optional fields became diagnostic items')
                 return 1
             if config.read_text() != content or set(Path(folder).iterdir()) != {config}:
                 print('FAIL credentials: diagnostic changed persistent files')
                 return 1
-    print('PASS credentials: omitted/empty fields; no persistent writes (TEST DOUBLE)')
+
+    overlong = (
+        ('UserID', 'U' * 128, 'Password=TEST_DOUBLE_PASSWORD\n'),
+        ('Password', 'P' * 128, 'UserID=TEST_USER\n'),
+    )
+    for field, value, companion in overlong:
+        with tempfile.TemporaryDirectory(prefix='dm-semantics-') as folder:
+            config = Path(folder) / 'config.ini'
+            content = ('# TEST DOUBLE: configuration only; no connection\n[config]\n'
+                       'FrontMdAddr=tcp://127.0.0.1:1\nInstruments=IF2609\n'
+                       'DataDirectory=data\nFlowPath=flow\n' + companion
+                       + f'{field}={value}\n')
+            config.write_text(content)
+            result = invoke('doctor', 'collector', '--config', str(config))
+            output = result.stdout + result.stderr
+            if result.returncode == 0 or 'Collector rejected the configuration' not in output:
+                print(f'FAIL credentials: overlong {field} must fail overall validation')
+                return 1
+            if value in output or 'is too long for the CTP field' in output:
+                print(f'FAIL credentials: overlong {field} failure was not redacted')
+                return 1
+            if config.read_text() != content or set(Path(folder).iterdir()) != {config}:
+                print('FAIL credentials: diagnostic changed persistent files')
+                return 1
+    print('PASS credentials: omitted/empty/filled and overlong fields; redacted, no persistent writes (TEST DOUBLE)')
     return 0
 
 

@@ -21,6 +21,26 @@ int main(int argc, char** argv) {
         CHECK(load_interval("SnapshotIntervalMs=" + std::to_string(interval)) == interval);
     for (const auto* value : {"0", "-1", "60001", "15oops"})
         Throws([&] { load_interval(std::string("SnapshotIntervalMs=") + value); });
+    const auto load_credentials = [&](const std::string& fields) {
+        { std::ofstream out(path); out << "# TEST DOUBLE: no market connection\n[config]\n"
+                                      << "FrontMdAddr=test-double\nInstruments=IF2609\n" << fields; }
+        auto value = collector::LoadConfig(path);
+        collector::ValidateConfig(value);
+        return value;
+    };
+    const auto omitted_credentials = load_credentials("");
+    CHECK(omitted_credentials.user_id.empty());
+    CHECK(omitted_credentials.password.empty());
+    const auto empty_credentials = load_credentials("UserID=\nPassword=\n");
+    CHECK(empty_credentials.user_id.empty());
+    CHECK(empty_credentials.password.empty());
+    const auto filled_credentials =
+        load_credentials("UserID=TEST_USER\nPassword=TEST_DOUBLE_PASSWORD\n");
+    CHECK(filled_credentials.user_id == "TEST_USER");
+    CHECK(filled_credentials.password == "TEST_DOUBLE_PASSWORD");
+    CThostFtdcReqUserLoginField login_request{};
+    Throws([&] { load_credentials("UserID=" + std::string(sizeof(login_request.UserID), 'U') + "\n"); });
+    Throws([&] { load_credentials("Password=" + std::string(sizeof(login_request.Password), 'P') + "\n"); });
     auto config = collector::LoadConfig(argv[1]);
     CHECK(config.snapshot_interval_ms == 15000);
     CHECK(config.data_directory.is_absolute());
