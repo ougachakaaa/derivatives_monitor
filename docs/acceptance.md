@@ -23,6 +23,14 @@
 
 这些证据不包含真实 CTP/行情、真实配置写入、现场恢复、当前版本浏览器或 Docker runtime，也不改变 native/Docker 行为。账号空值被本地接受不证明真实前置允许匿名接入；进程与 HTTP 工程闭环不证明行情推进或业务就绪。本轮不签收 G1–G6，TEST DOUBLE 和监督测试不能替代三日行情、真实恢复及最终部署验收。
 
+## Query 参考目录路径一致性修复（2026-09-10）
+
+提交 `9cc5870` 将单 Query 和联合启动共用的参考目录环境准备逻辑对齐 [Deployment Contract](contracts/deployment.md)：已设置的 `MARKET_CALENDAR_DIR`、`SKEW_REFERENCE_DIR` 基于调用目录转为绝对路径，缺省保持缺省，空字符串映射到调用目录；不展开占位符、不解引用符号链接、不创建目录，也不改父进程及其他组件环境。此记录不替换上文历史 offline 报告的版本归属。
+
+该修复工作树（随后提交为 `9cc5870`）执行 `python3 -m unittest discover -s tests -p 'test_dev*.py' -v`，34 项通过。新增 TEST DOUBLE 回归覆盖单组件/联合启动的相对、绝对、空、缺省、空格/`..`、符号链接、未展开字符、无持久写入及环境隔离；标准库子进程使用实际构造的 Query cwd/env 验证参考路径仍指向临时调用目录。`python3 harness/check_dev_semantics.py --scope all` 的 credentials 和 CLI 均 PASS；`python3 harness/run.py docs` 为 PASS，报告 `artifacts/harness/20260910T081747Z-docs-41e87148/result.json` 保存提交前修复工作树信息；`git diff --check` 通过。
+
+本次未重跑完整 offline、浏览器或 Docker runtime，未启动真实行情、读取真实配置或加载业务参考包。以上仅证明路径与文档一致，不签收真实行情或 MVP 门槛。
+
 ## 工程 harness 与门槛映射
 
 | Harness 检查 | 覆盖 | 不能证明 |

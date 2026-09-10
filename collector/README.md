@@ -42,7 +42,8 @@ collector/build/Release/bin/data_collector --config collector/config.ini
 | 参数 | 默认值 / 使用说明 |
 |---|---|
 | `FrontMdAddr` | 必填的行情前置地址；可用性以现场验证为准 |
-| `BrokerID`、`UserID`、`Password`、`UserProductInfo` | 按接入方要求填写 |
+| `BrokerID`、`UserProductInfo` | 按接入方要求填写 |
+| `UserID`、`Password` | 可缺省或留空，doctor 不要求填写；已填值仍遵守字段安全校验，详见 [Collector Contract](../docs/contracts/collector.md#行情接入与可选账号字段) |
 | `Instruments` | 冒号或逗号分隔的精确合约代码 |
 | `InstrumentsFile` | 可选逐行代码文件；命令行合约覆盖文件，文件覆盖 `Instruments` |
 | `DataDirectory` | 默认 `data` |
