@@ -12,6 +12,7 @@ import shutil
 import signal
 import socket
 import subprocess
+import sys
 import threading
 import time
 from urllib.error import HTTPError, URLError
@@ -337,16 +338,19 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="dev", description="Run and diagnose repository components in a foreground development session.")
     parser.set_defaults(config=None, data_dir=None, query_port=None, dashboard_port=None)
     subparsers = parser.add_subparsers(dest="command", metavar="COMMAND")
-    child = subparsers.add_parser("collector", help="run collector in the foreground")
+    up = subparsers.add_parser(
+        "up", help="run all components or one selected component in the foreground"
+    )
+    up.add_argument("--config", metavar="PATH")
+    up.add_argument("--query-port", metavar="N")
+    up.add_argument("--dashboard-port", metavar="N")
+    components = up.add_subparsers(dest="component", metavar="COMPONENT")
+    child = components.add_parser("collector", help="run collector in the foreground")
     child.add_argument("--config", metavar="PATH")
-    child = subparsers.add_parser("query", help="run query in the foreground")
+    child = components.add_parser("query", help="run query in the foreground")
     child.add_argument("--data-dir", metavar="PATH")
     child.add_argument("--query-port", metavar="N")
-    child = subparsers.add_parser("dashboard", help="run dashboard in the foreground")
-    child.add_argument("--dashboard-port", metavar="N")
-    child = subparsers.add_parser("up", help="run all components in the foreground")
-    child.add_argument("--config", metavar="PATH")
-    child.add_argument("--query-port", metavar="N")
+    child = components.add_parser("dashboard", help="run dashboard in the foreground")
     child.add_argument("--dashboard-port", metavar="N")
     doctor = subparsers.add_parser("doctor", help="check component-scoped local runtime prerequisites")
     doctor.add_argument("component", nargs="?", choices=COMPONENTS, help="default: all components")
@@ -367,12 +371,12 @@ def reject_inapplicable(parser: argparse.ArgumentParser, args: argparse.Namespac
 
 
 def reject_start_inapplicable(parser: argparse.ArgumentParser, args: argparse.Namespace) -> None:
-    if args.command == "collector" and any((args.data_dir, args.query_port, args.dashboard_port)):
-        parser.error("collector only accepts --config")
-    if args.command == "query" and any((args.config, args.dashboard_port)):
-        parser.error("query only accepts --data-dir and --query-port")
-    if args.command == "dashboard" and any((args.config, args.data_dir, args.query_port)):
-        parser.error("dashboard only accepts --dashboard-port; set QUERY_URL in the environment")
+    if args.component == "collector" and any((args.data_dir, args.query_port, args.dashboard_port)):
+        parser.error("up collector only accepts --config")
+    if args.component == "query" and any((args.config, args.dashboard_port)):
+        parser.error("up query only accepts --data-dir and --query-port")
+    if args.component == "dashboard" and any((args.config, args.data_dir, args.query_port)):
+        parser.error("up dashboard only accepts --dashboard-port; set QUERY_URL in the environment")
 
 
 def doctor(args: argparse.Namespace, parser: argparse.ArgumentParser, invocation_cwd: Path) -> int:
@@ -713,7 +717,7 @@ def supervise_component(spec: ProcessSpec, stop_timeout: float = STOP_TIMEOUT_SE
 def component_spec(args: argparse.Namespace, parser: argparse.ArgumentParser, invocation_cwd: Path) -> ProcessSpec:
     reject_start_inapplicable(parser, args)
     environment = os.environ.copy()
-    if args.command == "collector":
+    if args.component == "collector":
         config_value = args.config if args.config is not None else str(ROOT / "collector/config.ini")
         config = absolute_user_path(config_value, invocation_cwd)
         return ProcessSpec(
@@ -722,7 +726,7 @@ def component_spec(args: argparse.Namespace, parser: argparse.ArgumentParser, in
             ROOT,
             environment,
         )
-    if args.command == "query":
+    if args.component == "query":
         data_value = args.data_dir if args.data_dir is not None else os.environ.get("DATA_DIR", str(ROOT / "collector/data"))
         data_dir = absolute_user_path(data_value, invocation_cwd)
         port = parse_port(args.query_port, "--query-port") if args.query_port is not None else env_port("QUERY_PORT", DEFAULT_QUERY_PORT, parser)
@@ -788,14 +792,14 @@ def up_specs(args: argparse.Namespace, parser: argparse.ArgumentParser, invocati
 def run_component(args: argparse.Namespace, parser: argparse.ArgumentParser, invocation_cwd: Path) -> int:
     reject_start_inapplicable(parser, args)
     diagnostic_args = argparse.Namespace(
-        component=args.command,
+        component=args.component,
         config=args.config,
         data_dir=args.data_dir,
         query_port=args.query_port,
         dashboard_port=args.dashboard_port,
     )
     if doctor(diagnostic_args, parser, invocation_cwd) != 0:
-        _runner_log(f"{args.command} was not started because its diagnostic failed")
+        _runner_log(f"{args.component} was not started because its diagnostic failed")
         return 1
     return supervise_component(component_spec(args, parser, invocation_cwd))
 
@@ -822,7 +826,12 @@ def run_up(args: argparse.Namespace, parser: argparse.ArgumentParser, invocation
 def main(argv: list[str] | None = None) -> int:
     invocation_cwd = Path.cwd()
     parser = build_parser()
-    args = parser.parse_args(argv)
+    raw_argv = list(sys.argv[1:] if argv is None else argv)
+    if raw_argv and raw_argv[0] in COMPONENTS:
+        parser.error(f"'{raw_argv[0]}' moved under 'up'; use ./dev up {raw_argv[0]}")
+    args = parser.parse_args(raw_argv)
+    if args.command == "up" and args.component is not None and raw_argv[1] != args.component:
+        parser.error(f"options for up {args.component} must follow the component; use ./dev up {args.component} [options]")
     if args.command is None:
         parser.print_help()
         return 0
@@ -830,8 +839,9 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "doctor":
             return doctor(args, parser, invocation_cwd)
         if args.command == "up":
-            return run_up(args, parser, invocation_cwd)
-        return run_component(args, parser, invocation_cwd)
+            if args.component is None:
+                return run_up(args, parser, invocation_cwd)
+            return run_component(args, parser, invocation_cwd)
     except argparse.ArgumentTypeError as error:
         parser.error(str(error))
     return 2

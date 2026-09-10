@@ -53,6 +53,8 @@ def profiles(profile):
     checks += build_steps()
     if profile == 'offline':
         checks += [step('ctest', ['ctest', '--test-dir', BUILD, '--output-on-failure']),
+                   step('dev-semantics', [sys.executable, 'harness/check_dev_semantics.py', '--scope', 'all'],
+                        requires=[BUILD / 'bin/data_collector']),
                    step('dev-runner-tests', [sys.executable, '-m', 'unittest', 'discover',
                                              '-s', 'tests', '-p', 'test_dev*.py', '-v']),
                    step('dev-runner-smoke', [sys.executable, 'tests/dev_runner_smoke.py'],

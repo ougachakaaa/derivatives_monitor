@@ -45,15 +45,72 @@ class DevDoctorTests(unittest.TestCase):
             cwd = Path(temporary)
             code, output, _ = self.run_main(["--help"], cwd=cwd)
             self.assertEqual(code, 0)
-            for command in ("collector", "query", "dashboard", "up", "doctor"):
+            for command in ("up", "doctor"):
                 self.assertIn(command, output)
-            self.assertIn("run all components in the foreground", output)
+            self.assertIn("run all components or one selected component in the foreground", output)
             self.assertNotIn("available in a later implementation task", output)
             code, output, error = self.run_main(["up", "--help"], cwd=cwd)
             self.assertEqual((code, error), (0, ""))
             self.assertIn("--config", output)
             self.assertNotIn("--data-dir", output)
             self.assertNotIn("available in a later implementation task", output)
+            for component, options in (
+                ("collector", ("--config",)),
+                ("query", ("--data-dir", "--query-port")),
+                ("dashboard", ("--dashboard-port",)),
+            ):
+                code, output, error = self.run_main(["up", component, "--help"], cwd=cwd)
+                self.assertEqual((code, error), (0, ""))
+                self.assertIn(f"usage: dev up {component}", output)
+                for option in options:
+                    self.assertIn(option, output)
+
+    def test_retired_component_commands_return_usage_error_without_dispatch(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            cwd = Path(temporary)
+            for component in dev.COMPONENTS:
+                for suffix in ((), ("--help",), ("--config", "TEST_DOUBLE")):
+                    with self.subTest(component=component, suffix=suffix), \
+                            mock.patch.object(dev, "doctor") as doctor, \
+                            mock.patch.object(dev, "supervise_component") as supervise:
+                        code, _, error = self.run_main([component, *suffix], cwd=cwd)
+                        self.assertEqual(code, 2)
+                        self.assertIn(f"./dev up {component}", error)
+                        doctor.assert_not_called()
+                        supervise.assert_not_called()
+
+    def test_up_dispatches_combined_or_one_component(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            cwd = Path(temporary)
+            with mock.patch.object(dev, "run_up", return_value=17) as run_up, \
+                    mock.patch.object(dev, "run_component", return_value=19) as run_component:
+                self.assertEqual(dev.main(["up"]), 17)
+                run_up.assert_called_once()
+                run_component.assert_not_called()
+
+                self.assertEqual(dev.main(["up", "query", "--query-port", "18000"]), 19)
+                run_component.assert_called_once()
+                self.assertEqual(run_component.call_args.args[0].component, "query")
+
+    def test_up_component_argument_boundaries_are_usage_errors(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            cwd = Path(temporary)
+            cases = (
+                ["up", "--config", "TEST_DOUBLE.ini", "collector"],
+                ["up", "collector", "--query-port", "18000"],
+                ["up", "query", "--config", "TEST_DOUBLE.ini"],
+                ["up", "dashboard", "--query-port", "18000"],
+                ["up", "all"],
+                ["up", "collector", "query"],
+            )
+            for argv in cases:
+                with self.subTest(argv=argv), \
+                        mock.patch.object(dev, "run_up") as run_up, \
+                        mock.patch.object(dev, "run_component") as run_component:
+                    code, _, _ = self.run_main(argv, cwd=cwd)
+                    self.assertEqual(code, 2)
+                    run_up.assert_not_called()
+                    run_component.assert_not_called()
 
     def test_component_specs_use_direct_existing_entrypoints(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -69,19 +126,19 @@ class DevDoctorTests(unittest.TestCase):
             }
             cases = (
                 (
-                    ["collector", "--config", "selected.ini"],
+                    ["up", "collector", "--config", "selected.ini"],
                     "collector",
                     [str(root / "collector/build/Release/bin/data_collector"), "--config", str(caller / "selected.ini")],
                     root,
                 ),
                 (
-                    ["query", "--data-dir", "raw", "--query-port", "18000"],
+                    ["up", "query", "--data-dir", "raw", "--query-port", "18000"],
                     "query",
                     [str(root / "query/.venv/bin/python"), "-m", "uvicorn", "app:app", "--host", "127.0.0.1", "--port", "18000", "--no-proxy-headers"],
                     root / "query",
                 ),
                 (
-                    ["dashboard", "--dashboard-port", "18101"],
+                    ["up", "dashboard", "--dashboard-port", "18101"],
                     "dashboard",
                     ["/test/node", str(root / "dashboard/node_modules/vite/bin/vite.js"), "--host", "127.0.0.1", "--port", "18101", "--strictPort"],
                     root / "dashboard",
@@ -103,7 +160,7 @@ class DevDoctorTests(unittest.TestCase):
 
     def test_failed_component_diagnostic_prevents_spawn(self):
         parser = dev.build_parser()
-        args = parser.parse_args(["collector"])
+        args = parser.parse_args(["up", "collector"])
         with mock.patch.object(dev, "doctor", return_value=1), \
                 mock.patch.object(dev, "supervise_component") as supervise, \
                 redirect_stdout(io.StringIO()):

@@ -183,7 +183,7 @@ def main() -> None:
             assert json_get(dashboard_base, "/api/health")["data"]["readable"]
 
             port_conflict = subprocess.run(
-                [str(ROOT / "dev"), "query", "--data-dir", str(data), "--query-port", str(query_port)],
+                [str(ROOT / "dev"), "up", "query", "--data-dir", str(data), "--query-port", str(query_port)],
                 cwd=work,
                 env=environment,
                 stdout=subprocess.PIPE,
@@ -197,7 +197,7 @@ def main() -> None:
 
             before_writer_conflict = row_count(data)
             writer_conflict = subprocess.run(
-                [str(ROOT / "dev"), "collector", "--config", "config.ini"],
+                [str(ROOT / "dev"), "up", "collector", "--config", "config.ini"],
                 cwd=work,
                 env=environment,
                 stdout=subprocess.PIPE,
