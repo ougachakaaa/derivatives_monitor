@@ -8,7 +8,7 @@
 
 | 方式 | 前提 | 管理入口 |
 |---|---|---|
-| 前台开发 | Linux/WSL x86-64、Release 构建、query Python 3.12/.venv、Linux Node 22.12+、前端依赖、已有有效配置 | `./dev doctor`；`./dev up` 或单组件命令；当前终端 Ctrl-C 结束 |
+| 前台开发 | Linux/WSL x86-64、Release 构建、query Python 3.12/.venv、Linux Node 22.12+、前端依赖、已有有效配置 | `./dev doctor`；`./dev up` 或 `./dev up <component>`；当前终端 Ctrl-C 结束 |
 | Native systemd | 同上并需要用户 systemd | `./collector/scripts/native.sh up`；`status` / `logs` / `update` / `stop` |
 | Docker Compose | Docker Engine + Compose v2、Git/Bash、有效配置或首次交互输入 | `./scripts/deploy.sh up`；`status` / `logs` / `stop` / `verify YYYYMMDD` |
 
@@ -33,16 +33,16 @@
 
 ```bash
 ./dev doctor collector --config collector/config.ini
-./dev collector --config collector/config.ini
+./dev up collector --config collector/config.ini
 
 ./dev doctor query --data-dir collector/data --query-port 8000
-./dev query --data-dir collector/data --query-port 8000
+./dev up query --data-dir collector/data --query-port 8000
 
 QUERY_URL=http://127.0.0.1:8000 ./dev doctor dashboard --dashboard-port 8101
-QUERY_URL=http://127.0.0.1:8000 ./dev dashboard --dashboard-port 8101
+QUERY_URL=http://127.0.0.1:8000 ./dev up dashboard --dashboard-port 8101
 ```
 
-相对路径、环境变量优先级和联合派生规则以 [Deployment Contract](contracts/deployment.md#developer-runner-的生命周期边界) 为准。`up` 从 Collector 配置取得 Query 的 Raw 目录，并从 Query 端口生成 Dashboard 代理；不要为联合会话设置冲突的 `DATA_DIR` 或 `QUERY_URL`。诊断只检查本地运行条件，不证明 CTP 登录、行情推进、Raw 可读或 Skew 可计算。
+启动选项放在 `up` 或所选组件之后；旧顶层 `./dev collector/query/dashboard` 已退役。相对路径、环境变量优先级和联合派生规则以 [Deployment Contract](contracts/deployment.md#developer-runner-的生命周期边界) 为准。`up` 从 Collector 配置取得 Query 的 Raw 目录，并从 Query 端口生成 Dashboard 代理；不要为联合会话设置冲突的 `DATA_DIR` 或 `QUERY_URL`。诊断只检查本地运行条件，不证明 CTP 登录、行情推进、Raw 可读或 Skew 可计算。
 
 保持 `./dev` 在前台；Ctrl-C、SIGTERM 或终端 SIGHUP 会触发本次自有进程的正常收尾。Query/Dashboard 退出或一次性 HTTP 检查失败不会停止 Collector；已有端口或 writer 冲突应通过其原管理入口处理。需要跨终端自动启动、重启、状态和日志管理时，改用上表的 native systemd 或 Docker Compose 入口，不要同时写同一 Raw 目录。
 

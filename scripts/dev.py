@@ -339,7 +339,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.set_defaults(config=None, data_dir=None, query_port=None, dashboard_port=None)
     subparsers = parser.add_subparsers(dest="command", metavar="COMMAND")
     up = subparsers.add_parser(
-        "up", help="run all components or one selected component in the foreground"
+        "up",
+        help="run all components or one selected component in the foreground",
+        description="Run all components when COMPONENT is omitted; otherwise run the selected component.",
     )
     up.add_argument("--config", metavar="PATH")
     up.add_argument("--query-port", metavar="N")

@@ -20,7 +20,7 @@ python3 harness/run.py docker
 | `docs` | 检查维护文档的本地文件链接与 authority 入口、正式构建/运行不得反向依赖 `experiments/`、原件/SDK 哈希和必要 Docker 白名单；不访问外网，不验证 Markdown 锚点 |
 | `analytics-contract` | 仅标准库；核对七项冻结状态、策略/生成器哈希，使用float64二分与固定独立oracle核对价格/IV/delta/远期/两翼；不运行生产Analytics |
 | `analytics` | 在 `analytics-contract` 基础上，用 `query/.venv` 运行生产 Analytics 及 Skew HTTP 切片正常、异常和边界回归；不读取实盘、不证明官方参考可用 |
-| `offline` | CMake/G++/SQLite 开发库、Python 3.12 的 `query/.venv`、Linux Node 22.12+/npm/已安装前端依赖、SQLite CLI；重新 configure/build Release，执行 CTest、developer runner 隔离测试及实际 `./dev` TEST DOUBLE 链路、Query、Universe、deploy 替身、verify 真 SQLite CLI、React 和构建 |
+| `offline` | CMake/G++/SQLite 开发库、Python 3.12 的 `query/.venv`、Linux Node 22.12+/npm/已安装前端依赖、SQLite CLI；重新 configure/build Release，执行 CTest、developer runner 显式语义/隔离测试及实际 `./dev` TEST DOUBLE 链路、Query、Universe、deploy 替身、verify 真 SQLite CLI、React 和构建 |
 | `native` | 原生编译及 query 依赖；重新构建后运行合成夜盘与真实 HTTP 独立停启测试，临时数据/随机端口 |
 | `browser` | native 前提，加 Linux Node/前端依赖、Playwright Chromium 及系统库；合成夜盘与含浏览器的原生闭环 |
 | `packaging` | Docker Engine；分别以三个正式 Dockerfile 的 `context-audit` scratch stage 导出实际上下文，逐字节核对每个镜像的精确输入集合；无需拉取基础镜像，不证明 runtime 镜像可运行 |
@@ -54,7 +54,7 @@ TEST DOUBLE 不等于真实 CTP；100ms 合成场景不等于生产 15 秒调度
 python3 harness/run.py offline
 ```
 
-它要求 Collector Release build 所需工具、`query/.venv`、Linux Node/npm 与前端依赖，以及 `sqlite3` CLI；本地工具不在默认 `PATH` 时，按上文说明只为本次 shell 加入相应 `bin`。profile 会重新构建后运行 runner 标准库隔离测试和实际 `./dev` TEST DOUBLE 链路，并继续执行原有 Query、Universe、deploy、verify、React 与前端构建；任一前置缺失都按全 profile 的 PASS/FAIL/NOT_RUN 规则处理。
+它要求 Collector Release build 所需工具、`query/.venv`、Linux Node/npm 与前端依赖，以及 `sqlite3` CLI；本地工具不在默认 `PATH` 时，按上文说明只为本次 shell 加入相应 `bin`。profile 会重新构建后运行显式 credentials/CLI 语义检查、runner 标准库隔离测试和实际 `./dev` TEST DOUBLE 链路，并继续执行原有 Query、Universe、deploy、verify、React 与前端构建；任一前置缺失都按全 profile 的 PASS/FAIL/NOT_RUN 规则处理。
 
 开发 runner 的快速定向检查可单独运行，但不能代替完整 profile 报告：
 
@@ -81,6 +81,14 @@ artifacts/analytics-oracle-env/bin/python harness/analytics_oracle.py
 
 `analytics-contract` 中的选择和二分函数仅供设计样本自洽核对，**不是生产实现或完整质量/时段测试**。生产实现不import这些函数或oracle；`analytics` profile 另行覆盖固定oracle和契约§8.4生产行为。至少10个真实时点的§8.5对账仍是现场门槛；通过任一自动profile都不会关闭G3。
 
-## 行情接入与启动命令迁移验收
+## Developer runner 显式语义检查
 
-按[执行计划](../docs/dev-cli-execution-plan.md)显式运行 `python3 harness/check_dev_semantics.py --scope credentials` 或 `--scope cli`，也可用 `--scope all` 检查两者。前者仅以临时 TEST DOUBLE 配置调用 doctor，后者仅检查 help 与旧命令拒绝，不启动行情。当前 CLI 迁移待实现，失败不能记为通过；迁移完成后接入 offline。覆盖范围与退出分类见计划，当前证据见 [Acceptance](../docs/acceptance.md#行情接入与启动命令语义调整)。
+快速检查可选行情账号和分组启动 CLI：
+
+```bash
+python3 harness/check_dev_semantics.py --scope credentials
+python3 harness/check_dev_semantics.py --scope cli
+python3 harness/check_dev_semantics.py --scope all
+```
+
+`credentials` 只用临时 TEST DOUBLE 配置调用 doctor，覆盖账号字段缺省、空值、正常已填、过长失败脱敏及无持久写入；`cli` 只检查公共 help 与退役入口返回 2，不启动服务。缺 Collector build、入口不可执行或超时返回 NOT_RUN（2），断言失败返回 FAIL（1），全部执行通过返回 0。`all` 已作为 `dev-semantics` 步骤纳入 `offline`；单独运行不能代替完整 profile。当前实现与证据限制见 [Acceptance](../docs/acceptance.md#本地开发入口交付状态)。

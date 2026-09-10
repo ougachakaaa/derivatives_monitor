@@ -53,6 +53,7 @@ class DevDoctorTests(unittest.TestCase):
             self.assertEqual((code, error), (0, ""))
             self.assertIn("--config", output)
             self.assertNotIn("--data-dir", output)
+            self.assertIn("Run all components when COMPONENT is omitted", output)
             self.assertNotIn("available in a later implementation task", output)
             for component, options in (
                 ("collector", ("--config",)),

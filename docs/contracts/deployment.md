@@ -25,7 +25,7 @@ Skew 审核参考包可保存在数据目录的 `references/analytics/`，由独
 
 本节定义本地前台开发会话的要求，不改变上文两种持久部署方式。实现与验证状态见 [Acceptance](../acceptance.md)，实际操作见[运行与恢复](../operations.md#前台开发会话)。
 
-仓库根公共入口为 `./dev`：`doctor [collector|query|dashboard]` 检查全部或指定组件，`up collector`、`up query`、`up dashboard` 分别前台运行一个组件，`up`（不带组件）前台运行三个组件。顶层 `collector/query/dashboard` 不再作为启动命令或兼容别名；误用返回使用错误及新命令提示，不启动进程。`up all`、多组件列表不纳入本次接口。本次命令迁移的实现状态见 [Acceptance](../acceptance.md#行情接入与启动命令语义调整)。所有启动命令先执行相同范围的诊断；阻断错误不得启动对应进程，联合诊断有阻断错误时不得启动任何组件。Runner 不自动安装或构建依赖。
+仓库根公共入口为 `./dev`：`doctor [collector|query|dashboard]` 检查全部或指定组件，`up collector`、`up query`、`up dashboard` 分别前台运行一个组件，`up`（不带组件）前台运行三个组件。顶层 `collector/query/dashboard` 不再作为启动命令或兼容别名；误用返回使用错误及新命令提示，不启动进程。`up all`、多组件列表不纳入本次接口。实现与验证状态见 [Acceptance](../acceptance.md#本地开发入口交付状态)。所有启动命令先执行相同范围的诊断；阻断错误不得启动对应进程，联合诊断有阻断错误时不得启动任何组件。Runner 不自动安装或构建依赖。
 
 | 有效输入 | 解析规则 |
 |---|---|

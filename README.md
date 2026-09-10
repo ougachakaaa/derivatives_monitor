@@ -11,7 +11,7 @@
 ./dev up           # 前台运行 Collector、Query、Dashboard
 ```
 
-`./dev doctor collector|query|dashboard` 和 `./dev collector|query|dashboard` 可单独检查或运行组件；参数以 `./dev COMMAND --help` 为准。用 Ctrl-C 结束本次会话。该入口不安装、构建或接管 systemd/Docker，完整准备步骤、参数示例及三种运行方式的区别见 [Operations](docs/operations.md#前台开发会话)。
+`./dev doctor collector|query|dashboard` 可单独检查组件，`./dev up collector|query|dashboard` 可单独运行组件。联合参数见 `./dev up --help`，单组件参数见 `./dev up COMPONENT --help`。用 Ctrl-C 结束本次会话。该入口不安装、构建或接管 systemd/Docker，完整准备步骤、参数示例及三种运行方式的区别见 [Operations](docs/operations.md#前台开发会话)。
 
 - Agent 工作规则：[AGENTS.md](AGENTS.md)
 - 产品、设计与结构：[MVP](docs/mvp.md)、[Design](docs/design.md)、[Architecture](docs/architecture.md)
