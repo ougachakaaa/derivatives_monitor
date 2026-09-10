@@ -716,6 +716,15 @@ def supervise_component(spec: ProcessSpec, stop_timeout: float = STOP_TIMEOUT_SE
     return supervise_components([spec], stop_timeout=stop_timeout)
 
 
+def query_environment(base: dict[str, str], invocation_cwd: Path) -> dict[str, str]:
+    """Resolve reference paths before switching to the Query working directory."""
+    environment = base.copy()
+    for name in ("MARKET_CALENDAR_DIR", "SKEW_REFERENCE_DIR"):
+        if name in environment:
+            environment[name] = str(absolute_user_path(environment[name], invocation_cwd))
+    return environment
+
+
 def component_spec(args: argparse.Namespace, parser: argparse.ArgumentParser, invocation_cwd: Path) -> ProcessSpec:
     reject_start_inapplicable(parser, args)
     environment = os.environ.copy()
@@ -732,6 +741,7 @@ def component_spec(args: argparse.Namespace, parser: argparse.ArgumentParser, in
         data_value = args.data_dir if args.data_dir is not None else os.environ.get("DATA_DIR", str(ROOT / "collector/data"))
         data_dir = absolute_user_path(data_value, invocation_cwd)
         port = parse_port(args.query_port, "--query-port") if args.query_port is not None else env_port("QUERY_PORT", DEFAULT_QUERY_PORT, parser)
+        environment = query_environment(environment, invocation_cwd)
         environment["DATA_DIR"] = str(data_dir)
         return ProcessSpec(
             "query",
@@ -766,13 +776,13 @@ def up_specs(args: argparse.Namespace, parser: argparse.ArgumentParser, invocati
         ROOT,
         base_environment.copy(),
     )
-    query_environment = base_environment.copy()
-    query_environment["DATA_DIR"] = str(data_dir)
+    query_env = query_environment(base_environment, invocation_cwd)
+    query_env["DATA_DIR"] = str(data_dir)
     query = ProcessSpec(
         "query",
         [str(ROOT / "query/.venv/bin/python"), "-m", "uvicorn", "app:app", "--host", "127.0.0.1", "--port", str(query_port), "--no-proxy-headers"],
         ROOT / "query",
-        query_environment,
+        query_env,
         clean_exit_ok=False,
     )
     dashboard_environment = base_environment.copy()

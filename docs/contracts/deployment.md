@@ -35,7 +35,7 @@ Skew 审核参考包可保存在数据目录的 `references/analytics/`，由独
 | `--dashboard-port N` / `DASHBOARD_PORT` | CLI → 环境 → 8101；适用于 Dashboard、`up` 及对应诊断 |
 | Dashboard `QUERY_URL` | 仅单独 Dashboard 使用；默认 `http://127.0.0.1:8000`。`up` 必须从有效 Query 端口派生，不接受覆盖 |
 
-用户输入和路径环境变量中的相对路径以调用 `./dev` 时的目录为基准；仓库入口及组件工作目录不依赖调用目录。联合启动遇到已有 `DATA_DIR` 或 `QUERY_URL` 与派生值冲突时必须在创建进程前拒绝。Query 的既有参考环境变量继续透传，Runner 不解释或补写其业务内容。未知参数、不适用于所选命令的参数、空或越界端口及联合启动的相同端口均为使用错误；HTTP 服务只绑定 loopback 并严格使用有效端口。
+用户输入和路径环境变量中的相对路径以调用 `./dev` 时的目录为基准；仓库入口及组件工作目录不依赖调用目录。联合启动遇到已有 `DATA_DIR` 或 `QUERY_URL` 与派生值冲突时必须在创建进程前拒绝。Query 的 `MARKET_CALENDAR_DIR`、`SKEW_REFERENCE_DIR` 若已设置，按调用目录转换为绝对路径后传给 Query；缺省保持缺省，显式空字符串映射为调用目录。不展开 `~` 或环境变量占位符、不解引用符号链接、不检查或创建参考目录。`SKEW_TARGET_MONTH` 等其他值保持原样；Runner 只修改 Query 的环境副本，不解释或补写参考业务内容。未知参数、不适用于所选命令的参数、空或越界端口及联合启动的相同端口均为使用错误；HTTP 服务只绑定 loopback 并严格使用有效端口。
 
 - Runner 的 lifecycle ownership 仅覆盖本次调用创建的组件子进程及其受控后代；它随当前 terminal session 工作，不接管其他终端、其他 checkout 或已经存在的进程。不得按进程名、端口或历史 PID 文件取得控制权。
 - Runner 不调用 native/systemd 或 Docker/Compose 管理器来启动、停止、安装、启用、更新或替换部署；不创建持久服务、定时器或可跨会话接管的运行状态，不后台驻留、不自动重启。已有部署占用端口或数据目录时报告冲突，由操作者通过原部署入口处理。

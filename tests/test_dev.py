@@ -3,10 +3,12 @@
 
 from contextlib import redirect_stderr, redirect_stdout
 import io
+import json
 import os
 from pathlib import Path
 import socket
 import subprocess
+import sys
 import tempfile
 import unittest
 from unittest import mock
@@ -19,6 +21,75 @@ def completed(command, returncode=0, stdout="", stderr=""):
 
 
 class DevDoctorTests(unittest.TestCase):
+    def reference_specs(self, root, caller):
+        parser = dev.build_parser()
+        with mock.patch.object(dev, "ROOT", root):
+            single = dev.component_spec(parser.parse_args(["up", "query"]), parser, caller)
+            combined, _ = dev.up_specs(parser.parse_args(["up"]), parser, caller)
+        return single, combined
+
+    def test_reference_paths_follow_invocation_directory_for_both_start_modes(self):
+        with tempfile.TemporaryDirectory(prefix="TEST-DOUBLE-reference-") as temporary:
+            root = Path(temporary) / "repo"
+            caller = Path(temporary) / "outside caller"
+            (root / "collector").mkdir(parents=True)
+            caller.mkdir()
+            (root / "collector/config.ini").write_text("# TEST DOUBLE\n[config]\n")
+            alias = caller / "alias"
+            alias.symlink_to(root, target_is_directory=True)
+            cases = (
+                (None, None),
+                ("", str(caller)),
+                ("missing refs", str(caller / "missing refs")),
+                ("unused/../refs with spaces", str(caller / "refs with spaces")),
+                (str(root / "absolute refs"), str(root / "absolute refs")),
+                ("alias/calendars", str(alias / "calendars")),
+                ("~/$REFERENCE", str(caller / "~/$REFERENCE")),
+            )
+            names = ("MARKET_CALENDAR_DIR", "SKEW_REFERENCE_DIR")
+            before = set(Path(temporary).rglob("*"))
+            for value, expected in cases:
+                with self.subTest(value=value):
+                    environment = {"SKEW_TARGET_MONTH": "2610", "TEST_DOUBLE_OTHER": "unchanged"}
+                    if value is not None:
+                        environment.update(dict.fromkeys(names, value))
+                    with mock.patch.dict(os.environ, environment, clear=True):
+                        single, combined = self.reference_specs(root, caller)
+                        self.assertEqual(dict(os.environ), environment)
+                    for spec in (single, combined[1]):
+                        for name in names:
+                            if expected is None:
+                                self.assertNotIn(name, spec.environment)
+                            else:
+                                self.assertEqual(spec.environment[name], expected)
+                        self.assertEqual(spec.environment["SKEW_TARGET_MONTH"], "2610")
+                        self.assertEqual(spec.environment["TEST_DOUBLE_OTHER"], "unchanged")
+                    for spec in (combined[0], combined[2]):
+                        for name in names:
+                            self.assertEqual(spec.environment.get(name), value)
+            self.assertEqual(set(Path(temporary).rglob("*")), before)
+
+    def test_query_child_observes_reference_paths_from_external_caller(self):
+        with tempfile.TemporaryDirectory(prefix="TEST-DOUBLE-reference-child-") as temporary:
+            root = Path(temporary) / "repo"
+            caller = Path(temporary) / "caller"
+            (root / "collector").mkdir(parents=True)
+            (root / "query").mkdir()
+            caller.mkdir()
+            (root / "collector/config.ini").write_text("# TEST DOUBLE\n[config]\n")
+            environment = {"MARKET_CALENDAR_DIR": "calendars", "SKEW_REFERENCE_DIR": "references"}
+            with mock.patch.dict(os.environ, environment, clear=True):
+                single, combined = self.reference_specs(root, caller)
+            for spec in (single, combined[1]):
+                result = subprocess.run(
+                    [sys.executable, "-c", "import os,json; print(json.dumps([os.getcwd(), os.environ['MARKET_CALENDAR_DIR'], os.environ['SKEW_REFERENCE_DIR']]))"],
+                    cwd=spec.cwd, env=spec.environment, capture_output=True,
+                    text=True, check=True, timeout=10,
+                )
+                self.assertEqual(json.loads(result.stdout),
+                                 [str(root / "query"), str(caller / "calendars"), str(caller / "references")])
+            self.assertEqual(list(caller.iterdir()), [])
+
     def run_main(self, argv, *, cwd, environ=None):
         out = io.StringIO()
         err = io.StringIO()
