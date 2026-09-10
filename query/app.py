@@ -1,4 +1,5 @@
 """FastAPI serves JSON only. The independent dashboard owns all frontend assets."""
+import json
 import os
 import re
 from fastapi import FastAPI, Request
@@ -6,19 +7,21 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from storage import QueryError, Store
 from contract_coverage import coverage
+from feature_service import FeatureRequestError, skew_feature_service
 from market_calendar import sessions, DEFAULT_DIRECTORY
 from skew_references import ReferenceRepository
 from skew_service import SkewService
 
 
 def create_app(directory=None, calendar_directory=None, *, reference_directory=None,
-               target_month=None, reference_repository=None):
+               target_month=None, reference_repository=None, feature_service=None):
     app = FastAPI(title="Derivatives Monitor read API", version="0.1.0")
     store = Store(directory or os.environ.get("DATA_DIR", "/data"))
     calendar_directory = calendar_directory or os.environ.get("MARKET_CALENDAR_DIR", DEFAULT_DIRECTORY)
     skew = SkewService(store, reference_repository or ReferenceRepository(
         reference_directory or os.environ.get("SKEW_REFERENCE_DIR", store.directory / 'references/analytics')),
         calendar_directory, target_month or os.environ.get("SKEW_TARGET_MONTH"))
+    features = feature_service if feature_service is not None else skew_feature_service(skew)
 
     @app.exception_handler(QueryError)
     async def query_error(request, error):
@@ -99,6 +102,32 @@ def create_app(directory=None, calendar_directory=None, *, reference_directory=N
         parameters(request, ("day", "month", "at", "raw_revision", "bundle_id"))
         return skew.query('series', day=day, month=month, at=at,
                           raw_revision=raw_revision, bundle_id=bundle_id)
+
+    @app.post("/api/features/evaluate")
+    async def feature_evaluate(request: Request):
+        parameters(request, ())
+        if request.headers.get('content-type', '').split(';', 1)[0].strip().lower() != 'application/json':
+            raise QueryError(400, 'Feature request body must be JSON')
+        try:
+            def strict_object(pairs):
+                result = {}
+                for key, value in pairs:
+                    if key in result:
+                        raise ValueError('duplicate JSON field')
+                    result[key] = value
+                return result
+
+            def reject_constant(value):
+                raise ValueError('non-finite JSON number: ' + value)
+
+            body = json.loads(await request.body(), object_pairs_hook=strict_object,
+                              parse_constant=reject_constant)
+        except (ValueError, UnicodeDecodeError):
+            raise QueryError(400, 'Invalid Feature request JSON') from None
+        try:
+            return features.evaluate(body)
+        except FeatureRequestError as error:
+            raise QueryError(400, str(error)) from None
 
     @app.get("/api/summary")
     def summary(request: Request, day: str):

@@ -17,12 +17,12 @@
 
 ## Monitoring v1 平行扩展状态
 
-2026-09-09，运行代码基线 `23672a5`，分支 `feature/realtime-monitoring-alerts`。本次仅完成 M0 设计/约束与实施交接，领域冻结提交 `5711078`；交接见 [Monitoring execution plan](monitoring-execution-plan.md)。精确要求归 [Feature](contracts/features.md)和 [Monitoring](contracts/monitoring.md) Contracts，目标结构与当前部署的区别见 [Architecture](architecture.md)。
+2026-09-10，分支 `feature/realtime-monitoring-alerts` 已在 M0 文档冻结之上完成 M1 Feature service / HTTP 工程切片；M2–M5 仍未实现。交接见 [Monitoring execution plan](monitoring-execution-plan.md)。精确要求归 [Feature](contracts/features.md)和 [Monitoring](contracts/monitoring.md) Contracts，目标结构与当前部署的区别见 [Architecture](architecture.md)。
 
 | 交付层次 | 当前状态/证据 | 缺口 |
 |---|---|---|
 | M0 设计冻结 | 产品平行边界、领域模型、依赖/ownership、状态机、事务和投递恢复已落位 authority；milestone 拆为独立 commits | 文档证据仅证明设计和结构检查，不证明业务运行 |
-| M1 Feature service / HTTP | 待实现；现有 SkewService/数值核心可复用 | 新接口及新旧语义一致性、构建输入回归未执行 |
+| M1 Feature service / HTTP | 已实现通用 v1 envelope、显式注册表、复用 SkewService 的 `mo-skew-25d-v1` provider 及只读 `POST /api/features/evaluate`；新旧接口相同 TEST DOUBLE 输入的数值、时间、状态、质量、scope 与完整 evidence 对等；严格参数/失败和只读边界已有工程回归 | Docker 输入白名单已同步并通过结构检查；本机 Docker 命令不可用，实际 packaging context 导出未执行成功；真实 MO/官方参考仍沿用 G2/G3 缺口 |
 | M2 Rule Engine | 待实现 | 纯规则、crossing、UNKNOWN、去重及 representative TEST DOUBLE 回归未执行 |
 | M3 持久事件 / runtime | 待实现 | application SQLite、原子提交、独立进程和恢复验证未执行 |
 | M4 webhook delivery | 待实现 | 独立投递、尝试记录、有限重试和不确定性恢复验证未执行 |
@@ -34,6 +34,12 @@ M0 文档基线检查：`artifacts/harness/20260909T152645Z-docs-a8bc6e08/result
 完整交接文档检查：`artifacts/harness/20260909T154127Z-docs-30337ce2/result.json`（PASS），`git diff --check` 通过；人工核对仅有 Markdown 变更，业务实现、Skew 机器策略及 oracle 未变。报告后的改动仅补充此证据登记，并澄清响应 scope 的实际交易日与缺口关闭的去重边界；最终内容以 M0 两个 Git commits 为准。
 
 本次没有执行 analytics/offline/native/browser/packaging/docker，没有启动/停止真实服务、读取实盘数据或发送 webhook。basis、return、ATM IV 只有扩展性测试规划，未实现生产指标，也尚未执行这些 TEST DOUBLE 测试。原 G1–G6/P1/P2 均不因 M0 文档冻结签收。
+
+M1 由两个独立提交交付：`feat(query): add shared feature projection`（`8c6c900`）和 `feat(query): expose read-only feature evaluation`。第一提交的 6 项 service/provider 测试使用真实临时 SQLite、Market State、生产 Analytics 与明确的 SYNTHETIC / TEST DOUBLE 参考包，验证 envelope 有限标量约束、注册表、严格 scope/参数/时间、Skew 公共结果逐字段投影、同一采样位置跨 Raw revision/请求时钟的稳定 sample key，以及未知位置不伪造 sample key。第二提交的 7 项 HTTP 测试在同类隔离输入上验证只读 POST、新旧接口对等、PARTIAL/历史/陈旧/不可用、未知/重复/非有限 JSON 与字段/版本/Feature/scope/参数拒绝、生产拒绝 SYNTHETIC、Raw 404/503 原样传播和未预期 provider 异常为 HTTP 失败；测试前后 Raw SQLite 字节一致。
+
+本次完整 Query 回归 89 项通过；`python3 harness/run.py analytics` 为 PASS，报告 `artifacts/harness/20260910T151944Z-analytics-beea795b/result.json`，包含既有 frozen contract/oracle 与生产 Skew 回归，未修改模型、参数、质量门槛或数值容差。构建输入已同步至 Query Dockerfile、deny-by-default allowlist 与 harness 精确输入清单；docs 结构检查为 PASS，报告 `artifacts/harness/20260910T152100Z-docs-b207185b/result.json`，验证必要文件均被声明。`python3 harness/run.py packaging` 报告 `artifacts/harness/20260910T151708Z-packaging-e477e8ee/result.json` 为 FAIL：docs 与 harness tests 通过，但当前 WSL 未启用 Docker Desktop integration，`docker version` 失败，实际 context 导出因此 NOT_RUN；不能把结构检查写成 packaging PASS。
+
+M1 没有实现或测试 Rule Engine、application SQLite、Monitoring runtime、webhook 或 basis/return/ATM IV，也没有启动/停止真实服务、读取实盘或发送通知。工程 TEST DOUBLE 通过不签收真实 Feature/通知证据，不改变 G1–G6/P1/P2 及 M2–M5 缺口。
 
 ## 本地开发入口交付状态
 

@@ -51,6 +51,7 @@ QUERY_INPUTS = (
     'query/analytics.py',
     'query/skew_service.py',
     'query/skew_references.py',
+    'query/feature_service.py',
     'query/calendars/2026.json',
     'query/tests/test_analytics.py',
     'query/tests/test_api.py',
@@ -59,6 +60,8 @@ QUERY_INPUTS = (
     'query/tests/test_market_state.py',
     'query/tests/test_sessions_api.py',
     'query/tests/test_skew_api.py',
+    'query/tests/test_feature_service.py',
+    'query/tests/test_features_api.py',
     'harness/fixtures/analytics-skew-v1.json',
 )
 

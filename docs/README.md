@@ -30,7 +30,7 @@
 - [Calendar / Universe](contracts/market-session.md)
 - [Deployment](contracts/deployment.md)
 - [Analytics / Skew v1](contracts/analytics-skew.md)及其[机器策略](contracts/analytics-skew-v1.json)
-- [Feature 查询 v1](contracts/features.md)（已冻结，待实现）
+- [Feature 查询 v1](contracts/features.md)（已冻结；实现与验证状态见 [Acceptance](acceptance.md)）
 - [Monitoring / Opportunity / Notification v1](contracts/monitoring.md)（已冻结，待实现）
 
 可执行模块手册：[Collector](../collector/README.md)、[Query](../query/README.md)、[Dashboard](../dashboard/README.md)。验证入口和证据语义见 [Harness](../harness/README.md)。

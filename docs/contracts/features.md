@@ -1,6 +1,6 @@
 # Feature 查询契约 v1
 
-状态：**FROZEN / 待实现**，2026-09-09。本文定义共享 Feature 的语义、查询接口及失败边界；实现与验证状态唯一见 [Acceptance](../acceptance.md)。产品范围见 [MVP](../mvp.md)，物理归属与依赖见 [Architecture](../architecture.md)。
+状态：**FROZEN**，2026-09-09。本文定义共享 Feature 的语义、查询接口及失败边界；实现与验证状态唯一见 [Acceptance](../acceptance.md)。产品范围见 [MVP](../mvp.md)，物理归属与依赖见 [Architecture](../architecture.md)。
 
 ## 1. 语义与消费者边界
 
