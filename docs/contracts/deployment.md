@@ -25,7 +25,7 @@ Skew 审核参考包可保存在数据目录的 `references/analytics/`，由独
 
 本节定义本地前台开发会话的要求，不改变上文两种持久部署方式。实现与验证状态见 [Acceptance](../acceptance.md)，实际操作见[运行与恢复](../operations.md#前台开发会话)。
 
-仓库根公共入口为 `./dev`：`doctor [collector|query|dashboard]` 检查全部或指定组件，`collector`、`query`、`dashboard` 分别前台运行一个组件，`up` 前台运行三个组件。所有启动命令先执行相同范围的诊断；阻断错误不得启动对应进程，联合诊断有阻断错误时不得启动任何组件。Runner 不自动安装或构建依赖。
+仓库根公共入口为 `./dev`：`doctor [collector|query|dashboard]` 检查全部或指定组件，`up collector`、`up query`、`up dashboard` 分别前台运行一个组件，`up`（不带组件）前台运行三个组件。顶层 `collector/query/dashboard` 不再作为启动命令或兼容别名；误用返回使用错误及新命令提示，不启动进程。`up all`、多组件列表不纳入本次接口。本次命令迁移的实现状态见 [Acceptance](../acceptance.md#行情接入与启动命令语义调整)。所有启动命令先执行相同范围的诊断；阻断错误不得启动对应进程，联合诊断有阻断错误时不得启动任何组件。Runner 不自动安装或构建依赖。
 
 | 有效输入 | 解析规则 |
 |---|---|
@@ -50,6 +50,10 @@ Skew 审核参考包可保存在数据目录的 `references/analytics/`，由独
 - 联合启动时 Query 必须读取本次 Collector 配置指向的同一数据目录；显式输入冲突应在启动前拒绝，不能静默选择不同目录。单独启动 Query 不需要读取 Collector 凭据配置，也不要求 Collector 运行。
 - 配置内相对路径继续以所选配置文件目录为基准，不因统一入口改变含义。Runner 不将 Collector 凭据或 INI 内容传给 Query/Dashboard；诊断不回显凭据或包含凭据的错误原行。
 - 环境、配置和端口诊断不启动服务、不改写持久文件、不自动修复配置或释放端口。端口或锁的预检结果只是当时观察；权限不足、不可检查和缺证据必须明确标为未知，不能视为通过。
+
+## Doctor 的账号字段边界
+
+`doctor` 不将 `UserID` / `Password` 的存在、缺省、空值或非空列为诊断项，不提示填写，不因两者缺省或为空产生 warning/error/unknown，也不探测账号有效性或网络登录。不显示其名称对应的值或配置原行。Collector 整体 `--check-config` 校验继续保留；非空值超过 SDK 字段容量等实际配置错误可以整体校验失败并脱敏报告，不得为隐藏账号诊断而绕过安全校验。字段和 MdApi 协议语义见 [Collector Contract](collector.md#行情接入与可选账号字段)。
 
 ## 启动与健康的证据语义
 

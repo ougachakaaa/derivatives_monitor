@@ -65,3 +65,9 @@
 React 组件 7 项通过，覆盖当前 Skew、当日变化、完整性与 TEST DOUBLE 标记、PARTIAL、STALE、UNAVAILABLE、指定分钟回看、Skew API 断线清值/恢复以及诊断独立失效；`npm run build` 通过。`browser` 结果为 `artifacts/harness/20260909T005859Z-browser-2446e812/result.json`（PASS），在实际 Chromium 中覆盖同样的 Skew TEST DOUBLE 状态、移动端无整页溢出，并保留真实临时 C++ → SQLite → FastAPI 诊断路径。`packaging` 结果为 `artifacts/harness/20260909T005808Z-packaging-957813a7/result.json`（PASS），证明 Dashboard 生产构建输入仍符合镜像 allowlist。
 
 这些数值和参考均为 TEST DOUBLE，没有已审核的真实官方日包、真实完整 MO 月链或人工日常使用记录。因此本节只表明汇报页工程行为可回归，**不签收 G4**。
+
+## 行情接入与启动命令语义调整
+
+2026-09-10：能力边界和目标 CLI 已确定，见 [MVP](mvp.md#行情接入能力边界)、[Deployment](contracts/deployment.md)及[执行计划](dev-cli-execution-plan.md)。当前实现使用 MdApi，配置校验允许空账号字段；doctor 无独立账号诊断项。新 `up collector/query/dashboard` 命令迁移待实现，现有顶层启动命令仍是当前代码行为；前节已完成结论对应上一轮交付，不证明本轮新语义通过。显式验收入口为 `python3 harness/check_dev_semantics.py --scope all`，本轮不连接真实行情，不改变原生或 Docker 部署。
+
+本次准备阶段：`python3 harness/check_dev_semantics.py --scope credentials` 为 PASS，仅覆盖临时 TEST DOUBLE 缺省/空账号字段与无持久写入；`--scope cli` 为 FAIL，确认旧命令仍被接受、新嵌套 help 尚未实现。此失败是新目标的待实现证据，未加入现有 offline，不将整项语义迁移写成通过。

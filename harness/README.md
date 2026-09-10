@@ -80,3 +80,7 @@ artifacts/analytics-oracle-env/bin/python harness/analytics_oracle.py
 生成器使用固定 QuantLib 1.40 与80位 mpmath 1.3.0，不导入生产或harness数值实现；默认只比较，不覆盖入库样本。需要审核新版本时用 `--output <新的文件路径>` 写新文件，生成器拒绝覆盖已有文件。生成器/策略的SHA-256随样本保存；不要因为实现失败就重新生成expected。
 
 `analytics-contract` 中的选择和二分函数仅供设计样本自洽核对，**不是生产实现或完整质量/时段测试**。生产实现不import这些函数或oracle；`analytics` profile 另行覆盖固定oracle和契约§8.4生产行为。至少10个真实时点的§8.5对账仍是现场门槛；通过任一自动profile都不会关闭G3。
+
+## 行情接入与启动命令迁移验收
+
+按[执行计划](../docs/dev-cli-execution-plan.md)显式运行 `python3 harness/check_dev_semantics.py --scope credentials` 或 `--scope cli`，也可用 `--scope all` 检查两者。前者仅以临时 TEST DOUBLE 配置调用 doctor，后者仅检查 help 与旧命令拒绝，不启动行情。当前 CLI 迁移待实现，失败不能记为通过；迁移完成后接入 offline。覆盖范围与退出分类见计划，当前证据见 [Acceptance](../docs/acceptance.md#行情接入与启动命令语义调整)。

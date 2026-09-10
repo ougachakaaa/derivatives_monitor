@@ -10,6 +10,10 @@
 - 演进现有 C++17/Linux SDK 接入：`collector/` 自有 INI、固定字段校验、日志、SDK 构建规则与最小第三方 SDK；保留实验 demo 的 CSV 探测用途，实验代码可依赖正式模块。不引入服务框架、消息队列或 Python runtime。
 - 合约 universe 来自配置、`InstrumentsFile` 或重复的 `--instrument` 参数，精确代码、去重、非空。C++ 不做合约发现；独立公开清单程序负责 CFFEX 与 SHFE AU/AG 期货发现和更新，原生管理器在清单变化时正常重启 Collector。
 
+## 行情接入与可选账号字段
+
+正式 Collector 仅使用 MdApi；交易接口能力边界见 [MVP](../mvp.md#行情接入能力边界)。`UserID` 和 `Password` 为可选行情接入字段，允许缺省或空值，不将其非空作为行情配置有效的前提。已有值按原 MdApi 请求流程处理，不删除字段、不改写配置，不移除 `ReqUserLogin` 或现有连接/登录/订阅失败诊断。已填写值仍遵守 SDK 字段长度等安全约束。空值被本地接受不证明任意前置均允许匿名接入，真实接入结果由 MdApi 响应表达。
+
 ## 数据与采样不变量
 
 - callback 立即复制 SDK 结构和本地 UTC epoch 微秒接收时间，不持有厂商指针，不做 SQLite I/O。主线程定期物化、写事务；共享状态只在短临界区复制/更新。

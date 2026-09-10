@@ -38,3 +38,5 @@
 一次性 execution plan 不是长期 system of record；任务完成后应将稳定规则归入对应 authority、在 Acceptance 登记实际证据，并移除活动计划及导航，必要历史从 Git 追溯。不恢复 `docs/tasks/` 或积累逐任务过程 specs。
 
 修改信息时只更新其 authority，并检查引用它的入口是否仍准确。文档状态用词中，“已实现”必须有代码证据，“已验证”必须说明版本、环境、数据来源与证据；“待实现/待验”不得省略。当前结论统一登记到 Acceptance，不回填为设计定义。旧过程 specs 不再维护，可从 Git 历史追溯。
+
+当前一次性实施交接：[行情接入与启动命令语义调整](dev-cli-execution-plan.md)。目标命令以 Deployment Contract 为准，可用状态以 Acceptance 为准。
