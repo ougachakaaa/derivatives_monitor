@@ -25,6 +25,18 @@ Skew 审核参考包可保存在数据目录的 `references/analytics/`，由独
 
 本节定义本地前台开发会话的要求，不改变上文两种持久部署方式。实现与验证状态见 [Acceptance](../acceptance.md)，本次交付顺序见 [execution plan](../dev-runner-execution-plan.md)。
 
+仓库根公共入口为 `./dev`：`doctor [collector|query|dashboard]` 检查全部或指定组件，`collector`、`query`、`dashboard` 分别前台运行一个组件，`up` 前台运行三个组件。所有启动命令先执行相同范围的诊断；阻断错误不得启动对应进程，联合诊断有阻断错误时不得启动任何组件。Runner 不自动安装或构建依赖。
+
+| 有效输入 | 解析规则 |
+|---|---|
+| Collector `--config PATH` | 适用于 Collector、`up` 及对应诊断；默认 `collector/config.ini`，不读取配置路径环境变量 |
+| Query `--data-dir PATH` / `DATA_DIR` | 仅单独 Query 接受；CLI → 环境 → `collector/data`。`up` 必须从所选 Collector 配置派生，不接受覆盖 |
+| `--query-port N` / `QUERY_PORT` | CLI → 环境 → 8000；适用于 Query、`up` 及对应诊断 |
+| `--dashboard-port N` / `DASHBOARD_PORT` | CLI → 环境 → 8101；适用于 Dashboard、`up` 及对应诊断 |
+| Dashboard `QUERY_URL` | 仅单独 Dashboard 使用；默认 `http://127.0.0.1:8000`。`up` 必须从有效 Query 端口派生，不接受覆盖 |
+
+用户输入和路径环境变量中的相对路径以调用 `./dev` 时的目录为基准；仓库入口及组件工作目录不依赖调用目录。联合启动遇到已有 `DATA_DIR` 或 `QUERY_URL` 与派生值冲突时必须在创建进程前拒绝。Query 的既有参考环境变量继续透传，Runner 不解释或补写其业务内容。未知参数、不适用于所选命令的参数、空或越界端口及联合启动的相同端口均为使用错误；HTTP 服务只绑定 loopback 并严格使用有效端口。
+
 - Runner 的 lifecycle ownership 仅覆盖本次调用创建的组件子进程及其受控后代；它随当前 terminal session 工作，不接管其他终端、其他 checkout 或已经存在的进程。不得按进程名、端口或历史 PID 文件取得控制权。
 - Runner 不调用 native/systemd 或 Docker/Compose 管理器来启动、停止、安装、启用、更新或替换部署；不创建持久服务、定时器或可跨会话接管的运行状态，不后台驻留、不自动重启。已有部署占用端口或数据目录时报告冲突，由操作者通过原部署入口处理。
 - Collector、Query、Dashboard 可分别启动。联合启动只协调本次开发会话，不建立组件间启动或健康依赖。启动后的 Query/Dashboard 退出、HTTP 不可达或业务不可用，不触发 Collector 停止或重启；其他组件也不因同伴退出而被自动停止。Runner 保持管理仍存活的子进程并明确记录失败。

@@ -2,7 +2,7 @@
 
 本文件只记录当前实现、验证证据和待补缺口；产品收尾条件由 [MVP](mvp.md)定义，设计与精确行为分别以 [Design](design.md)、[Architecture](architecture.md)和 [Contracts](contracts/) 为准。本矩阵中的门槛摘要用于映射证据，不创建新的设计要求。
 
-状态基线：2026-09-09 汇报首页工程切片。**MVP 未完成**。工程回归由 harness 生成当次结果；历史报告只是指定时间的证据，不能证明本版本/本机当前实盘状态。下面的“待验”不是测试通过。此前的离线/原生/浏览器/打包检查和完整 Docker 网络限制见[整理验收记录](archive/reorganization-20260908.md)。
+状态基线：2026-09-10 developer runner 工程交付审计。**MVP 未完成**。工程回归由 harness 生成当次结果；历史报告只是指定时间的证据，不能证明本版本/本机当前实盘状态。下面的“待验”不是测试通过。此前的离线/原生/浏览器/打包检查和完整 Docker 网络限制见[整理验收记录](archive/reorganization-20260908.md)。
 
 | ID | 收尾门槛 | 现有证据/实现 | 还需取得的证据 |
 |---|---|---|---|
@@ -17,9 +17,11 @@
 
 ## 本地开发入口交付状态
 
-2026-09-10：developer runner 任务 2–5 已实现根 `./dev` 的 help、参数边界、组件级 `doctor`、三个组件直接前台启动、联合 `up` 和离线工程闭环；长期要求见 [Deployment Contract](contracts/deployment.md#developer-runner-的生命周期边界)，交付拆分见 [execution plan](dev-runner-execution-plan.md)。联合入口从已校验 Collector 配置派生 Query 数据目录、从有效 Query 端口派生 Dashboard 代理，并以独立进程组管理本次会话。标准库隔离测试覆盖组件依赖隔离、入口/cwd/虚拟环境与路径参数、配置失败脱敏、端口与联合环境冲突、预检失败零启动、正常/异常及部分 spawn 失败、同伴继续运行、INT/TERM/HUP、60 秒生产宽限常量和缩时行为、超时强制清理、正常受控后代及 harness 超时下嵌套进程组清理、外部进程不受影响、启动期信号及一次性 HTTP 超时只警告。
+2026-09-10：从 Git 复核任务 2–5 提交 `df5e8bf`、`23672a5`、`8755386`、`1773606` 及当前代码，根 `./dev` 已实现参数边界、组件级 `doctor`、三个组件直接前台启动、联合 `up` 和离线工程闭环；长期要求见 [Deployment Contract](contracts/deployment.md#developer-runner-的生命周期边界)，交付状态仍由 [execution plan](dev-runner-execution-plan.md) 跟踪。联合入口从已校验 Collector 配置派生 Query 数据目录、从有效 Query 端口派生 Dashboard 代理，并以独立进程组管理本次会话。标准库隔离测试覆盖组件依赖隔离、入口/cwd/虚拟环境与路径参数、配置失败脱敏、端口与联合环境冲突、预检失败零启动、正常/异常及部分 spawn 失败、同伴继续运行、INT/TERM/HUP、60 秒生产宽限常量和缩时行为、超时强制清理、正常受控后代及 harness 超时下嵌套进程组清理、外部进程不受影响、启动期信号及一次性 HTTP 超时只警告。
 
-实际 `./dev` TEST DOUBLE smoke 使用临时配置/data/flow、随机端口和替身 SDK，经过真实 Collector → SQLite → Uvicorn → Vite，验证 Query 共享 Raw、Dashboard 代理、下游退出不停止 Collector、会话清理、重启保留并追加数据，以及 writer/端口冲突不影响既有进程。`offline` 报告 `artifacts/harness/20260910T032523Z-offline-a1d836cb/result.json` 中 docs、harness-tests、configure/build、CTest、developer runner tests/smoke、Query、Universe 和 deploy 为 PASS；宿主缺 `sqlite3` CLI，verify 为 NOT_RUN，并使该报告整体为 NOT_RUN、后续 React/build 未在该 profile 中执行。没有真实 CTP、浏览器或 Docker 证据；本次不改变 native/Docker 实现，也不签收 G5/G6。TEST DOUBLE 闭环和监督测试不能替代现场数据恢复及最终部署验收。
+版本 `1773606` 的 `python3 harness/run.py offline` 报告为 `artifacts/harness/20260910T034556Z-offline-c4c2b71d/result.json`（PASS、干净工作树）：docs、harness-tests、configure/build、7 项 CTest、29 项 developer runner tests、实际 runner smoke、Query、Universe、deploy、verify、7 项 React 和 frontend-build 均执行通过。实际 smoke 使用临时配置/data/flow、随机端口和替身 SDK，经过真实 Collector → SQLite → Uvicorn → Vite，验证 Query 共享 Raw、Dashboard 代理、下游退出不停止 Collector、会话清理、重启保留并追加数据，以及 writer/端口冲突不影响既有进程。此前 `artifacts/harness/20260910T032523Z-offline-a1d836cb/result.json` 因 `sqlite3` 不在当时 `PATH` 为 NOT_RUN，不作为全套通过证据。
+
+交付审计同时发现代码缺陷：`./dev --help` 的 `up` 条目仍显示 “available in a later implementation task”，与已经可用的命令不一致。当前文档任务不修改代码，因此任务 6 和 execution plan 尚未完成；修正后仍需重新核对帮助与适用验证。现有 runner 也没有真实 CTP、现场恢复、当前版本浏览器或 Docker runtime 证据；本次不改变 native/Docker 实现，不签收 G1–G6。TEST DOUBLE 闭环和监督测试不能替代现场数据恢复及最终部署验收。
 
 ## 工程 harness 与门槛映射
 

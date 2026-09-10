@@ -4,6 +4,8 @@ Query 是 Python 3.12 / FastAPI 服务：读取 Collector 的 Raw 数据，提�
 
 领域契约：[Market State](../docs/contracts/market-state.md) · [Market Session](../docs/contracts/market-session.md) · [Analytics / Skew](../docs/contracts/analytics-skew.md) · [Acceptance](../docs/acceptance.md) · [Harness](../harness/README.md)
 
+统一前台开发入口位于仓库根：`./dev doctor query` 检查本组件，`./dev query` 运行本组件，`./dev up` 运行完整开发会话。参数示例和与持久部署的区别见 [Operations](../docs/operations.md#前台开发会话)；下面保留 Query 自身的安装、直接运行和调用用法。
+
 ## 安装、启动与测试
 
 从 `query/` 目录执行：

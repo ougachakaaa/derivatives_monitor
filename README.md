@@ -2,6 +2,17 @@
 
 本地衍生品监控项目，MVP 聚焦一个 MO 到期月的可信 Skew 观察与分钟回看。产品范围、当前架构、精确契约和实现状态不在本入口重复维护，请从[长期文档入口](docs/README.md)按职责查阅。
 
+## 本地前台开发
+
+准备好三个组件各自的运行依赖和已有 Collector 配置后，从仓库根目录使用统一入口：
+
+```bash
+./dev doctor       # 联合启动前检查
+./dev up           # 前台运行 Collector、Query、Dashboard
+```
+
+`./dev doctor collector|query|dashboard` 和 `./dev collector|query|dashboard` 可单独检查或运行组件；参数以 `./dev COMMAND --help` 为准。用 Ctrl-C 结束本次会话。该入口不安装、构建或接管 systemd/Docker，完整准备步骤、参数示例及三种运行方式的区别见 [Operations](docs/operations.md#前台开发会话)。
+
 - Agent 工作规则：[AGENTS.md](AGENTS.md)
 - 产品、设计与结构：[MVP](docs/mvp.md)、[Design](docs/design.md)、[Architecture](docs/architecture.md)
 - 精确行为：[Contracts](docs/contracts/)

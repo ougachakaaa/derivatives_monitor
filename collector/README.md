@@ -4,6 +4,8 @@ Collector 接收 CTP 行情，在内存维护最新状态并定期物化到 Raw 
 
 相关入口：[Market Session / Universe Contract](../docs/contracts/market-session.md) · [Deployment Contract](../docs/contracts/deployment.md) · [Operations](../docs/operations.md) · [Acceptance](../docs/acceptance.md) · [Harness](../harness/README.md)
 
+统一前台开发入口位于仓库根：`./dev doctor collector` 检查本组件，`./dev collector` 运行本组件，`./dev up` 运行完整开发会话。参数示例和与持久部署的区别见 [Operations](../docs/operations.md#前台开发会话)；下面保留 Collector 自身的构建、直接运行和管理用法。
+
 ## 构建与测试
 
 要求 Linux x86-64、CMake ≥ 3.16、C++17 编译器和 SQLite ≥ 3.24 开发包。完整 `offline` Harness 还需要 `sqlite3` CLI 及 Linux Node/npm；若工具解压在被忽略的本地目录，先将各自的 `bin` 目录加入本次 shell 的 `PATH`。仓库内正式 SDK 位于 `collector/third_party/ctp/`，CMake 支持位于 `collector/cmake/ctp_sdk.cmake`；正式 Collector 不依赖 `experiments/`。

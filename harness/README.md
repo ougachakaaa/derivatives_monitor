@@ -46,6 +46,25 @@ python3 harness/run.py docker
 
 TEST DOUBLE 不等于真实 CTP；100ms 合成场景不等于生产 15 秒调度，后者由专门 CTest 验证。历史成功次数不写死在 runner 中；正式验收仍要审查每项测试覆盖的契约。
 
+## Developer runner 验证
+
+正式证据入口是现有 `offline` profile：
+
+```bash
+python3 harness/run.py offline
+```
+
+它要求 Collector Release build 所需工具、`query/.venv`、Linux Node/npm 与前端依赖，以及 `sqlite3` CLI；本地工具不在默认 `PATH` 时，按上文说明只为本次 shell 加入相应 `bin`。profile 会重新构建后运行 runner 标准库隔离测试和实际 `./dev` TEST DOUBLE 链路，并继续执行原有 Query、Universe、deploy、verify、React 与前端构建；任一前置缺失都按全 profile 的 PASS/FAIL/NOT_RUN 规则处理。
+
+开发 runner 的快速定向检查可单独运行，但不能代替完整 profile 报告：
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -p 'test_dev*.py' -v
+PYTHONDONTWRITEBYTECODE=1 python3 tests/dev_runner_smoke.py
+```
+
+第二条还要求已构建的共享模式 Collector 与 TEST DOUBLE SDK、`query/.venv`、Linux Node 和已安装 Vite；它只在临时配置/data/flow 与随机 loopback 端口运行。实际开发启动前的本机条件检查使用 `./dev doctor`，不是工程验收报告。
+
 ## Analytics / Skew 契约数值基线
 
 规范：[mo-skew-25d-v1](../docs/contracts/analytics-skew.md)，常量：[策略JSON](../docs/contracts/analytics-skew-v1.json)，固定期望：[SYNTHETIC数值样本](fixtures/analytics-skew-v1.json)。样本包括12组价格/IV/delta和高精度价格、两条按tick舍入的完整合成链（两种Skew符号）、插值/单位例子。`analytics-contract` 用独立的标准库实现检查这些例子和失败/误用回归，不读取生产模块。`analytics` 再让生产模块消费合成 Market State minute frame 与显式 ReferenceBundle，核对固定期望及失败状态；`analytics` 还运行真实临时 SQLite → Market State → Analytics → HTTP 的 TEST DOUBLE 回归，覆盖分钟选择、历史/当前、固定revision序列/迟到写入、失败缺口、哈希与错误；两者都不读取实盘。

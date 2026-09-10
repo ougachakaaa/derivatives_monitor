@@ -4,6 +4,8 @@ Dashboard 是独立 React/Vite 前端，用于展示 MO Skew 业务结果和运�
 
 相关入口：[Deployment Contract](../docs/contracts/deployment.md) · [Operations](../docs/operations.md) · [Acceptance](../docs/acceptance.md) · [Harness](../harness/README.md)
 
+统一前台开发入口位于仓库根：`./dev doctor dashboard` 检查本组件，`./dev dashboard` 运行本组件，`./dev up` 运行完整开发会话。参数示例和与持久部署的区别见 [Operations](../docs/operations.md#前台开发会话)；下面保留 Dashboard 自身的依赖安装、直接运行和测试用法。
+
 ## 本地开发
 
 需要 Node 22.12+。从 `dashboard/` 目录执行：
@@ -30,7 +32,7 @@ npm run build
 
 产物位于 `dashboard/dist/`。生产镜像由 Nginx 提供静态文件并代理同源 `/api/`；具体镜像、端口和挂载边界见 [Deployment Contract](../docs/contracts/deployment.md)。
 
-## 启动完整系统
+## 持久部署完整系统
 
 从仓库根目录选择一种方式：
 
