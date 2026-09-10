@@ -17,11 +17,11 @@
 
 ## 本地开发入口交付状态
 
-2026-09-10：从 Git 复核任务 2–5 提交 `df5e8bf`、`23672a5`、`8755386`、`1773606` 及当前代码，根 `./dev` 已实现参数边界、组件级 `doctor`、三个组件直接前台启动、联合 `up` 和离线工程闭环；长期要求见 [Deployment Contract](contracts/deployment.md#developer-runner-的生命周期边界)，交付状态仍由 [execution plan](dev-runner-execution-plan.md) 跟踪。联合入口从已校验 Collector 配置派生 Query 数据目录、从有效 Query 端口派生 Dashboard 代理，并以独立进程组管理本次会话。标准库隔离测试覆盖组件依赖隔离、入口/cwd/虚拟环境与路径参数、配置失败脱敏、端口与联合环境冲突、预检失败零启动、正常/异常及部分 spawn 失败、同伴继续运行、INT/TERM/HUP、60 秒生产宽限常量和缩时行为、超时强制清理、正常受控后代及 harness 超时下嵌套进程组清理、外部进程不受影响、启动期信号及一次性 HTTP 超时只警告。
+2026-09-10：从 Git 复核任务 2–5 提交 `df5e8bf`、`23672a5`、`8755386`、`1773606` 及当前代码，任务 6 已发布根入口、三种运行方式、模块链接、稳定公共行为、验证入口和本节证据；一次性 execution plan 已完成并移除，实施历史由上述提交及 Git 保留。根 `./dev` 已实现参数边界、组件级 `doctor`、三个组件直接前台启动、联合 `up` 和离线工程闭环；长期要求见 [Deployment Contract](contracts/deployment.md#developer-runner-的生命周期边界)，操作见 [Operations](operations.md#前台开发会话)。联合入口从已校验 Collector 配置派生 Query 数据目录、从有效 Query 端口派生 Dashboard 代理，并以独立进程组管理本次会话。标准库隔离测试覆盖组件依赖隔离、入口/cwd/虚拟环境与路径参数、配置失败脱敏、端口与联合环境冲突、预检失败零启动、正常/异常及部分 spawn 失败、同伴继续运行、INT/TERM/HUP、60 秒生产宽限常量和缩时行为、超时强制清理、正常受控后代及 harness 超时下嵌套进程组清理、外部进程不受影响、启动期信号及一次性 HTTP 超时只警告。
 
 版本 `1773606` 的 `python3 harness/run.py offline` 报告为 `artifacts/harness/20260910T034556Z-offline-c4c2b71d/result.json`（PASS、干净工作树）：docs、harness-tests、configure/build、7 项 CTest、29 项 developer runner tests、实际 runner smoke、Query、Universe、deploy、verify、7 项 React 和 frontend-build 均执行通过。实际 smoke 使用临时配置/data/flow、随机端口和替身 SDK，经过真实 Collector → SQLite → Uvicorn → Vite，验证 Query 共享 Raw、Dashboard 代理、下游退出不停止 Collector、会话清理、重启保留并追加数据，以及 writer/端口冲突不影响既有进程。此前 `artifacts/harness/20260910T032523Z-offline-a1d836cb/result.json` 因 `sqlite3` 不在当时 `PATH` 为 NOT_RUN，不作为全套通过证据。
 
-交付审计同时发现代码缺陷：`./dev --help` 的 `up` 条目仍显示 “available in a later implementation task”，与已经可用的命令不一致。当前文档任务不修改代码，因此任务 6 和 execution plan 尚未完成；修正后仍需重新核对帮助与适用验证。现有 runner 也没有真实 CTP、现场恢复、当前版本浏览器或 Docker runtime 证据；本次不改变 native/Docker 实现，不签收 G1–G6。TEST DOUBLE 闭环和监督测试不能替代现场数据恢复及最终部署验收。
+提交 `c512465` 将 `./dev --help` 的 `up` 描述修正为 “run all components in the foreground”，并在既有 help 测试中禁止过期提示回归；`./dev --help`、`./dev up --help` 和 `python3 -m unittest discover -s tests -p 'test_dev.py' -v`（15 项）均通过。该修复不改变参数、启动、诊断或生命周期逻辑。现有 runner 仍没有真实 CTP、现场恢复、当前版本浏览器或 Docker runtime 证据；本次不改变 native/Docker 实现，不签收 G1–G6。TEST DOUBLE 闭环和监督测试不能替代现场数据恢复及最终部署验收。
 
 ## 工程 harness 与门槛映射
 

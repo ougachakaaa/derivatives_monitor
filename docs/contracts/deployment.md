@@ -23,7 +23,7 @@ Skew 审核参考包可保存在数据目录的 `references/analytics/`，由独
 
 ## Developer runner 的生命周期边界
 
-本节定义本地前台开发会话的要求，不改变上文两种持久部署方式。实现与验证状态见 [Acceptance](../acceptance.md)，本次交付顺序见 [execution plan](../dev-runner-execution-plan.md)。
+本节定义本地前台开发会话的要求，不改变上文两种持久部署方式。实现与验证状态见 [Acceptance](../acceptance.md)，实际操作见[运行与恢复](../operations.md#前台开发会话)。
 
 仓库根公共入口为 `./dev`：`doctor [collector|query|dashboard]` 检查全部或指定组件，`collector`、`query`、`dashboard` 分别前台运行一个组件，`up` 前台运行三个组件。所有启动命令先执行相同范围的诊断；阻断错误不得启动对应进程，联合诊断有阻断错误时不得启动任何组件。Runner 不自动安装或构建依赖。
 
