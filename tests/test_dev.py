@@ -47,10 +47,13 @@ class DevDoctorTests(unittest.TestCase):
             self.assertEqual(code, 0)
             for command in ("collector", "query", "dashboard", "up", "doctor"):
                 self.assertIn(command, output)
+            self.assertIn("run all components in the foreground", output)
+            self.assertNotIn("available in a later implementation task", output)
             code, output, error = self.run_main(["up", "--help"], cwd=cwd)
             self.assertEqual((code, error), (0, ""))
             self.assertIn("--config", output)
             self.assertNotIn("--data-dir", output)
+            self.assertNotIn("available in a later implementation task", output)
 
     def test_component_specs_use_direct_existing_entrypoints(self):
         with tempfile.TemporaryDirectory() as temporary:

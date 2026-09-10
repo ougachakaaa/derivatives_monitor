@@ -344,7 +344,7 @@ def build_parser() -> argparse.ArgumentParser:
     child.add_argument("--query-port", metavar="N")
     child = subparsers.add_parser("dashboard", help="run dashboard in the foreground")
     child.add_argument("--dashboard-port", metavar="N")
-    child = subparsers.add_parser("up", help="run all components (available in a later implementation task)")
+    child = subparsers.add_parser("up", help="run all components in the foreground")
     child.add_argument("--config", metavar="PATH")
     child.add_argument("--query-port", metavar="N")
     child.add_argument("--dashboard-port", metavar="N")
