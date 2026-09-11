@@ -1,11 +1,20 @@
 {
   "version": 1,
   "scope": {"id": "collector", "root": "collector", "parent": "repo", "entrypoint": "collector/README.md", "status": "existing"},
-  "documents": [{"path": "collector/README.md", "role": "entrypoint"}],
-  "claims": [],
+  "documents": [
+    {"path": "collector/README.md", "role": "entrypoint"},
+    {"path": "collector/AGENTS.md", "role": "agent-guidance"},
+    {"path": "collector/ARCHITECTURE.md", "role": "architecture"},
+    {"path": "collector/CONTRACT.md", "role": "contract"}
+  ],
+  "claims": [
+    {"id": "collector.internal-architecture", "definition": {"path": "collector/ARCHITECTURE.md", "anchor": "collector-internal-architecture"}, "constrained_scopes": ["collector"]},
+    {"id": "collector.runtime-contract", "definition": {"path": "collector/CONTRACT.md", "anchor": "collector-runtime-contract"}, "constrained_scopes": ["collector"]},
+    {"id": "collector.lifecycle-contract", "definition": {"path": "collector/CONTRACT.md", "anchor": "collector-lifecycle-contract"}, "constrained_scopes": ["collector"]}
+  ],
   "claim_references": [
     {"claim": "collector.runtime-contract", "path": "collector/README.md"},
-    {"claim": "repository.raw-boundary", "path": "collector/README.md"},
-    {"claim": "repository.deployment-contract", "path": "collector/README.md"}
+    {"claim": "repository.raw-boundary", "path": "collector/CONTRACT.md"},
+    {"claim": "repository.deployment-contract", "path": "collector/AGENTS.md"}
   ]
 }

@@ -2,7 +2,7 @@
 
 日期：2026-09-10。冻结基线：`main@351003e`，`feature/realtime-monitoring-alerts` worktree 同 HEAD，freeze 开始时两个工作树均干净。Semantic freeze / M0（原计划 S0）已由 `e67a9b0` 交付；后续 session 仍必须以用户明确指定的单一阶段为边界。此 M0 与 Monitoring 业务计划的 M0 不是同一阶段。
 
-本文只拥有执行顺序、验证、恢复、停止与计划生命周期，不拥有长期规则。治理唯一见 [docs README](README.md#authority-rules)，目标布局/归属唯一见 [Architecture mapping](../ARCHITECTURE.md#authority-mapping)，机器导航关系见 [Architecture](../ARCHITECTURE.md#authority-registration)。业务仍以各现行 Contract 为准；阶段实现与验证状态唯一登记 [Acceptance](acceptance.md#semantic-authority-s2)，不从本表推断完成程度。
+本文只拥有执行顺序、验证、恢复、停止与计划生命周期，不拥有长期规则。治理唯一见 [docs README](README.md#authority-rules)，目标布局/归属唯一见 [Architecture mapping](../ARCHITECTURE.md#authority-mapping)，机器导航关系见 [Architecture](../ARCHITECTURE.md#authority-registration)。业务仍以各现行 Contract 为准；阶段实现与验证状态唯一登记 [Acceptance](acceptance.md#semantic-authority-s3)，不从本表推断完成程度。
 
 <a id="resume"></a>
 
@@ -60,6 +60,12 @@ S1 以 `main@e67a9b0` 的干净工作树为实际基线。根登记逐项列出�
 S2 以 `main@6994059` 的干净工作树为实际基线。`docs/design.md` 与 `docs/architecture.md` 原子迁到根 `DESIGN.md` / `ARCHITECTURE.md` 并删除旧地址；repository claims 已退出 S2 exception。仍待 S4/S6 下放的 Query/Monitoring 局部段落只在根文件保留一份，登记中的当前路径同步为根文件，退出阶段不变。
 
 共享 Raw 所有权、writer 协调、WAL/只读和 Collector 诊断协议从 Collector/Read Path 拆到 `docs/contracts/raw-boundary.md`；旧处改为链接，Deployment 只保留系统挂载与生命周期。Read Path 的 Feature 标题不再声称待实现，实际状态统一导航 Acceptance。Architecture 将 C++ Collector runtime 与 `collector/scripts/universe.py`、native manager 的工具职责明确区分；不移动代码或扩大合法依赖。
+
+### S3 reconciliation 清单
+
+S3 以 `main@c15b229` 的干净工作树为实际基线。原 `docs/contracts/collector.md` 的 callback、配置、采样、session、提交与自身停止规则迁至 `collector/CONTRACT.md`，旧文件删除并加入 retired-path 检查；共享 Raw 规则仍只由 `docs/contracts/raw-boundary.md` 拥有。Collector 的内部 C++ 文件关系单独登记到 `collector/ARCHITECTURE.md`，不把实现细节提升为新业务语义。
+
+Market Session 中只有来源抓取、字段校验、旧代码保留、generation 发布和可选重启行为迁至 `collector/scripts/CONTRACT.md`；Calendar/Universe 版本、日期交接、coverage 与页面消费者协议继续留根。`collector/scripts/README.md` 成为工具 scope 入口，Universe 对 Query Calendar 的既有依赖继续作为 tool dependency 登记，不变成 C++ runtime 依赖。Collector README 的三服务教程迁到根 Operations，工具命令归 scripts README；`native.py`、`universe.py` 与其他生产代码均未移动或修改。
 
 ## 3. Harness 工作规格
 

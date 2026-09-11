@@ -58,6 +58,16 @@ class ProductionDependencyDirectionTest(unittest.TestCase):
         self.assertEqual(errors,
                          ['Retired repository authority path must not return: docs/design.md'])
 
+    def test_retired_collector_contract_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            path = root / 'docs/contracts/collector.md'
+            path.parent.mkdir(parents=True)
+            path.write_text('# duplicate Collector authority\n')
+            errors = retired_authority_errors(root)
+        self.assertEqual(errors,
+                         ['Retired repository authority path must not return: docs/contracts/collector.md'])
+
 
 if __name__ == '__main__':
     unittest.main()

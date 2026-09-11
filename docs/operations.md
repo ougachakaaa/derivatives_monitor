@@ -16,7 +16,33 @@
 
 同一数据目录只能有一个 Collector。离线测试无需启动真实服务；文档整理无需执行 up/update/stop。宿主安装步骤见各模块 README，不依赖历史报告中 `/tmp` 下的工具路径。
 
-原生 `up` 包含订阅文件配置准备、服务 enable/restart 和 timer 启动，具体备份及配置替换步骤见 [Collector 手册](../collector/README.md#原生-wsl-管理)。它与 Docker `up` 复用已有配置的行为不同；原生 `stop` 不取消服务 enable，长期禁用仍按该手册操作。本地前台入口的实现与验证状态见 [Acceptance](acceptance.md#本地开发入口交付状态)。
+本地前台入口的实现与验证状态见 [Acceptance](acceptance.md#本地开发入口交付状态)。持久部署的具体步骤如下；工具自身参数入口见 [`collector/scripts` 手册](../collector/scripts/README.md)。
+
+<a id="native-systemd-部署"></a>
+
+## Native systemd 部署
+
+准备好 Collector Release build、`query/.venv`、Dashboard 依赖、有效 `collector/config.ini` 和用户级 systemd 后，执行 `./collector/scripts/native.sh up`。该命令校验依赖和配置、刷新 Universe，将已有配置备份到 `collector/tmp/native-backups/`，校验候选配置后把 `InstrumentsFile` 设为 `data/universe/current/instruments.txt` 并原子替换配置；随后启用并重启 Collector、Query、Dashboard 三个用户服务并启动 Universe timer。因此 `up` 不是只读检查或单纯前台启动。
+
+使用同一入口的 `status`、`logs`、`update` 和 `stop` 管理部署。`update` 获取公开清单且可能在订阅集变化时正常重启活跃 Collector；`stop` 停止服务和 timer，但不取消 enable。Windows 浏览器默认访问 `http://localhost:8101`，FastAPI 文档为 `http://localhost:8000/docs`；WSL 或 Windows 停止、睡眠时采集不会继续。长期禁用自动启动：
+
+```bash
+systemctl --user disable derivatives-monitor-{collector,query,dashboard}.service derivatives-monitor-universe.timer
+```
+
+<a id="docker-compose-部署"></a>
+
+## Docker Compose 部署
+
+要求 Linux x86-64 Docker Engine、Compose v2、Git 和 Bash。执行 `./scripts/deploy.sh up` 完成首次配置、构建、预检和后台启动；更新代码后仍使用该命令。首次运行创建权限受限的 `collector/config.ini`，已有配置原样复用。默认页面端口为 8101、API 端口为 8000，可用 `DASHBOARD_PORT` 与 `QUERY_PORT` 调整。
+
+`logs` 跟随三服务日志，`status` 查看三服务状态、重启次数和采集摘要，`stop` 正常停止并保留数据，`verify YYYYMMDD` 在隔离容器中只读检查指定交易日。不要同时运行 native Collector 和 Docker Collector 写同一数据目录。若需保留 Query/Dashboard 而只停止容器 Collector：
+
+```bash
+docker stop --time 60 "$(docker ps -q --filter label=com.docker.compose.project=derivatives-monitor --filter label=com.docker.compose.service=collector)"
+```
+
+恢复采集仍执行 `./scripts/deploy.sh up`。Compose、镜像输入、挂载和停止宽限的精确约束见 [Deployment Contract](contracts/deployment.md)。
 
 日常分别检查主循环心跳、连接/登录、逐合约订阅、最后接收/提交、源交易日和清单/日历版本。市场 CLOSED/BREAK、不活跃合约无推送、订阅失败不是同一状态。查看 `snapshot_commit` 与两次只读行数/最近时间确认推进；不要把 accepted、written 和跨 run 日行数相互比较为同一指标。
 
@@ -50,7 +76,7 @@ QUERY_URL=http://127.0.0.1:8000 ./dev up dashboard --dashboard-port 8101
 
 ## 更新参考与软件
 
-- 原生 `update` 获取公开清单；来源失败保留旧清单并明确 stale。清单变化可能正常重启 Collector；不把维护命令当成只读检查。Docker/手工入口不自动提供相同的 universe 定时器。
+- 原生 `update` 获取并发布公开清单，可能正常重启 Collector；不要把维护命令当成只读检查。具体失败、旧清单保留和发布判定见 [Universe Tool Contract](../collector/scripts/CONTRACT.md)，Docker/手工入口不自动提供相同的 universe 定时器。
 - 日历当前覆盖 2026，跨年前按[年历维护规则](../query/calendars/README.md)审核新版本。JSON 原子发布后下次查询生效；profile 代码修改需重启 Query。UNKNOWN 不能用工作日推断兜底。
 - 软件更新前保留版本、日志和数据。构建与配置预检成功后部署，使用正常 SIGTERM 尾部提交。已有采样配置不自动改写；显式 `1000` 仍为一秒，需要改成 `15000` 时由操作人明确配置。
 - 不删除运行依赖的 `collector/build/` 工具、不清理配置/data/flow；Raw、universe 原响应与 generations 暂不自动轮转，观察剩余磁盘并制定保留策略。磁盘故障时优先保留证据，不能删库换取“健康”。

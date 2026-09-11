@@ -1,5 +1,4 @@
 <a id="repository-deployment-contract"></a>
-<a id="collector-lifecycle-contract"></a>
 <a id="monitoring-lifecycle-contract"></a>
 
 # 部署长期契约
@@ -32,7 +31,7 @@ Skew 审核参考包可保存在数据目录的 `references/analytics/`，由独
 - 仓库级 `scripts/deploy.sh up` 是唯一正式 Docker system deployment 入口，首次交互配置、后续复用。它协调三服务构建、预检、启动、状态、日志和停止，但 Collector 的配置与 runtime state 仍归 `collector/`。固定 `DataDirectory=data`、`FlowPath=flow`、`RunSeconds=0`；首次默认连接超时 120 秒、采样 15000ms、状态日志 10 秒。构建、测试和权限/配置预检在更新现有容器前完成；固定 Compose 项目禁止另一 checkout 接管原实例。
 - Docker 使用 `unless-stopped`，Collector 直接接收 SIGTERM，停止宽限 60 秒。`stop` 保留数据；故障可能反复重启，必须通过日志/退出码/重启计数判断，不把 running 当成功行情。
 - Docker 日志每份 10MB、保留三份。`logs` 的退出不停止采集；更新前按需要导出旧容器日志。
-- 原生管理器使用三个用户 systemd 服务及 universe 定时器。清单更新在发布的合约集变化、运行订阅集不一致或已有订阅诊断无法解析时正常重启活跃 Collector；手工 `up` 则启用并重启三个服务。08:45/09:00/09:15 与 20:40/21:00/21:15 为更新/重试点。此 Python 管理工具不进入 C++ 采集运行时。
+- 原生管理器使用三个用户 systemd 服务及 universe 定时器，并按 [Universe Tool Contract](../../collector/scripts/CONTRACT.md#保留发布与失败)的发布结果决定是否正常重启活跃 Collector；手工 `up` 则启用并重启三个服务。08:45/09:00/09:15 与 20:40/21:00/21:15 为更新/重试点。此 Python 管理工具不进入 C++ 采集运行时。
 - 原生服务异常退出 10 秒后重启；停止宽限 60 秒。WSL 停止或 Windows 睡眠时不能继续采集。用户管理器下次启动可能拉起已启用服务，长期禁用见操作手册。
 
 ## Developer runner 的生命周期边界
@@ -54,7 +53,7 @@ Skew 审核参考包可保存在数据目录的 `references/analytics/`，由独
 - Runner 的 lifecycle ownership 仅覆盖本次调用创建的组件子进程及其受控后代；它随当前 terminal session 工作，不接管其他终端、其他 checkout 或已经存在的进程。不得按进程名、端口或历史 PID 文件取得控制权。
 - Runner 不调用 native/systemd 或 Docker/Compose 管理器来启动、停止、安装、启用、更新或替换部署；不创建持久服务、定时器或可跨会话接管的运行状态，不后台驻留、不自动重启。已有部署占用端口或数据目录时报告冲突，由操作者通过原部署入口处理。
 - Collector、Query、Dashboard 可分别启动。联合启动只协调本次开发会话，不建立组件间启动或健康依赖。启动后的 Query/Dashboard 退出、HTTP 不可达或业务不可用，不触发 Collector 停止或重启；其他组件也不因同伴退出而被自动停止。Runner 保持管理仍存活的子进程并明确记录失败。
-- 用户结束会话，或 runner 收到 SIGINT、SIGTERM、终端 SIGHUP 时，只收尾本次拥有的进程，先发送 SIGTERM 并给予 60 秒正常退出宽限；超时仅可强制结束本次残留进程并明确报告。Collector 正常停止的 SDK 释放与尾部提交仍由 [Collector Contract](collector.md)定义。SIGKILL、宿主退出或无法送达终端信号不具备正常收尾保证；不得报告尾部已提交。
+- 用户结束会话，或 runner 收到 SIGINT、SIGTERM、终端 SIGHUP 时，只收尾本次拥有的进程，先发送 SIGTERM 并给予 60 秒正常退出宽限；超时仅可强制结束本次残留进程并明确报告。Collector 正常停止的 SDK 释放与尾部提交仍由 [Collector Contract](../../collector/CONTRACT.md#生命周期与失败语义)定义。SIGKILL、宿主退出或无法送达终端信号不具备正常收尾保证；不得报告尾部已提交。
 - Runner 的异常退出路径应尽力收尾自己已创建的进程；不能因清理失败扩大控制范围或隐瞒残留。非零子进程退出、启动失败和强制终止不得被汇总为会话成功。
 
 ## 开发配置与数据不变量
@@ -67,7 +66,7 @@ Skew 审核参考包可保存在数据目录的 `references/analytics/`，由独
 
 ## Doctor 的账号字段边界
 
-`doctor` 不将 `UserID` / `Password` 的存在、缺省、空值或非空列为诊断项，不提示填写，不因两者缺省或为空产生 warning/error/unknown，也不探测账号有效性或网络登录。不显示其名称对应的值或配置原行。Collector 整体 `--check-config` 校验继续保留；非空值超过 SDK 字段容量等实际配置错误可以整体校验失败并脱敏报告，不得为隐藏账号诊断而绕过安全校验。字段和 MdApi 协议语义见 [Collector Contract](collector.md#行情接入与可选账号字段)。
+`doctor` 不将 `UserID` / `Password` 的存在、缺省、空值或非空列为诊断项，不提示填写，不因两者缺省或为空产生 warning/error/unknown，也不探测账号有效性或网络登录。不显示其名称对应的值或配置原行。Collector 整体 `--check-config` 校验继续保留；非空值超过 SDK 字段容量等实际配置错误可以整体校验失败并脱敏报告，不得为隐藏账号诊断而绕过安全校验。字段和 MdApi 协议语义见 [Collector Contract](../../collector/CONTRACT.md#行情接入与可选账号字段)。
 
 ## 启动与健康的证据语义
 

@@ -2,18 +2,18 @@
 
 # Raw Market Facts 共享边界
 
-本契约只定义 Collector producer 与只读消费者共同遵守的 Raw 所有权、发布、锁、WAL 和运行诊断协议。Collector 如何接收、采样和提交见 [Collector Contract](collector.md)；Query 内部查询及公共 HTTP 见 [Read Path](read-path.md)；挂载、目录生命周期和服务管理见 [Deployment](deployment.md)。
+本契约只定义 Collector producer 与只读消费者共同遵守的 Raw 所有权、发布、锁、WAL 和运行诊断协议。Collector 如何接收、采样和提交见 [Collector Contract](../../collector/CONTRACT.md)；Query 内部查询及公共 HTTP 见 [Read Path](read-path.md)；挂载、目录生命周期和服务管理见 [Deployment](deployment.md)。
 
 ## 所有权与已发布事实
 
 - Collector 是 Raw 数据目录和日库的唯一 writer；Query、Dashboard、Analytics 及后续消费者不得写 Raw、修改 schema 或建立第二份行情事实。下游只能解释实际已提交的采样，不得把未保存的 callback、缺失行情或推测值包装成 Raw。
-- Raw schema v1 按源行情中合法的 `TradingDay` 发布为一日一个 `YYYYMMDD.sqlite`，保存 `received_us`、`snapshot_us`、`run_id`、`sequence`、`id` 和 CTP 原字段；元数据明确 schema 版本和交易日，写入约束阻止混日。同日重启可以追加，每次运行以独立 run ID 标识，事务与唯一键阻止同次物化重复写入。具体接收、字段归一化、分区、采样窗口及跨日内存状态仍由 [Collector Contract](collector.md#数据与采样不变量)定义。
+- Raw schema v1 按源行情中合法的 `TradingDay` 发布为一日一个 `YYYYMMDD.sqlite`，保存 `received_us`、`snapshot_us`、`run_id`、`sequence`、`id` 和 CTP 原字段；元数据明确 schema 版本和交易日，写入约束阻止混日。同日重启可以追加，每次运行以独立 run ID 标识，事务与唯一键阻止同次物化重复写入。具体接收、字段归一化、分区、采样窗口及跨日内存状态仍由 [Collector Contract](../../collector/CONTRACT.md#数据与采样不变量)定义。
 - 数据目录、flow、配置和 application state 是不同 owner 的资源。系统挂载与保留规则见 [Deployment Contract](deployment.md#数据与隔离)；移除服务、镜像、构建或项目文件不能作为删除 Raw 的手段。
 
 ## Writer 协调与持久性
 
 - 每个 Raw 数据目录使用进程锁排除第二个 Collector writer。SQLite 使用单连接单 writer、WAL、`synchronous=FULL`、有界 busy timeout 和逐日事务；不承诺跨交易日原子提交。
-- 只有成功 commit 后的数据和 durable 行数才属于已发布事实。写入失败、正常停止尾部提交和强制终止窗口的 producer 行为见 [Collector Contract](collector.md#生命周期与失败语义)。目录或端口预检不能替代 writer 锁。
+- 只有成功 commit 后的数据和 durable 行数才属于已发布事实。写入失败、正常停止尾部提交和强制终止窗口的 producer 行为见 [Collector Contract](../../collector/CONTRACT.md#生命周期与失败语义)。目录或端口预检不能替代 writer 锁。
 
 ## 只读消费与 WAL
 

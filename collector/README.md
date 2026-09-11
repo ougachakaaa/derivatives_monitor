@@ -1,6 +1,6 @@
 # C++ Data Collector
 
-Collector 接收 CTP 行情，在内存维护最新状态并定期物化到 Raw 日 SQLite。这里提供构建、配置、运行和排障入口；组件所有权与依赖方向见[系统架构](../ARCHITECTURE.md)，采集行为见 [Collector Contract](../docs/contracts/collector.md)，共享持久化与读取协议见 [Raw Boundary](../docs/contracts/raw-boundary.md)。
+Collector 接收 CTP 行情，在内存维护最新状态并定期物化到 Raw 日 SQLite。这里提供构建、配置、直接运行和排障入口；本级工作路径见 [AGENTS](AGENTS.md)，内部关系见 [Architecture](ARCHITECTURE.md)，精确采集行为见 [Contract](CONTRACT.md)。共享持久化与读取协议见 [Raw Boundary](../docs/contracts/raw-boundary.md)。
 
 相关入口：[Market Session / Universe Contract](../docs/contracts/market-session.md) · [Deployment Contract](../docs/contracts/deployment.md) · [Operations](../docs/operations.md) · [Acceptance](../docs/acceptance.md) · [Harness](../harness/README.md)
 
@@ -37,103 +37,20 @@ collector/build/Release/bin/data_collector --config collector/config.ini --check
 collector/build/Release/bin/data_collector --config collector/config.ini
 ```
 
-`config.ini`、`data/`、`flow/` 和 `build/` 默认被 Git 忽略。真实凭据不得提交；相对路径以配置文件目录为基准。
+`config.ini`、`data/`、`flow/` 和 `build/` 默认被 Git 忽略，真实凭据不得提交。可用键、默认值、相对路径、订阅来源优先级和 CLI 覆盖规则统一见 [Collector Contract](CONTRACT.md#配置接口)；实际模板是 [`config.example.ini`](config.example.ini)。
 
-| 参数 | 默认值 / 使用说明 |
-|---|---|
-| `FrontMdAddr` | 必填的行情前置地址；可用性以现场验证为准 |
-| `BrokerID`、`UserProductInfo` | 按接入方要求填写 |
-| `UserID`、`Password` | 可缺省或留空，doctor 不要求填写；已填值仍遵守字段安全校验，详见 [Collector Contract](../docs/contracts/collector.md#行情接入与可选账号字段) |
-| `Instruments` | 冒号或逗号分隔的精确合约代码 |
-| `InstrumentsFile` | 可选逐行代码文件；命令行合约覆盖文件，文件覆盖 `Instruments` |
-| `DataDirectory` | 默认 `data` |
-| `FlowPath` | 默认 `flow`；每个运行实例使用独立目录 |
-| `SnapshotIntervalMs` | 默认 `15000` |
-| `StatusIntervalSeconds` | 默认 `10` |
-| `ConnectTimeoutSeconds` | 默认 `20` |
-| `RetryIntervalSeconds` | 默认 `5` |
-| `SubscriptionBatchSize` | 默认 `100` |
-| `RunSeconds` | `0` 表示持续运行 |
-
-CLI 提供 `--config PATH`、可重复的 `--instrument CODE`、`--run-seconds N`、`--check-config` 和 `--help`。完整取值约束、优先级、采样及停止语义以 [Collector Contract](../docs/contracts/collector.md) 为准。
-
-Docker 部署脚本复用已有配置；原生 `up` 的订阅文件配置准备见下节。需要手工调整旧配置时先正常停止 Collector，显式修改配置并保留原数据目录；不要把配置变更当作 schema 迁移。
-
-## 原生 WSL 管理
-
-准备好 Collector build、`query/.venv`、Dashboard 依赖和用户级 systemd 后，从仓库根目录执行：
-
-```bash
-./collector/scripts/native.sh up
-./collector/scripts/native.sh status
-./collector/scripts/native.sh logs
-./collector/scripts/native.sh update
-./collector/scripts/native.sh stop
-```
-
-`up` 校验依赖和配置、刷新 Universe，并管理 Collector、Query、Dashboard 三个用户服务；`update` 可手工刷新公开清单。系统级生命周期、定时更新、重启及数据保护规则见 [Deployment Contract](../docs/contracts/deployment.md) 和 [Operations](../docs/operations.md)。
-
-原生 `up` 会将已有配置备份到 `collector/tmp/native-backups/`，校验候选配置后将 `InstrumentsFile` 设为 `data/universe/current/instruments.txt` 并替换配置文件；它不是只读检查或单纯前台启动。该命令还会启用并重启三个用户服务、启动 Universe timer；`stop` 停止服务和 timer，但不取消 enable。
-
-Windows 浏览器默认访问 **http://localhost:8101**，FastAPI 文档为 **http://localhost:8000/docs**。WSL 或 Windows 停止、睡眠时采集不会继续。若需长期禁用自动启动：
-
-```bash
-systemctl --user disable derivatives-monitor-{collector,query,dashboard}.service derivatives-monitor-universe.timer
-```
-
-## Docker / WSL 部署
-
-要求 Linux x86-64 Docker Engine、Compose v2、Git 和 Bash。在仓库根目录执行：
-
-```bash
-./scripts/deploy.sh up
-```
-
-| 命令 | 用途 |
-|---|---|
-| `./scripts/deploy.sh up` | 首次配置、构建、预检并后台启动；更新代码后也使用此命令 |
-| `./scripts/deploy.sh logs` | 跟随 Collector、Query、Dashboard 三服务日志 |
-| `./scripts/deploy.sh status` | 查看三服务状态、重启次数和采集健康摘要 |
-| `./scripts/deploy.sh stop` | 正常停止并保留数据 |
-| `./scripts/deploy.sh verify YYYYMMDD` | 在隔离容器中只读检查指定交易日 |
-
-首次运行会创建权限受限的 `collector/config.ini`；已有配置原样复用。默认页面端口为 8101、API 端口为 8000，可通过 `DASHBOARD_PORT` 和 `QUERY_PORT` 调整。Compose 和各服务 build boundary 的权威定义见 [Deployment Contract](../docs/contracts/deployment.md)，更新、停止、备份和恢复步骤见 [Operations](../docs/operations.md)。
-
-不要同时运行原生 Collector 和 Docker Collector 写同一数据目录。需要保留 Query/Dashboard 而只停止容器 Collector 时：
-
-```bash
-docker stop --time 60 "$(docker ps -q --filter label=com.docker.compose.project=derivatives-monitor --filter label=com.docker.compose.service=collector)"
-```
-
-恢复采集仍执行 `./scripts/deploy.sh up`。
-
-## Universe discovery
-
-公开合约清单工具独立于行情 callback。手工运行：
-
-```bash
-python3 collector/scripts/universe.py --data-dir collector/data
-python3 collector/scripts/universe.py --data-dir collector/data --date YYYYMMDD
-```
-
-输出保存在 `collector/data/universe/`；原生管理器使用 `current/instruments.txt`。工具的来源、日期选择、完整性、保留旧清单和失败行为由 [Market Session / Universe Contract](../docs/contracts/market-session.md) 定义。查看完整参数用 `--help`，运行工具测试：
-
-```bash
-python3 -m unittest discover -s collector/tests -p 'test_*.py' -v
-```
+需要手工调整旧配置时先正常停止 Collector，显式修改配置并保留原数据目录；不要把配置变更当作 schema 迁移。Universe、native manager 及镜像辅助命令见 [`collector/scripts` 手册](scripts/README.md)；完整三服务部署、配置准备、更新、停止与恢复步骤见 [Operations](../docs/operations.md)。
 
 ## 查看数据与运行状态
 
 优先使用管理入口：
 
 ```bash
-./collector/scripts/native.sh status
-./collector/scripts/native.sh logs
 ./scripts/deploy.sh status
 ./scripts/deploy.sh verify YYYYMMDD
 ```
 
-日志中常用事件包括 `front_connected`、`login_response`、`subscription_response`、`health`、`snapshot_commit`、`persistence_failed` 和 `stop`。连接、订阅、接收、写入和市场时段是不同证据；精确状态含义见 [Collector Contract](../docs/contracts/collector.md) 与 [Read Path Contract](../docs/contracts/read-path.md)。
+日志中常用事件包括 `front_connected`、`login_response`、`subscription_response`、`health`、`snapshot_commit`、`persistence_failed` 和 `stop`。连接、订阅、接收、写入和市场时段是不同证据；精确状态含义见 [Collector Contract](CONTRACT.md) 与 [Read Path Contract](../docs/contracts/read-path.md)。
 
 可选的只读 SQLite 快速检查：
 

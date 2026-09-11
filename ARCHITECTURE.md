@@ -59,7 +59,7 @@ flowchart LR
 | IV / Skew 响应 | Analytics / business service | API 与 Dashboard；当前不是第二份持久化事实库 |
 | 验收日志和现场证据 | Harness / 验收流程 | Acceptance 引用；不进入 runtime |
 
-数据集的精确 schema、锁、版本、时间、质量、选择和错误规则不在本表重复，分别见 [Raw Boundary](docs/contracts/raw-boundary.md)、[Collector](docs/contracts/collector.md)、[Read Path](docs/contracts/read-path.md)、[Market State](docs/contracts/market-state.md)、[Calendar / Universe](docs/contracts/market-session.md)、[Deployment](docs/contracts/deployment.md)及 [Analytics / Skew v1](docs/contracts/analytics-skew.md)。
+数据集的精确 schema、锁、版本、时间、质量、选择和错误规则不在本表重复，分别见 [Raw Boundary](docs/contracts/raw-boundary.md)、[Collector](collector/CONTRACT.md)、[Universe tool](collector/scripts/CONTRACT.md)、[Read Path](docs/contracts/read-path.md)、[Market State](docs/contracts/market-state.md)、[Calendar / Universe](docs/contracts/market-session.md)、[Deployment](docs/contracts/deployment.md)及 [Analytics / Skew v1](docs/contracts/analytics-skew.md)。
 
 ## Runtime 与模块边界
 
@@ -123,9 +123,9 @@ application store 是专属应用持久目录，不位于 Collector 数据目录
 
 ## Repository knowledge architecture：冻结目标
 
-本节拥有 documentation topology 和语义归属 mapping；治理规则唯一见[文档入口](docs/README.md#authority-rules)。目标布局保持冻结，表格逐项反映尚未迁移部分的当前来源。根 Design/Architecture 与共享 Raw authority 已归位；其余业务定义仍由表中现行 Contracts 提供。实施状态见 [Acceptance](docs/acceptance.md#semantic-authority-s2)，执行顺序见 [ExecPlan](docs/semantic-embedding-execplan.md)。
+本节拥有 documentation topology 和语义归属 mapping；治理规则唯一见[文档入口](docs/README.md#authority-rules)。目标布局保持冻结，表格逐项反映尚未迁移部分的当前来源。根 Design/Architecture、共享 Raw authority 及 Collector/Collector tools authority 已归位；其余业务定义仍由表中现行 Contracts 提供。实施状态见 [Acceptance](docs/acceptance.md#semantic-authority-s3)，执行顺序见 [ExecPlan](docs/semantic-embedding-execplan.md)。
 
-当前导航为根 AGENTS/README/DESIGN/ARCHITECTURE → docs 入口与共享 Contracts；生产模块主要仍只有 README，Harness 有局部验证入口。尚未下放的 Query/Monitoring 局部设计与结构暂由根文件承接并以具名 migration exception 约束退出阶段；其他中央 Contracts 仍须按规则组分配，不能整份按文件名搬迁。实验区继续沿用逐层 SPEC/REFERENCE 组织。
+当前导航为根 AGENTS/README/DESIGN/ARCHITECTURE → docs 入口与共享 Contracts；Collector 与 tools 已有局部入口/结构/契约，其他生产模块主要仍只有 README，Harness 有局部验证入口。尚未下放的 Query/Monitoring 局部设计与结构暂由根文件承接并以具名 migration exception 约束退出阶段；其他中央 Contracts 仍须按规则组分配，不能整份按文件名搬迁。实验区继续沿用逐层 SPEC/REFERENCE 组织。
 
 冻结目标文件如下；未列出的对称文件不创建。根 DESIGN/ARCHITECTURE 已承接原 docs 地址，旧中央副本不保留；其内以 migration exception 暂存的局部内容仍按后续阶段下放。
 
@@ -181,18 +181,18 @@ application store 是专属应用持久目录，不位于 Collector 数据目录
 | 根 Design §9 | HTTP 共享、拆包触发和反向依赖理由留根；薄 provider 组织理由后续到 Query DESIGN |
 | 根 Design §10 | 机会记录/通知恢复内部取舍后续到 Monitoring DESIGN；与 Market Facts 的跨模块边界留根并引用 |
 | [本文](ARCHITECTURE.md) | 一级模块、跨模块流、当前/目标 runtime 已在根；Query 内部文件关系与 Monitoring 循环/存储结构后续下放各自 ARCHITECTURE |
-| [Collector Contract](docs/contracts/collector.md)、[Raw Boundary](docs/contracts/raw-boundary.md) | Raw 共享读写、锁、诊断协议已归 raw-boundary；callback、采样、session、配置、重连、提交、停止后续到 collector/CONTRACT.md |
+| [Collector Contract](collector/CONTRACT.md)、[Raw Boundary](docs/contracts/raw-boundary.md) | Raw 共享读写、锁、诊断协议归 raw-boundary；callback、采样、session、配置、重连、提交和 Collector 自身停止归本地 Contract |
 | [Read Path](docs/contracts/read-path.md)：边界/健康/SQLite | 系统挂载与生命周期已引用 Deployment，共享 Raw/心跳协议已引用 raw-boundary；公共 HTTP 留 read-path，Query 内部读取要求后续归 query/CONTRACT.md |
 | Read Path：Skew | HTTP 参数、wire shape、状态映射保留根 read-path；分钟选择、series 计算引用 Query Skew，删除重复定义 |
 | Read Path：React | 布局、轮询、失败清值、显示精度、历史与当前视图交互归 dashboard/CONTRACT.md |
-| [Market Session](docs/contracts/market-session.md) | Calendar/Universe 跨模块版本、时间、交接协议留根；来源抓取/发布行为到 collector/scripts/CONTRACT.md；Query 内部 Calendar/coverage 适配到 query/CONTRACT.md；页面时段表到 Dashboard |
+| [Market Session](docs/contracts/market-session.md)、[Universe Tool Contract](collector/scripts/CONTRACT.md) | Calendar/Universe 跨模块版本、时间、交接协议留根；来源抓取/发布行为已归工具 Contract；Query 内部 Calendar/coverage 适配后续到 query/CONTRACT.md；页面时段表后续到 Dashboard |
 | [Market State](docs/contracts/market-state.md) | query/contracts/market-state.md；引用根 Raw/Calendar 协议，去掉重复采集事实 |
 | [Skew](docs/contracts/analytics-skew.md) | query/contracts/analytics-skew.md；纯页面规则到 Dashboard；审核包布局/导入/读取适配到 query/contracts/references.md；§10 历史记录与 §11 实现/测试证据到 query/ACCEPTANCE.md，保留 §11 的真实接口规范，不能整节删除 |
 | [Skew 策略](docs/contracts/analytics-skew-v1.json)、[来源说明](docs/references/analytics-skew-sources.md) | query/contracts/analytics-skew-v1.json、query/references/analytics-skew-sources.md；共享原件档案不动 |
 | [Feature](docs/contracts/features.md) | 通用 envelope、身份/采样键、时间、错误、版本、消费者与窗口归属边界留根；registry/provider 内部要求到 Query CONTRACT；Skew 映射留根单一定义并引用 Query 数值契约 |
 | [Monitoring](docs/contracts/monitoring.md) | monitoring/CONTRACT.md 拥有规则、crossing、UNKNOWN、配置、事务、恢复、投递；跨模块访问和生命周期引用根，删除重复约束 |
 | [Deployment](docs/contracts/deployment.md) | 保留真实跨组件约束；Collector 自身停机引用 Collector；Monitoring 自有锁/重试引用 Monitoring |
-| [Collector README](collector/README.md) | 配置用法保留，已有规范归局部 Contract；三服务部署教程到根 Operations；工具命令到 scripts README |
+| [Collector README](collector/README.md)、[scripts README](collector/scripts/README.md) | Collector 配置/直接运行用法与工具命令已分开；已有规范归各自 Contract；三服务部署教程归根 Operations |
 | [Query README](query/README.md)、[Dashboard README](dashboard/README.md) | 保留实际用法、故障定位并增加本级导航；Query 增加已实现 Feature 用法 |
 | [Calendar README](query/calendars/README.md) | 保留参考数据维护步骤，不承接 Query 解释算法 |
 | [Acceptance](docs/acceptance.md) | G1–G6/P1/P2、跨进程/部署/runner 证据留根；Query/Dashboard/Monitoring 局部记录原样迁入各自 ACCEPTANCE，根只链接，不复制进度 |
@@ -210,4 +210,4 @@ application store 是专属应用持久目录，不位于 Collector 数据目录
 
 claim 按可独立修改的接口或规则组划分，不为每句话建 ID。Markdown 与机器策略各自登记职责：Skew 已有机器字段值以原 JSON 为机器 authority，Markdown 解释含义，重复数值展示只作为受一致性检查的投影。登记不能制造第二套规则或把 evidence/ExecPlan 注册为规范。
 
-登记从根 [`.authority.json`](.authority.json) 开始，局部 scope 由各自同名文件登记；冻结待实现且尚无目录的 scope 只在父登记中声明，不预建空目录。离线检查实现位于 `harness/authority.py`，迁移例外与关闭条件仍只由 [ExecPlan](docs/semantic-embedding-execplan.md)安排；当前完成状态见 [Acceptance](docs/acceptance.md#semantic-authority-s2)。
+登记从根 [`.authority.json`](.authority.json) 开始，局部 scope 由各自同名文件登记；冻结待实现且尚无目录的 scope 只在父登记中声明，不预建空目录。离线检查实现位于 `harness/authority.py`，迁移例外与关闭条件仍只由 [ExecPlan](docs/semantic-embedding-execplan.md)安排；当前完成状态见 [Acceptance](docs/acceptance.md#semantic-authority-s3)。

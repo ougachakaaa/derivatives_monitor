@@ -7,7 +7,7 @@ Python 契约 v1；已实现，历史离线证据见[归档](../archive/acceptan
 
 ## 架构位置
 
-Collector 的 callback、采样和物化行为见 [Collector Contract](collector.md#数据与采样不变量)；Raw 所有权、分区身份、只读和 WAL/锁协议见 [Raw Boundary](raw-boundary.md)。Python `Store.connect` 在该共享边界内提供事务和执行预算。`Calendar` 提供版本化产品时段（含竞价），native runtime 管理进程；这些机制不需要改写。
+Collector 的 callback、采样和物化行为见 [Collector Contract](../../collector/CONTRACT.md#数据与采样不变量)；Raw 所有权、分区身份、只读和 WAL/锁协议见 [Raw Boundary](raw-boundary.md)。Python `Store.connect` 在该共享边界内提供事务和执行预算。`Calendar` 提供版本化产品时段（含竞价），native runtime 管理进程；这些机制不需要改写。
 
 纯 Python `query/market_state.py`，复用 Store 和 Calendar，提供可导入的 scope / frame / latest 契约及 JSON CLI。无需新增 HTTP、调度任务或常驻缓存。Analytics 只依赖这个模块的输出，不理解文件路径、表名或 SQL。
 

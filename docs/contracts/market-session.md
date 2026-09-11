@@ -1,5 +1,4 @@
 <a id="market-session-shared-contract"></a>
-<a id="universe-tool-contract"></a>
 <a id="query-calendar-contract"></a>
 <a id="dashboard-session-contract"></a>
 
@@ -28,13 +27,12 @@ Calendar 和 Universe 是独立参考能力，不进入 C++ callback 或 Raw 写
 - OPEN/BREAK 的 trading_day 为当前逻辑交易日；CLOSED 使用下一已知有效交易时段所属交易日，同时提供最近时段自己的交易日。没有可确认归属时为 null/UNKNOWN。此推导只解释日历，绝不改写 CTP 事实 TradingDay。
 - `GET /api/sessions?exchange=SHFE&product=AU&at=<带时区ISO时间>`；exchange/product 可省略以返回全部/某交易所；product 单独给出非法。默认当前时刻。非法参数400，日历不可用在200响应中明确UNKNOWN。CLI提供同等查询和 `--validate`。
 
-## Universe / Coverage
+## Universe / Coverage 共享交接
 
-- 保留原11个CFFEX产品和Sina fallback；增AU/AG期货，拒绝期权及其他商品。manifest v1保留原 products 键，新增 exchange 与各产品 requested_day；源代码/日期/上市日/到期日严格验证，价格不进入持久行情。
-- CFFEX保持既有清单刷新日期口径；SHFE使用日历当前/下一逻辑交易日，支持夜盘前发布的次日清单。`--date` 显式指定时两交易所均按该日期查询。缺失日历时保留旧SHFE清单并明确失败，不靠自然日期猜测夜盘归属。
-- SHFE来源失败或部分返回时按产品保留未到期旧代码，标记stale/未完整确认；初次SHFE无可用代码不能伪装完整覆盖，已有CFFEX清单继续可用；全量空清单拒绝发布。继续沿用原子generation切换、锁、变化才重启的原流程。
-- Query coverage按exchange/product分组，SHFE以各自目标日期核对清单；保留原订阅、无推送、缺口与心跳语义。Dashboard增加独立市场时段表，支持同时CFFEX CLOSED / SHFE OPEN；时段请求失败清空旧状态，绝不改变Collector健康的定义。
-- native仍只有既有universe刷新及变更后重启机制；本任务不根据Session启动/停止Collector，不新增Runtime Scheduler。
+- Universe manifest v1 保留原 `products` 键，并向生产者与消费者共享 exchange、各产品 requested day、来源、完整性及 stale/error 状态。清单只提供精确订阅代码与审核元数据，不把来源价格转成 Raw 行情，也不改写 CTP `TradingDay`。
+- Universe 工具使用本 Calendar 的逻辑交易日选择 SHFE 来源日；显式日期同时作为两交易所 requested day。Calendar 无法确认时必须以未知/失败交接，不能由消费者按自然日期补猜。具体来源抓取、字段校验、旧代码保留、generation 发布与可选重启归 [Universe Tool Contract](../../collector/scripts/CONTRACT.md)。
+- Query coverage 按 exchange/product 分组，SHFE 以各自目标日期核对清单；保留原订阅、无推送、缺口与心跳语义。Dashboard 增加独立市场时段表，支持同时 CFFEX CLOSED / SHFE OPEN；时段请求失败清空旧状态，绝不改变 Collector 健康的定义。
+- Market Session 只解释市场时段，不据此启动或停止 Collector，也不新增 Runtime Scheduler。repository manager 的三服务生命周期见 [Deployment Contract](deployment.md)。
 
 ## 维护与验收
 

@@ -136,3 +136,15 @@ React 组件 7 项通过，覆盖当前 Skew、当日变化、完整性与 TEST 
 本阶段未修改生产代码、业务数值、Skew 策略、golden/oracle、参考原件、SDK 或 experiments，也未执行 S3。结构检查只证明迁移路径、链接/锚点、claim/scope、依赖和受保护输入，不提升任何业务或现场验收状态。
 
 `python3 harness/run.py docs` 为 PASS，报告 `artifacts/harness/20260911T003901Z-docs-006eb907/result.json` 记录 `6994059` 加 S2 工作树，docs 与 authority 自测两个步骤均实际执行。完整 `harness/tests` 共 30 项通过，`git diff --check` 通过；报告后的修改仅登记本证据。提交前再次直接执行结构检查与 diff 检查。
+
+<a id="semantic-authority-s3"></a>
+
+## Repository semantic embedding：Collector / tools authority / S3
+
+2026-09-11，从干净的 `main@c15b229` 恢复并核对 S1/S2 的登记、迁移和提交。本阶段建立 Collector 的 AGENTS/README/ARCHITECTURE/CONTRACT 导航，以及 `collector/scripts/` 的 AGENTS/README/CONTRACT 工具入口；Collector runtime、Collector 自身 lifecycle 和 Universe tool claims 已退出三个 S3 migration exceptions，旧中央 Collector Contract 被删除并列入退役路径检查。
+
+Collector callback、配置、采样、session、提交与正常停止语义只迁址、不重新设计；共享 Raw owner/锁/WAL/诊断继续留根。Universe 的来源抓取、校验、保留和发布行为下沉到工具 scope，Calendar/Universe 跨模块交接继续留根；C++ runtime 不依赖 Query，只有既有 `universe.py` → `query/market_calendar.py` 工具边。三服务 native/Docker 教程归根 Operations，repository deployment lifecycle 未下沉。
+
+本阶段只修改文档、authority registration 和相应 Harness 文档路径检查；没有移动或修改 `native.py`、`universe.py` 或其他生产代码，没有读取配置/Raw、运行真实服务或执行 S4。结构检查证明路径、锚点、claim/scope、依赖和受保护输入，不提升业务或现场验收状态。
+
+`python3 harness/run.py docs` 为 PASS，报告 `artifacts/harness/20260911T010603Z-docs-d7abef93/result.json` 记录 `c15b229` 加 S3 工作树，docs 与 authority 自测两个步骤均实际执行；完整 `harness/tests` 共 31 项通过，`git diff --check` 通过。报告后的修改仅登记本证据；提交前再次执行结构与 diff 检查。

@@ -4,14 +4,20 @@
     "id": "collector-tools",
     "root": "collector/scripts",
     "parent": "collector",
-    "entrypoint": "collector/README.md",
-    "status": "existing",
-    "entrypoint_migration": {"current_path": "collector/README.md", "target_path": "collector/scripts/README.md", "exit_stage": "S3"}
+    "entrypoint": "collector/scripts/README.md",
+    "status": "existing"
   },
-  "documents": [],
-  "claims": [],
+  "documents": [
+    {"path": "collector/scripts/README.md", "role": "entrypoint"},
+    {"path": "collector/scripts/AGENTS.md", "role": "agent-guidance"},
+    {"path": "collector/scripts/CONTRACT.md", "role": "contract"}
+  ],
+  "claims": [
+    {"id": "collector-tools.universe-contract", "definition": {"path": "collector/scripts/CONTRACT.md", "anchor": "universe-tool-contract"}, "constrained_scopes": ["collector-tools"]}
+  ],
   "claim_references": [
-    {"claim": "collector-tools.universe-contract", "path": "collector/README.md"},
-    {"claim": "repository.market-session", "path": "collector/README.md"}
+    {"claim": "collector-tools.universe-contract", "path": "collector/scripts/README.md"},
+    {"claim": "repository.market-session", "path": "collector/scripts/CONTRACT.md"},
+    {"claim": "repository.deployment-contract", "path": "collector/scripts/README.md"}
   ]
 }

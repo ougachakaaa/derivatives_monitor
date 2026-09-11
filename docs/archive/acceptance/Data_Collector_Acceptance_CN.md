@@ -3,7 +3,7 @@
 > 历史验收快照：仅证明文中日期/版本/环境下的观察。旧端口、临时路径、待验状态和操作命令可能已过时；当前设计见[文档入口](../../README.md)，当前门槛见[验收矩阵](../../acceptance.md)，运行见[操作说明](../../operations.md)。原始日志缺失时仅作为历史摘要。
 
 
-验收日期：2026-09-06（Asia/Shanghai，周日）。约束：[设计约束](../../contracts/collector.md)。
+验收日期：2026-09-06（Asia/Shanghai，周日）。约束：[Collector Contract](../../../collector/CONTRACT.md)。
 
 ## 结果边界
 

@@ -40,7 +40,7 @@ Parent scope 只负责自身 scope 的语义、跨直接子级的 invariant，�
 3. 跨 scope 引用标明共享协议、依赖的公开能力、证据或参考；不得依赖兄弟私有设计取得隐含约束。父级可直链深层 authority，但不能代替其定义。
 4. 验证时只读取局部要求和 [Harness](../harness/README.md)相应 profile。新人了解产品时从 [MVP](mvp.md)、[Design](../DESIGN.md)、[Architecture](../ARCHITECTURE.md)进入，不把全仓 Contracts 作为局部任务前置。
 
-根 Design/Architecture 与共享 Raw boundary 已迁移；其余尚未迁移项继续使用下面的现行地址，并按 [mapping](../ARCHITECTURE.md#authority-mapping)逐项切换。未来路径以代码格式表示，不链接不存在文件、不预建占位文档。每项迁移必须同时移动定义、删除重复并更新导航，旧位置不能成为第二 authority。
+根 Design/Architecture、共享 Raw boundary 以及 Collector/Collector tools 局部 authority 已迁移；其余尚未迁移项继续使用下面的现行地址，并按 [mapping](../ARCHITECTURE.md#authority-mapping)逐项切换。未来路径以代码格式表示，不链接不存在文件、不预建占位文档。每项迁移必须同时移动定义、删除重复并更新导航，旧位置不能成为第二 authority。
 
 仓库级状态与操作：[Acceptance](acceptance.md) · [Operations](operations.md)。
 
@@ -49,7 +49,7 @@ Parent scope 只负责自身 scope 的语义、跨直接子级的 invariant，�
 精确契约入口：
 
 - [Raw Market Facts 共享边界](contracts/raw-boundary.md)
-- [Collector](contracts/collector.md)
+- [Collector runtime](../collector/CONTRACT.md)及 [Universe tool](../collector/scripts/CONTRACT.md)
 - [Read Path](contracts/read-path.md)
 - [Market State](contracts/market-state.md)
 - [Calendar / Universe](contracts/market-session.md)
@@ -68,4 +68,4 @@ Parent scope 只负责自身 scope 的语义、跨直接子级的 invariant，�
 
 修改信息时只更新其 authority，并检查引用它的入口是否仍准确。文档状态用词中，“已实现”必须有代码证据，“已验证”必须说明版本、环境、数据来源与证据；“待实现/待验”不得省略。当前结论统一登记到 Acceptance，不回填为设计定义。旧过程 specs 不再维护，可从 Git 历史追溯。
 
-[Repository semantic embedding ExecPlan](semantic-embedding-execplan.md)负责本次迁移交接，阶段状态见 [Acceptance](acceptance.md#semantic-authority-s2)。它与 Monitoring 业务实施计划相互独立；已完成阶段不授权继续执行后续迁移或 Monitoring 实现。
+[Repository semantic embedding ExecPlan](semantic-embedding-execplan.md)负责本次迁移交接，阶段状态见 [Acceptance](acceptance.md#semantic-authority-s3)。它与 Monitoring 业务实施计划相互独立；已完成阶段不授权继续执行后续迁移或 Monitoring 实现。
