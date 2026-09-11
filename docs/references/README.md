@@ -1,6 +1,6 @@
 # 外部参考档案
 
-这里保存外部事实来源与历史接入记录。项目目标、设计理由、当前结构和精确行为分别见 [MVP](../mvp.md)、[Design](../design.md)、[Architecture](../architecture.md)与 [Contracts](../contracts/)；外部资料不自动变成项目决定或当前运行保证。`experiments/` 中现有原件、SDK 和实验 harness 均未移动或修改。
+这里保存外部事实来源与历史接入记录。项目目标、设计理由、当前结构和精确行为分别见 [MVP](../mvp.md)、[Design](../../DESIGN.md)、[Architecture](../../ARCHITECTURE.md)与 [Contracts](../README.md)；外部资料不自动变成项目决定或当前运行保证。`experiments/` 中现有原件、SDK 和实验 harness 均未移动或修改。
 
 ## 中信建投咨询与回复
 

@@ -4,19 +4,19 @@
 
 # 长期设计原则与取舍
 
-本文回答“为什么这样设计，以及系统演进时应守住什么”。产品目标和停止边界由 [MVP](mvp.md)定义，当前组件结构由 [Architecture](architecture.md)描述，任何精确行为、参数、接口和失败语义以对应 [Contract](contracts/) 为准，当前实现与验证程度见 [Acceptance](acceptance.md)。
+本文回答“为什么这样设计，以及系统演进时应守住什么”。产品目标和停止边界由 [MVP](docs/mvp.md)定义，当前组件结构由 [Architecture](ARCHITECTURE.md)描述，任何精确行为、参数、接口和失败语义以对应 [Contract](docs/README.md) 为准，当前实现与验证程度见 [Acceptance](docs/acceptance.md)。
 
 ## 1. 先保存事实，再解释事实
 
 系统优先保留可追溯的市场事实，派生解释位于事实记录之外。这样做使采集到的内容不会因页面、指标或研究口径变化而被覆写，也让后续算法能够针对同一输入复核。Raw 只代表实际保留的采样事实，不把未保存的事件包装成完整 tick 历史。
 
-因此，面向展示或分析的新需求不应反向塑造 Raw；派生结果应携带足够的输入身份和来源，在无法计算时保留原因，而不是修正、补齐或替换原始事实。具体数据所有权见 [Architecture](architecture.md)，保存和读取不变量见 [Collector](contracts/collector.md)与 [Read Path](contracts/read-path.md) Contracts。
+因此，面向展示或分析的新需求不应反向塑造 Raw；派生结果应携带足够的输入身份和来源，在无法计算时保留原因，而不是修正、补齐或替换原始事实。具体数据所有权见 [Architecture](ARCHITECTURE.md)，保存和读取不变量见 [Raw Boundary](docs/contracts/raw-boundary.md)及其链接的 provider/consumer Contracts。
 
 ## 2. 将采集保持为最小、独立的故障域
 
 行情接收和持久化是系统最需要连续性的路径。分析、HTTP、浏览器或运维辅助能力的失败不应阻断这一链路，也不应成为采集成立的前置条件。代价是下游只能通过明确的持久化和只读边界观察数据，但这比把快速演进的解释层耦合进采集进程更容易恢复和审计。
 
-系统演进可以增加新的消费者，但不能未经重新设计就让消费者控制采集生命周期或取得 Raw 写所有权。当前依赖方向和组件边界见 [Architecture](architecture.md)；精确生命周期与失败语义见 [Contracts](contracts/)。
+系统演进可以增加新的消费者，但不能未经重新设计就让消费者控制采集生命周期或取得 Raw 写所有权。当前依赖方向和组件边界见 [Architecture](ARCHITECTURE.md)；精确生命周期与失败语义见 [Contracts](docs/README.md)。
 
 ## 3. 对时间、采样和未知保持诚实
 
@@ -46,7 +46,7 @@
 
 当前产品服务本地个人盯盘与研究，因此优先选择可检查的持久化、只读访问、明确服务边界和可演练恢复，而不是交易执行、外网暴露或分布式基础设施。服务生命周期与数据生命周期分离，使软件更新和单个组件重启不等同于删除历史事实。
 
-本地开发会话与持久部署使用独立的生命周期所有权，使结束调试不会意外停止长期采集，也使开发工具无需接管系统服务。统一开发入口只降低组合现有组件的操作成本，不成为新的业务依赖；精确边界见 [Deployment Contract](contracts/deployment.md#developer-runner-的生命周期边界)。
+本地开发会话与持久部署使用独立的生命周期所有权，使结束调试不会意外停止长期采集，也使开发工具无需接管系统服务。统一开发入口只降低组合现有组件的操作成本，不成为新的业务依赖；精确边界见 [Deployment Contract](docs/contracts/deployment.md#developer-runner-的生命周期边界)。
 
 若未来产品目标变化，应先修改 MVP；若因此改变取舍理由、组件结构或精确行为，再分别修改 Design、Architecture 和 Contracts，并在 Acceptance 中重新评估已有证据。
 
@@ -60,10 +60,10 @@ Market State 解释事实，Feature 描述市场，Monitoring 表达用户规则
 
 首版独立 Monitoring 通过 Query HTTP 消费 Feature：无需挂载 Raw 或绑定 Query 的扁平 Python 导入，也保留 Query 与 Dashboard 独立运行的能力。代价是 Query 不可用时无法取得新的有效判断；明确 UNKNOWN 比维护第二条行情读取路径更小、更容易检查。无真实消费者或失败模式时，不预建计算图、动态插件和窗口框架。
 
-只有出现独立 Python 消费者、独立发布需求，或性能证据表明 HTTP 边界不合适时，才值得提取共享 Analytics 包；新增一个指标本身不足以触发拆包。提取保持 Feature ID、数值、时间、质量和追溯语义，并用相同输入对等验证，不借搬迁变更业务。当前及目标物理边界见 [Architecture](architecture.md)，公共语义见 [Feature Contract](contracts/features.md)。
+只有出现独立 Python 消费者、独立发布需求，或性能证据表明 HTTP 边界不合适时，才值得提取共享 Analytics 包；新增一个指标本身不足以触发拆包。提取保持 Feature ID、数值、时间、质量和追溯语义，并用相同输入对等验证，不借搬迁变更业务。当前及目标物理边界见 [Architecture](ARCHITECTURE.md)，公共语义见 [Feature Contract](docs/contracts/features.md)。
 
 ## 10. 将机会事实与投递结果分开保存
 
 市场派生值可重建，但“系统当时观察到机会并提交了事件”是应用事实，不能被后来的 Raw/参考修订或通知结果覆盖。为恢复和解释保留规则、前后输入及缺口，承认轮询只能发现观察之间的变化，不声称完整捕获每次穿越。这也使去重来自已提交状态，而不是通知发送是否成功。
 
-将事件提交与状态推进作为同一原子动作，再由内部通知 adapter 消费，可以避免通知失败反向改变判断。v1 用同一 application SQLite 和一个独立进程内的两个循环满足这个真实失败模式，不引入消息队列或独立通知服务。网络送达和本地登记无法原子完成，因此保留不确定性、有限重试和稳定事件身份，不承诺端到端 exactly-once。精确状态机和恢复规则只维护在 [Monitoring Contract](contracts/monitoring.md)。
+将事件提交与状态推进作为同一原子动作，再由内部通知 adapter 消费，可以避免通知失败反向改变判断。v1 用同一 application SQLite 和一个独立进程内的两个循环满足这个真实失败模式，不引入消息队列或独立通知服务。网络送达和本地登记无法原子完成，因此保留不确定性、有限重试和稳定事件身份，不承诺端到端 exactly-once。精确状态机和恢复规则只维护在 [Monitoring Contract](docs/contracts/monitoring.md)。

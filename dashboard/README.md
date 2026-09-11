@@ -1,6 +1,6 @@
 # React MO Skew 业务汇报
 
-Dashboard 是独立 React/Vite 前端，用于展示 MO Skew 业务结果和运行诊断。它通过 JSON API 工作，不在浏览器内计算 IV / Skew；页面在系统中的位置见[系统架构](../docs/architecture.md)，产品目标见 [MVP](../docs/mvp.md)，API 投影与失败行为见 [Read Path Contract](../docs/contracts/read-path.md)。
+Dashboard 是独立 React/Vite 前端，用于展示 MO Skew 业务结果和运行诊断。它通过 JSON API 工作，不在浏览器内计算 IV / Skew；页面在系统中的位置见[系统架构](../ARCHITECTURE.md)，产品目标见 [MVP](../docs/mvp.md)，API 投影与失败行为见 [Read Path Contract](../docs/contracts/read-path.md)。
 
 相关入口：[Deployment Contract](../docs/contracts/deployment.md) · [Operations](../docs/operations.md) · [Acceptance](../docs/acceptance.md) · [Harness](../harness/README.md)
 

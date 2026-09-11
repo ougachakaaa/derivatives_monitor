@@ -30,7 +30,7 @@ python3 harness/run.py docker
 
 `docs` 运行 authority 检查器的专门自测；其他 profile 还会先运行完整 harness 自测。`docker` 包含 packaging 检查；基础镜像仓库不可达时可单独运行 packaging，不能据此宣称完整容器验收通过。各 profile 独立，选择与修改相关的范围；需要完整工程证据时分别运行 offline、browser、docker。浏览器 profile 的 read-path 已含 native HTTP，不必为同一版本重复运行 native。真实行情和人工使用/对账/恢复/性能门槛用[现场模板](live-acceptance-template.md)记录，不包含在任何自动 profile 中。
 
-`docs` 只执行可确定的结构检查。文档治理由[repository authority 规则](../docs/README.md#authority-rules)定义；机器关系从根 [`.authority.json`](../.authority.json) 开始，逐项 migration exception 是迁移前地址的临时允许项，不是永久 topology。目标布局与切换关系见 [mapping](../docs/architecture.md#authority-mapping)，最终旧路径禁令与例外退出顺序见 [ExecPlan](../docs/semantic-embedding-execplan.md)。检查器区分生产、工具、测试和实验依赖；历史 archive、外部材料和 experiment 局部正文不作为生产 authority lint 输入。相同规范段落的精确重复可自动拒绝，语义改写的重复、实现状态措辞、Design/Architecture 分工和业务等价仍需按 authority 人工审查。
+`docs` 只执行可确定的结构检查。文档治理由[repository authority 规则](../docs/README.md#authority-rules)定义；机器关系从根 [`.authority.json`](../.authority.json) 开始，逐项 migration exception 是迁移前地址的临时允许项，不是永久 topology。目标布局与切换关系见 [mapping](../ARCHITECTURE.md#authority-mapping)，最终旧路径禁令与例外退出顺序见 [ExecPlan](../docs/semantic-embedding-execplan.md)。检查器区分生产、工具、测试和实验依赖；历史 archive、外部材料和 experiment 局部正文不作为生产 authority lint 输入。相同规范段落的精确重复可自动拒绝，语义改写的重复、实现状态措辞、Design/Architecture 分工和业务等价仍需按 authority 人工审查。
 
 所有命令和日志写到被 Git 忽略的 `artifacts/harness/<UTC>-<profile>-<id>/`。`result.json` 保存 HEAD、dirty 状态、平台、命令/工作目录、退出码、时长、日志 SHA-256、工作树补丁及未跟踪源码哈希。只应提交脱敏验收摘要，不提交行情或配置。报告的 `mvp_complete` 始终 false；归档时同时保留对应源码版本/补丁，否则 dirty tree 报告不能复现。
 

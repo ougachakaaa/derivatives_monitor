@@ -2,7 +2,7 @@
 
 # 长期文档入口
 
-本文件是 repository documentation governance 的唯一规则来源；[Architecture](architecture.md#knowledge-topology)拥有目标布局和 authority mapping，[ExecPlan](semantic-embedding-execplan.md)只安排迁移执行与完成条件。当前业务定义仍由下方链接的既有 Contracts 拥有，冻结目标不表示迁移已经完成。
+本文件是 repository documentation governance 的唯一规则来源；[Architecture](../ARCHITECTURE.md#knowledge-topology)拥有目标布局和 authority mapping，[ExecPlan](semantic-embedding-execplan.md)只安排迁移执行与完成条件。当前业务定义由根与下方链接的现行 Contracts 分别拥有，冻结目标不表示剩余迁移已经完成。
 
 <a id="authority-rules"></a>
 
@@ -38,9 +38,9 @@ Parent scope 只负责自身 scope 的语义、跨直接子级的 invariant，�
 1. 从任意目录工作，先读根及沿途适用 AGENTS；读取最近 scope README，按任务选择 Contract、Architecture、Design、Acceptance 或操作说明。
 2. 父入口直接链接已登记子 scope 的入口；子入口链接父入口及必需上级协议。进入子 scope 后只加载该路径上的 guidance，不默认加载兄弟模块。
 3. 跨 scope 引用标明共享协议、依赖的公开能力、证据或参考；不得依赖兄弟私有设计取得隐含约束。父级可直链深层 authority，但不能代替其定义。
-4. 验证时只读取局部要求和 [Harness](../harness/README.md)相应 profile。新人了解产品时从 [MVP](mvp.md)、[Design](design.md)、[Architecture](architecture.md)进入，不把全仓 Contracts 作为局部任务前置。
+4. 验证时只读取局部要求和 [Harness](../harness/README.md)相应 profile。新人了解产品时从 [MVP](mvp.md)、[Design](../DESIGN.md)、[Architecture](../ARCHITECTURE.md)进入，不把全仓 Contracts 作为局部任务前置。
 
-目前仍使用下面的中央地址；逐项迁移后的唯一地址按 [mapping](architecture.md#authority-mapping)切换。未来路径以代码格式表示，不链接不存在文件、不预建占位文档。每项迁移必须同时移动定义、删除重复并更新导航，旧位置不能成为第二 authority。
+根 Design/Architecture 与共享 Raw boundary 已迁移；其余尚未迁移项继续使用下面的现行地址，并按 [mapping](../ARCHITECTURE.md#authority-mapping)逐项切换。未来路径以代码格式表示，不链接不存在文件、不预建占位文档。每项迁移必须同时移动定义、删除重复并更新导航，旧位置不能成为第二 authority。
 
 仓库级状态与操作：[Acceptance](acceptance.md) · [Operations](operations.md)。
 
@@ -48,6 +48,7 @@ Parent scope 只负责自身 scope 的语义、跨直接子级的 invariant，�
 
 精确契约入口：
 
+- [Raw Market Facts 共享边界](contracts/raw-boundary.md)
 - [Collector](contracts/collector.md)
 - [Read Path](contracts/read-path.md)
 - [Market State](contracts/market-state.md)
@@ -67,4 +68,4 @@ Parent scope 只负责自身 scope 的语义、跨直接子级的 invariant，�
 
 修改信息时只更新其 authority，并检查引用它的入口是否仍准确。文档状态用词中，“已实现”必须有代码证据，“已验证”必须说明版本、环境、数据来源与证据；“待实现/待验”不得省略。当前结论统一登记到 Acceptance，不回填为设计定义。旧过程 specs 不再维护，可从 Git 历史追溯。
 
-[Repository semantic embedding ExecPlan](semantic-embedding-execplan.md)负责本次迁移交接，阶段状态见 [Acceptance](acceptance.md#semantic-freeze)。它与 Monitoring 业务实施计划相互独立；semantic freeze 不授权继续执行迁移或 Monitoring 实现。
+[Repository semantic embedding ExecPlan](semantic-embedding-execplan.md)负责本次迁移交接，阶段状态见 [Acceptance](acceptance.md#semantic-authority-s2)。它与 Monitoring 业务实施计划相互独立；已完成阶段不授权继续执行后续迁移或 Monitoring 实现。

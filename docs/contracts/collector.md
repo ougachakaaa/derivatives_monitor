@@ -3,20 +3,18 @@
 # Collector 长期契约
 
 
-本契约适用于 MVP 及后续下游扩展。整体定位见[系统架构](../architecture.md)，可执行用法见[Collector 手册](../../collector/README.md)。
+本契约适用于 MVP 及后续下游扩展。整体定位见[系统架构](../../ARCHITECTURE.md)，共享 Raw 协议见 [Raw Boundary](raw-boundary.md)，可执行用法见[Collector 手册](../../collector/README.md)。
 
 ## 边界与职责
 
 - 唯一闭环：CTP → C++ Collector → 每交易日 SQLite。Python、Browser、HTTP、策略、交易、现货指数、IV/基差计算均不进入采集链路。
-- Collector 是数据目录的唯一 writer；下游以 SQLite `mode=ro` 读取市场事实。运行目录与持久数据目录可分别配置，重启不得截断旧数据。
+- Collector 按共享 [Raw Boundary](raw-boundary.md#所有权与已发布事实) 写入市场事实；运行目录与持久数据目录可分别配置，重启不得截断旧数据。
 - 演进现有 C++17/Linux SDK 接入：`collector/` 自有 INI、固定字段校验、日志、SDK 构建规则与最小第三方 SDK；保留实验 demo 的 CSV 探测用途，实验代码可依赖正式模块。不引入服务框架、消息队列或 Python runtime。
 - 合约 universe 来自配置、`InstrumentsFile` 或重复的 `--instrument` 参数，精确代码、去重、非空。C++ 不做合约发现；独立公开清单程序负责 CFFEX 与 SHFE AU/AG 期货发现和更新，原生管理器在清单变化时正常重启 Collector。
 
 ## 行情接入与可选账号字段
 
 正式 Collector 仅使用 MdApi；交易接口能力边界见 [MVP](../mvp.md#行情接入能力边界)。`UserID` 和 `Password` 为可选行情接入字段，允许缺省或空值，不将其非空作为行情配置有效的前提。已有值按原 MdApi 请求流程处理，不删除字段、不改写配置，不移除 `ReqUserLogin` 或现有连接/登录/订阅失败诊断。已填写值仍遵守 SDK 字段长度等安全约束。空值被本地接受不证明任意前置均允许匿名接入，真实接入结果由 MdApi 响应表达。
-
-<a id="raw-shared-boundary"></a>
 
 ## 数据与采样不变量
 
@@ -31,7 +29,7 @@
 
 - SDK 头文件说明断线自动重连；应用在每次连接后登录，登录成功后重新订阅。请求返回 0 只表示本地受理，订阅响应单独跟踪，区分 pending/成功/失败/已订阅但无行情。
 - 主线程负责有间隔的登录重试、订阅批次和超时检测；callback 不 sleep。重新连接后清除本次 session 的健康状态，保留待持久化事实。
-- 每数据目录用进程锁排除第二个 Collector。SQLite 单连接单 writer，WAL + `synchronous=FULL`，有界 busy timeout，逐日事务；不要求跨日原子提交。
+- Raw writer 锁、SQLite 持久性和逐日事务边界统一见 [Raw Boundary](raw-boundary.md#writer-协调与持久性)。
 - 写入失败必须明确日志且非零退出，不能继续报告健康。成功 commit 后才累计 durable 行数。SIGINT/SIGTERM 先释放 SDK（SPI 仍存活），再物化尾部状态并关闭数据库。强制杀进程可能丢最后尚未提交窗口。
 - 日志包含 run ID、连接/登录/断线/重连、逐合约订阅及接收状态、最近接收/成功写入时间、拒收计数与持久化错误；无凭据输出。
 
@@ -39,6 +37,6 @@
 
 - 核心状态、日切、事务、失败及 SDK 生命周期可离线通过 C++/CTest 验证；模拟输入必须明确标识，不能当作真实行情证据。
 - 实盘连接、真实订阅和真实持续行情分别记录证据。前置不可达或非交易时段只能报告已验证的部分，不以空库、登录成功或模拟行情冒充实盘闭环。
-- 下游实时读使用短事务，活跃 WAL 数据不得仅复制 `.sqlite` 主文件或设 `immutable=1`。历史文件在正常关闭且无读事务占用时可独立拷贝；否则使用 SQLite backup。
+- 下游只读、WAL、复制和 backup 约束统一见 [Raw Boundary](raw-boundary.md#只读消费与-wal)。
 
-技术依据：[本仓库 SDK](../../collector/third_party/ctp/v6.7.13_20260225/linux64/mdapi/ThostFtdcMdApi.h)、[SQLite WAL](https://www.sqlite.org/wal.html)、[同步级别](https://www.sqlite.org/pragma.html#pragma_synchronous)、[只读 URI](https://www.sqlite.org/uri.html)。
+技术依据：[本仓库 SDK](../../collector/third_party/ctp/v6.7.13_20260225/linux64/mdapi/ThostFtdcMdApi.h)。

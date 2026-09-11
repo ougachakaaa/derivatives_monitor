@@ -1,6 +1,6 @@
 # 只读查询后端
 
-Query 是 Python 3.12 / FastAPI 服务：读取 Collector 的 Raw 数据，提供诊断、Market Session、Market State 和 MO Skew JSON。这里提供安装、启动、调用和排障方法；组件边界见[系统架构](../docs/architecture.md)，HTTP 与只读行为见 [Read Path Contract](../docs/contracts/read-path.md)。
+Query 是 Python 3.12 / FastAPI 服务：读取 Collector 的 Raw 数据，提供诊断、Market Session、Market State 和 MO Skew JSON。这里提供安装、启动、调用和排障方法；组件边界见[系统架构](../ARCHITECTURE.md)，共享 Raw 协议见 [Raw Boundary](../docs/contracts/raw-boundary.md)，HTTP 与 Query 读取行为见 [Read Path Contract](../docs/contracts/read-path.md)。
 
 领域契约：[Market State](../docs/contracts/market-state.md) · [Market Session](../docs/contracts/market-session.md) · [Analytics / Skew](../docs/contracts/analytics-skew.md) · [Acceptance](../docs/acceptance.md) · [Harness](../harness/README.md)
 

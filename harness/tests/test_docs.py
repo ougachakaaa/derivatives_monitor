@@ -5,7 +5,7 @@ import tempfile
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from check_docs import production_dependency_errors
+from check_docs import production_dependency_errors, retired_authority_errors
 
 
 class ProductionDependencyDirectionTest(unittest.TestCase):
@@ -38,7 +38,7 @@ class ProductionDependencyDirectionTest(unittest.TestCase):
         self.assertEqual(len(errors), 1)
         self.assertIn('collector/CMakeLists.txt:1', errors[0])
         self.assertIn('production dependency points into experiments/', errors[0])
-        self.assertIn('docs/architecture.md', errors[0])
+        self.assertIn('ARCHITECTURE.md', errors[0])
 
     def test_experiment_owned_docker_input_is_rejected(self):
         errors = self.check_fixture(
@@ -48,6 +48,15 @@ class ProductionDependencyDirectionTest(unittest.TestCase):
         self.assertEqual(len(errors), 1)
         self.assertIn('collector Docker input is experiment-owned', errors[0])
         self.assertIn('docs/contracts/deployment.md', errors[0])
+
+    def test_retired_repository_authority_paths_are_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / 'docs').mkdir()
+            (root / 'docs/design.md').write_text('# duplicate authority\n')
+            errors = retired_authority_errors(root)
+        self.assertEqual(errors,
+                         ['Retired repository authority path must not return: docs/design.md'])
 
 
 if __name__ == '__main__':

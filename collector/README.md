@@ -1,6 +1,6 @@
 # C++ Data Collector
 
-Collector 接收 CTP 行情，在内存维护最新状态并定期物化到 Raw 日 SQLite。这里提供构建、配置、运行和排障入口；组件所有权与依赖方向见[系统架构](../docs/architecture.md)，精确采集、持久化、时间和失败语义见 [Collector Contract](../docs/contracts/collector.md)。
+Collector 接收 CTP 行情，在内存维护最新状态并定期物化到 Raw 日 SQLite。这里提供构建、配置、运行和排障入口；组件所有权与依赖方向见[系统架构](../ARCHITECTURE.md)，采集行为见 [Collector Contract](../docs/contracts/collector.md)，共享持久化与读取协议见 [Raw Boundary](../docs/contracts/raw-boundary.md)。
 
 相关入口：[Market Session / Universe Contract](../docs/contracts/market-session.md) · [Deployment Contract](../docs/contracts/deployment.md) · [Operations](../docs/operations.md) · [Acceptance](../docs/acceptance.md) · [Harness](../harness/README.md)
 
@@ -142,7 +142,7 @@ sqlite3 -readonly collector/data/YYYYMMDD.sqlite \
   'SELECT TradingDay,InstrumentID,UpdateTime,LastPrice,received_us FROM snapshots ORDER BY id DESC LIMIT 5;'
 ```
 
-这只是诊断入口，不定义 Raw schema。活跃库、WAL、锁、历史日及备份的安全读取方式见 [Read Path Contract](../docs/contracts/read-path.md) 和 [Operations](../docs/operations.md)。
+这只是诊断入口，不定义 Raw schema。活跃库、WAL、锁、历史日及备份的安全读取边界见 [Raw Boundary](../docs/contracts/raw-boundary.md)，实际操作见 [Operations](../docs/operations.md)。
 
 ## 常见问题
 

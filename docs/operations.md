@@ -2,7 +2,7 @@
 
 # 运行、维护与恢复
 
-本文件只提供运行、维护、故障处理与恢复规程，不定义系统结构或业务行为。当前结构见 [Architecture](architecture.md)，精确部署和读写边界见 [Contracts](contracts/)。
+本文件只提供运行、维护、故障处理与恢复规程，不定义系统结构或业务行为。当前结构见 [Architecture](../ARCHITECTURE.md)，精确部署和读写边界见 [Contracts](README.md)。
 
 实际命令以 [Collector 手册](../collector/README.md)、[Query 手册](../query/README.md)和[Dashboard 手册](../dashboard/README.md)为准。默认看板 `http://localhost:8101`，API `http://localhost:8000/docs`。示例日期必须换成已有源 TradingDay；启动成功不代表收到行情。
 

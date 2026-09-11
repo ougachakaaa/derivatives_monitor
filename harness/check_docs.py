@@ -22,8 +22,8 @@ REQUIRED_PATHS = (
     'AGENTS.md',
     'docs/README.md',
     'docs/mvp.md',
-    'docs/design.md',
-    'docs/architecture.md',
+    'DESIGN.md',
+    'ARCHITECTURE.md',
     'docs/acceptance.md',
     'docs/operations.md',
     'docs/semantic-embedding-execplan.md',
@@ -36,7 +36,7 @@ REQUIRED_PATHS = (
     'scripts/deploy.sh',
     'scripts/dev.py',
     *(f'docs/contracts/{name}.md' for name in
-      ('collector', 'read-path', 'market-state', 'market-session', 'deployment', 'analytics-skew',
+      ('collector', 'raw-boundary', 'read-path', 'market-state', 'market-session', 'deployment', 'analytics-skew',
        'features', 'monitoring')),
     'docs/contracts/analytics-skew-v1.json',
     'docs/references/analytics-skew-sources.md',
@@ -57,6 +57,7 @@ NON_IMAGE_PRODUCTION_INPUTS = (
 
 EXPERIMENT_PATH = re.compile(r'(?<![A-Za-z0-9_-])experiments[/\\]')
 EXPERIMENT_IMPORT = re.compile(r'^\s*(?:from|import)\s+experiments(?:\.|\s|$)')
+RETIRED_AUTHORITY_PATHS = ('docs/design.md', 'docs/architecture.md')
 
 
 def docker_included(relative, rules):
@@ -82,7 +83,7 @@ def production_dependency_errors(root=ROOT, boundaries=BOUNDARIES):
             if Path(relative).parts[:1] == ('experiments',):
                 errors.append(
                     f'{service} Docker input is experiment-owned: {relative}; formal images must only '
-                    'consume production-owned inputs (docs/architecture.md, docs/contracts/deployment.md)'
+                    'consume production-owned inputs (ARCHITECTURE.md, docs/contracts/deployment.md)'
                 )
             if '/tests/' not in relative and '/third_party/' not in relative \
                     and not relative.endswith('Dockerfile.dockerignore') \
@@ -107,9 +108,14 @@ def production_dependency_errors(root=ROOT, boundaries=BOUNDARIES):
                 errors.append(
                     f'{relative}:{line_number}: production dependency points into experiments/; '
                     'move the dependency to a production-owned path '
-                    '(docs/architecture.md, docs/contracts/deployment.md)'
+                    '(ARCHITECTURE.md, docs/contracts/deployment.md)'
                 )
     return errors
+
+
+def retired_authority_errors(root=ROOT):
+    return [f'Retired repository authority path must not return: {relative}'
+            for relative in RETIRED_AUTHORITY_PATHS if (root / relative).exists()]
 
 
 def check(root=ROOT):
@@ -120,6 +126,7 @@ def check(root=ROOT):
     if (root / 'docs/tasks').exists():
         errors.append('Deprecated process specs must not return under docs/tasks; '
                       'use the durable authority map in docs/README.md')
+    errors.extend(retired_authority_errors(root))
     if (root / 'collector/compose.yaml').exists():
         errors.append('Deprecated collector/compose.yaml exists; system Compose is owned by '
                       'compose.yaml (docs/contracts/deployment.md)')

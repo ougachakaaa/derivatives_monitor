@@ -4,6 +4,7 @@
   "documents": [{"path": "query/README.md", "role": "entrypoint"}],
   "claims": [],
   "claim_references": [
+    {"claim": "repository.raw-boundary", "path": "query/README.md"},
     {"claim": "query.read-contract", "path": "query/README.md"},
     {"claim": "query.market-state-contract", "path": "query/README.md"},
     {"claim": "query.skew-contract", "path": "query/README.md"},

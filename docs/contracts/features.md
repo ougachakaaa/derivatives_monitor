@@ -3,7 +3,7 @@
 
 # Feature 查询契约 v1
 
-状态：**FROZEN**，2026-09-09。本文定义共享 Feature 的语义、查询接口及失败边界；实现与验证状态唯一见 [Acceptance](../acceptance.md)。产品范围见 [MVP](../mvp.md)，物理归属与依赖见 [Architecture](../architecture.md)。
+状态：**FROZEN**，2026-09-09。本文定义共享 Feature 的语义、查询接口及失败边界；实现与验证状态唯一见 [Acceptance](../acceptance.md)。产品范围见 [MVP](../mvp.md)，物理归属与依赖见 [Architecture](../../ARCHITECTURE.md)。
 
 ## 1. 语义与消费者边界
 
@@ -75,7 +75,7 @@ rolling market window 属于 Feature provider 的输入选择/计算状态，不
 
 窗口必须由对应指标 Contract 冻结长度、采样时钟、session 边界、缺口、参考身份和读取一致性；同一 Raw 日内固定 revision，多输入的实际身份必须显式保留，不能假称跨库原子快照。当前不新增窗口库或通用窗口框架。需要缓存时保持可重建、可失效，不能获得 Market Facts 写所有权。
 
-新 provider 需有明确指标定义及证据，再注册到同一接口；规则判断和通知不增加品种/指标分支。拆包条件属于 [Design](../design.md)，实现位置属于 [Architecture](../architecture.md)。拆分前后相同输入必须保持数值、时间、质量和追溯语义一致。
+新 provider 需有明确指标定义及证据，再注册到同一接口；规则判断和通知不增加品种/指标分支。拆包条件属于 [Design](../../DESIGN.md)，实现位置属于 [Architecture](../../ARCHITECTURE.md)。拆分前后相同输入必须保持数值、时间、质量和追溯语义一致。
 
 ## 5. 验证与变更
 

@@ -10,7 +10,7 @@
 
 | Authority / 实现 | 对本任务的约束或已确认事实 |
 |---|---|
-| [MVP](mvp.md) / [Design](design.md) / [Architecture](architecture.md) | Monitoring 是平行扩展；主线 Skew 收尾不变；冻结目标结构与当前三组件部署分开 |
+| [MVP](mvp.md) / [Design](../DESIGN.md) / [Architecture](../ARCHITECTURE.md) | Monitoring 是平行扩展；主线 Skew 收尾不变；冻结目标结构与当前三组件部署分开 |
 | [Feature Contract](contracts/features.md) | 公共语义、单 Feature 查询、Skew 投影、采样身份、共享/窗口边界 |
 | [Monitoring Contract](contracts/monitoring.md) | Rule/Evaluation、crossing、事务、恢复和投递语义；实施不得另选状态机 |
 | [Market State](contracts/market-state.md) / [Market Session](contracts/market-session.md) | 时间、session、revision、质量及显式 Universe 不变量 |

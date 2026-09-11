@@ -14,8 +14,8 @@
 `./dev doctor collector|query|dashboard` 可单独检查组件，`./dev up collector|query|dashboard` 可单独运行组件。联合参数见 `./dev up --help`，单组件参数见 `./dev up COMPONENT --help`。用 Ctrl-C 结束本次会话。该入口不安装、构建或接管 systemd/Docker，完整准备步骤、参数示例及三种运行方式的区别见 [Operations](docs/operations.md#前台开发会话)。
 
 - Agent 工作规则：[AGENTS.md](AGENTS.md)
-- 产品、设计与结构：[MVP](docs/mvp.md)、[Design](docs/design.md)、[Architecture](docs/architecture.md)
-- Knowledge authority：[治理规则](docs/README.md#authority-rules)、[目标布局与 mapping](docs/architecture.md#knowledge-topology)
+- 产品、设计与结构：[MVP](docs/mvp.md)、[Design](DESIGN.md)、[Architecture](ARCHITECTURE.md)
+- Knowledge authority：[治理规则](docs/README.md#authority-rules)、[目标布局与 mapping](ARCHITECTURE.md#knowledge-topology)
 - 精确行为：[当前契约入口](docs/README.md)
 - 当前状态与证据缺口：[Acceptance](docs/acceptance.md)
 - 实际部署、维护与恢复：[Operations](docs/operations.md)

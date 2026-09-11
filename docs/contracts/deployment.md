@@ -8,7 +8,7 @@
 
 ## Monitoring v1 可选前台进程（已冻结，待实现）
 
-当前三服务部署保持不变。平行扩展增加一个独立本地 Python 前台进程，入口实现在后续 milestone 交付；不修改 Compose/systemd 或平行 developer runner，不自动启动/停止/重启现有组件。当前进度见 [Acceptance](../acceptance.md)，目标模块见 [Architecture](../architecture.md)。
+当前三服务部署保持不变。平行扩展增加一个独立本地 Python 前台进程，入口实现在后续 milestone 交付；不修改 Compose/systemd 或平行 developer runner，不自动启动/停止/重启现有组件。当前进度见 [Acceptance](../acceptance.md)，目标模块见 [Architecture](../../ARCHITECTURE.md)。
 
 Monitoring 仅通过 Query HTTP 消费 Feature；不读取 Raw、不导入 Query 内部模块、不挂载行情、Collector 配置、flow、CTP 凭据或管理 socket。Query 不可达时记录输入不可用，不管理 Query 生命周期。Collector 对所有下游均无启动/健康依赖，Query 和 Dashboard 也不要求 Monitoring 运行。
 
@@ -19,7 +19,7 @@ Monitoring 仅通过 Query HTTP 消费 Feature；不读取 Raw、不导入 Query
 ## 数据与隔离
 
 - 宿主 `collector/data/`、`collector/flow/` 的生命周期独立于服务/镜像/构建。没有数据迁移，也不是容器临时层；不得用清理镜像或项目目录的动作删除历史数据。
-- Docker Collector 可写 `/app/data`；Query 同 UID/GID 只读挂载该目录到 `/data` 并设置只读 rootfs；Dashboard 无数据/flow/配置/Docker socket 挂载。Query 和 Dashboard 均无 CTP 凭据。
+- Docker Collector 可写 `/app/data`；Query 同 UID/GID 只读挂载该目录到 `/data` 并设置只读 rootfs，不挂载 Docker socket、Collector flow 或 CTP 凭据；Dashboard 无数据/flow/配置/Docker socket 挂载，也无 CTP 凭据。
 - Docker 配置只读挂载，以 0600 保存本地 INI；Docker 部署入口不覆盖已有配置。三个正式镜像保持 repository root build context，各自通过同目录 `Dockerfile.dockerignore` 采用 deny-by-default 白名单，只允许本镜像的源码、锁文件、必要 SDK/测试/日历等明确输入；配置、凭据、Raw、日志、flow、参考咨询原件和本机工具不进入上下文。新增仓库文件默认不进入既有镜像，成为构建依赖时须显式更新所属镜像的白名单。
 - 正式 Collector 只链接仓库官方 SDK。TEST DOUBLE 动态库仅为隔离测试显式加载，不进入正式 runtime 镜像。
 - Query 只提供 JSON，Dashboard 独立服务页面并同源代理 `/api/`；Docker 使用 Nginx，原生 systemd 使用 Vite。默认宿主 `127.0.0.1:8101` 和 `127.0.0.1:8000`。容器 Nginx 内部 8080 与宿主 8101 不混用。
@@ -60,7 +60,7 @@ Skew 审核参考包可保存在数据目录的 `references/analytics/`，由独
 ## 开发配置与数据不变量
 
 - Collector 配置、flow、Raw 仍归 Collector；Runner 只消费已有配置，不创建或改写凭据、采样参数、运行时长、订阅配置，不自动刷新 Universe 或导入参考包。原生管理器的配置准备行为不因此改变，其操作见 [Collector 手册](../../collector/README.md)。
-- Collector 始终是 Raw 唯一 writer，Query 只读，Dashboard 只访问 JSON。开发入口不建立第二套事实、迁移 schema、放宽 SQLite 只读规则，或为启动/停止清理数据、flow、日志及现场证据。跨开发会话、native 和 Docker 的同目录互斥仍由 Collector 的目录锁最终保证；预检不能代替该锁。
+- 开发入口遵守 [Raw Boundary](raw-boundary.md)：不建立第二套事实、迁移 schema、放宽只读规则，或为启动/停止清理数据、flow、日志及现场证据。跨开发会话、native 和 Docker 的同目录互斥仍由 Raw writer 锁最终保证；预检不能代替该锁。
 - 联合启动时 Query 必须读取本次 Collector 配置指向的同一数据目录；显式输入冲突应在启动前拒绝，不能静默选择不同目录。单独启动 Query 不需要读取 Collector 凭据配置，也不要求 Collector 运行。
 - 配置内相对路径继续以所选配置文件目录为基准，不因统一入口改变含义。Runner 不将 Collector 凭据或 INI 内容传给 Query/Dashboard；诊断不回显凭据或包含凭据的错误原行。
 - 环境、配置和端口诊断不启动服务、不改写持久文件、不自动修复配置或释放端口。端口或锁的预检结果只是当时观察；权限不足、不可检查和缺证据必须明确标为未知，不能视为通过。
@@ -85,4 +85,4 @@ Docker 构建执行 CTest、Query 测试、React 测试/构建；隔离容器 sm
 
 Docker build boundary 由对应服务的 `Dockerfile` 与 `Dockerfile.dockerignore` 共同拥有；仓库根 `compose.yaml` 负责 runtime composition。三个 service 均以仓库根为 build context；Compose 文件移动不改变 `collector/config.ini`、`collector/data/`、`collector/flow/` 的归属和挂载语义。边界验收须导出三个 Dockerfile 实际过滤后的上下文，逐字节核对明确输入且拒绝额外文件，并实际走完三个 runtime image 的依赖安装、构建和 build-stage 测试。
 
-只读验收器 `verify YYYYMMDD` 检查非空、schema/日身份、外键/完整性及 run 来源。活跃 WAL 正常只读；停机无非空 WAL 且取得目录共享锁才使用 immutable。旧日缺 sidecar 且 Collector 活跃时明确失败，不创建空库、不删除 WAL、不放宽只读。
+只读验收器 `verify YYYYMMDD` 检查非空、schema/日身份、外键/完整性及 run 来源；读取过程严格引用 [Raw Boundary](raw-boundary.md#只读消费与-wal)，不另定义 WAL、immutable 或 sidecar 规则。

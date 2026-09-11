@@ -2,7 +2,7 @@
 
 # Monitoring / Opportunity / Notification 契约 v1
 
-状态：**FROZEN / 待实现**，2026-09-09。本契约冻结用户机会检测、状态推进、事件与投递失败语义；当前证据只登记在 [Acceptance](../acceptance.md)。产品与永久不交易边界见 [MVP](../mvp.md)，模块和数据所有权见 [Architecture](../architecture.md)，行情输入只经 [Feature Contract](features.md)。
+状态：**FROZEN / 待实现**，2026-09-09。本契约冻结用户机会检测、状态推进、事件与投递失败语义；当前证据只登记在 [Acceptance](../acceptance.md)。产品与永久不交易边界见 [MVP](../mvp.md)，模块和数据所有权见 [Architecture](../../ARCHITECTURE.md)，行情输入只经 [Feature Contract](features.md)。
 
 ## 1. Rule 与 Evaluation
 

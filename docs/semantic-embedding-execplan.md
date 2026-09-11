@@ -2,7 +2,7 @@
 
 日期：2026-09-10。冻结基线：`main@351003e`，`feature/realtime-monitoring-alerts` worktree 同 HEAD，freeze 开始时两个工作树均干净。Semantic freeze / M0（原计划 S0）已由 `e67a9b0` 交付；后续 session 仍必须以用户明确指定的单一阶段为边界。此 M0 与 Monitoring 业务计划的 M0 不是同一阶段。
 
-本文只拥有执行顺序、验证、恢复、停止与计划生命周期，不拥有长期规则。治理唯一见 [docs README](README.md#authority-rules)，目标布局/归属唯一见 [Architecture mapping](architecture.md#authority-mapping)，机器导航关系见 [Architecture](architecture.md#authority-registration)。业务仍以各现行 Contract 为准；阶段实现与验证状态唯一登记 [Acceptance](acceptance.md#semantic-freeze)，不从本表推断完成程度。
+本文只拥有执行顺序、验证、恢复、停止与计划生命周期，不拥有长期规则。治理唯一见 [docs README](README.md#authority-rules)，目标布局/归属唯一见 [Architecture mapping](../ARCHITECTURE.md#authority-mapping)，机器导航关系见 [Architecture](../ARCHITECTURE.md#authority-registration)。业务仍以各现行 Contract 为准；阶段实现与验证状态唯一登记 [Acceptance](acceptance.md#semantic-authority-s2)，不从本表推断完成程度。
 
 <a id="resume"></a>
 
@@ -17,7 +17,7 @@
 ### 已 reconciliation 的事实与待处理问题
 
 - `351003e` 已含 Feature service、HTTP endpoint 及测试：`8c6c900` 为 service，`351003e` 为 HTTP。Monitoring M2–M5 未实现；原 execution plan 的旧基线/提交线索不覆盖 Git 与 Acceptance。
-- [Read Path](contracts/read-path.md)仍称 Feature 待实现，与 [Acceptance](acceptance.md)和代码不一致；后续 S2 删除 Contract 的可变进度，改状态导航。M0 不改业务 Contract。
+- S2 已将 [Read Path](contracts/read-path.md) 的 Feature 可变进度改为 [Acceptance](acceptance.md) 导航；Feature 行为契约未因状态 reconciliation 改写。
 - [Skew](contracts/analytics-skew.md)与 Read Path 重复分钟选择、当前可用性和当日变化；按 mapping 区分计算语义和 HTTP 投影。
 - Raw/WAL/锁/心跳/部署限制散布多份 Contract，按共享不变量与局部行为切分；不能为了去重丢失例外、错误或时间条件。
 - Skew §10/§11 混有历史验证、实现状态和真实接口细节；证据移出，接口细节保留为规范。
@@ -45,7 +45,7 @@
 | S7 `docs(harness): localize verification semantics` | Harness CONTRACT/AGENTS 归位，README 保留用法；根 Acceptance 保留系统门槛/跨模块证据并导航局部记录；完善实验入口且实验文件不变 |
 | S8 `test(docs): enforce final authority topology` | 删除全部临时迁移例外，启用最终旧路径禁令，完成逐项无丢失/无双定义 review 和 clean-clone 导航演练；删除本 ExecPlan 及活动导航，保留 Git 历史 |
 
-每阶段按[归属 mapping](architecture.md#authority-mapping)细化到段落/规则组，记录所有移出内容的去向。迁移在同一提交中移动定义、删除源处重复、更新消费者链接及检查；不能通过先复制再等待未来清理获得 locality。模块读取入口一旦落地，父入口必须指向它。
+每阶段按[归属 mapping](../ARCHITECTURE.md#authority-mapping)细化到段落/规则组，记录所有移出内容的去向。迁移在同一提交中移动定义、删除源处重复、更新消费者链接及检查；不能通过先复制再等待未来清理获得 locality。模块读取入口一旦落地，父入口必须指向它。
 
 M0 的目标路径仅写为文字或代码格式；S1 创建现有 scope 的关系登记，并在父登记中声明尚无目录的 frozen-pending scope。S2–S7 才创建对应的长期内容文件，不预建空 Monitoring 文档。
 
@@ -53,11 +53,17 @@ M0 的目标路径仅写为文字或代码格式；S1 创建现有 scope 的关�
 
 S1 以 `main@e67a9b0` 的干净工作树为实际基线。根登记逐项列出当前定义、稳定锚点、受约束 scope、唯一目标及 S2–S7 退出阶段；局部登记只连接当前入口和所依赖 claim，不复制业务正文。当前中央定义继续有效，尚未发生业务 authority 迁移。
 
-检查器保留并区分 `collector/scripts/universe.py` 到 Query Calendar 的工具依赖、Query 镜像到 Harness golden fixture 的构建输入，以及父 scope 使用现有 child 工具/参考文件的输入；Monitoring 只作为 frozen-pending scope 登记，不创建目录或运行入口。Feature/Monitoring 当前 Contracts 已进入必需路径检查，M0 已发现的 Read Path 状态措辞冲突仍留待 S2，未用 S1 改写业务语义。
+检查器保留并区分 `collector/scripts/universe.py` 到 Query Calendar 的工具依赖、Query 镜像到 Harness golden fixture 的构建输入，以及父 scope 使用现有 child 工具/参考文件的输入；Monitoring 只作为 frozen-pending scope 登记，不创建目录或运行入口。Feature/Monitoring 当前 Contracts 已进入必需路径检查。
+
+### S2 reconciliation 清单
+
+S2 以 `main@6994059` 的干净工作树为实际基线。`docs/design.md` 与 `docs/architecture.md` 原子迁到根 `DESIGN.md` / `ARCHITECTURE.md` 并删除旧地址；repository claims 已退出 S2 exception。仍待 S4/S6 下放的 Query/Monitoring 局部段落只在根文件保留一份，登记中的当前路径同步为根文件，退出阶段不变。
+
+共享 Raw 所有权、writer 协调、WAL/只读和 Collector 诊断协议从 Collector/Read Path 拆到 `docs/contracts/raw-boundary.md`；旧处改为链接，Deployment 只保留系统挂载与生命周期。Read Path 的 Feature 标题不再声称待实现，实际状态统一导航 Acceptance。Architecture 将 C++ Collector runtime 与 `collector/scripts/universe.py`、native manager 的工具职责明确区分；不移动代码或扩大合法依赖。
 
 ## 3. Harness 工作规格
 
-按 [机器导航职责](architecture.md#authority-registration)实现同版本 `.authority.json`。claim 粒度是独立接口/规则组，登记只承载路径和关系，不能存业务正文。S1 建检查与迁移前登记，S8 拒绝最终旧位置；中间例外必须可枚举且逐项退出。
+按 [机器导航职责](../ARCHITECTURE.md#authority-registration)实现同版本 `.authority.json`。claim 粒度是独立接口/规则组，登记只承载路径和关系，不能存业务正文。S1 建检查与迁移前登记，S8 拒绝最终旧位置；中间例外必须可枚举且逐项退出。
 
 | 检查 | 拒绝场景 / 正向场景 |
 |---|---|
@@ -110,7 +116,7 @@ S1 起 docs profile 包含文档检查器负向自测，仍仅标准库、离线
 
 ### 迁移前已冻结，实施者不得另选
 
-- [治理职责](README.md#authority-rules)、[目标 topology/mapping](architecture.md#knowledge-topology)、共享协议归属及代码位置不变。
+- [治理职责](README.md#authority-rules)、[目标 topology/mapping](../ARCHITECTURE.md#knowledge-topology)、共享协议归属及代码位置不变。
 - Raw、Calendar、Market State、Skew、Feature、Monitoring 既有含义/版本；MVP 与真实证据缺口不提升。
 - 原件/SDK/策略/golden/实验保护；合法工具依赖及 native 系统职责；无生产新指标、部署能力或业务实现。
 - Monitoring 后续可建立有实际冻结内容的文档 scope，不能预建空模块；实验内容/命名保持字节不变。
@@ -136,7 +142,7 @@ S1 起 docs profile 包含文档检查器负向自测，仍仅标准库、离线
 
 ## 6. 计划生命周期
 
-M0 完成后本文保持活动状态供未来被明确授权的 migration session 使用；当前 session 必须停止。后续每阶段在 Acceptance 登记证据，并更新本文中的路径和必要 reconciliation，不创建多份竞争计划。
+本文保持活动状态供未来被明确授权的 migration session 使用；每个 session 在完成用户指定的单一阶段后停止。后续每阶段在 Acceptance 登记证据，并更新本文中的路径和必要 reconciliation，不创建多份竞争计划。
 
 S8 完成后删除本文和所有活动导航，Architecture mapping 转为现行归属导航，规则留 docs README，状态/证据留 Acceptance。历史步骤和提交从 Git 追溯，不移动到 docs/tasks，不将本计划全文复制为长期 Contract/Design。删除前检查没有任何长期规则只存在于本文。
 

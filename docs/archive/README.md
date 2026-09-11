@@ -18,7 +18,7 @@
 
 整理基于 Git `56dcb4b`：
 
-- `docs/Derivatives_Monitor_Phase1_Data_Collector_Architecture_CN.md` 的长期所有权/独立性/事实边界合并为[当前架构](../architecture.md)。
+- `docs/Derivatives_Monitor_Phase1_Data_Collector_Architecture_CN.md` 的长期所有权/独立性/事实边界合并为[当前架构](../../ARCHITECTURE.md)。
 - `Data_Collector_Constraints_CN.md`、`Read_Path_Constraints_CN.md`、`Data_Collector_Docker_Constraints_CN.md` 合并为 `docs/contracts/` 下对应长期契约；过时的单容器、无 Python/JS 部署限制由已经实现的三服务设计替代，C++ 无下游依赖的边界保持。
 - `Market_Calendar_Session_Design_CN.md` 与 `Market_State_Read_Model_Design_CN.md` 转为同目录长期契约，保留时间/质量/清单/SQL 语义，删除实施顺序与逐任务提交要求。
 - `docs/tasks/` 中 data-collector、market-session、market-state 全部过程 specs 从工作树删除。历史任务/commit 线索可用 `git show 56dcb4b:docs/tasks/data-collector/README.md` 等读取；不继续将它们作为活动约束。

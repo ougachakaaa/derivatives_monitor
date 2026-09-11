@@ -1,6 +1,6 @@
 # MVP 验收矩阵
 
-本文件只记录当前实现、验证证据和待补缺口；产品收尾条件由 [MVP](mvp.md)定义，设计与精确行为分别以 [Design](design.md)、[Architecture](architecture.md)和 [Contracts](contracts/) 为准。本矩阵中的门槛摘要用于映射证据，不创建新的设计要求。
+本文件只记录当前实现、验证证据和待补缺口；产品收尾条件由 [MVP](mvp.md)定义，设计与精确行为分别以 [Design](../DESIGN.md)、[Architecture](../ARCHITECTURE.md)和 [Contracts](contracts/) 为准。本矩阵中的门槛摘要用于映射证据，不创建新的设计要求。
 
 状态基线：2026-09-10 developer runner 工程交付审计。**MVP 未完成**。工程回归由 harness 生成当次结果；历史报告只是指定时间的证据，不能证明本版本/本机当前实盘状态。下面的“待验”不是测试通过。此前的离线/原生/浏览器/打包检查和完整 Docker 网络限制见[整理验收记录](archive/reorganization-20260908.md)。
 
@@ -17,7 +17,7 @@
 
 ## Monitoring v1 平行扩展状态
 
-2026-09-10，分支 `feature/realtime-monitoring-alerts` 已在 M0 文档冻结之上完成 M1 Feature service / HTTP 工程切片；M2–M5 仍未实现。交接见 [Monitoring execution plan](monitoring-execution-plan.md)。精确要求归 [Feature](contracts/features.md)和 [Monitoring](contracts/monitoring.md) Contracts，目标结构与当前部署的区别见 [Architecture](architecture.md)。
+2026-09-10，分支 `feature/realtime-monitoring-alerts` 已在 M0 文档冻结之上完成 M1 Feature service / HTTP 工程切片；M2–M5 仍未实现。交接见 [Monitoring execution plan](monitoring-execution-plan.md)。精确要求归 [Feature](contracts/features.md)和 [Monitoring](contracts/monitoring.md) Contracts，目标结构与当前部署的区别见 [Architecture](../ARCHITECTURE.md)。
 
 | 交付层次 | 当前状态/证据 | 缺口 |
 |---|---|---|
@@ -105,7 +105,7 @@ React 组件 7 项通过，覆盖当前 Skew、当日变化、完整性与 TEST 
 
 ## Repository semantic embedding：semantic freeze / M0
 
-2026-09-10，实施前复核 `main@351003e` 与同 HEAD 的 monitoring worktree，工作树干净。本阶段只冻结[治理规则](README.md#authority-rules)、[目标 topology / mapping](architecture.md#knowledge-topology)和[迁移 ExecPlan](semantic-embedding-execplan.md)；对应原迁移计划 S0，与 Monitoring 业务 M0 不同。
+2026-09-10，实施前复核 `main@351003e` 与同 HEAD 的 monitoring worktree，工作树干净。本阶段只冻结[治理规则](README.md#authority-rules)、[目标 topology / mapping](../ARCHITECTURE.md#knowledge-topology)和[迁移 ExecPlan](semantic-embedding-execplan.md)；对应原迁移计划 S0，与 Monitoring 业务 M0 不同。
 
 现有中央业务 Contracts 仍为当前定义，目标模块文档尚未迁移。S1–S8（scope 检查器、根/模块迁移、最终强制治理）均未执行；生产代码、业务 Contract、策略、oracle、实验、SDK 和原件保持不变。新 checks 尚未实现，不把 docs PASS 作为 scope/唯一性自动验证或 MVP 通过。
 
@@ -124,3 +124,15 @@ React 组件 7 项通过，覆盖当前 Skew、当日变化、完整性与 TEST 
 本阶段只修改机器导航、离线 Harness、导航/状态说明并为现行定义增加不改变正文的显式锚点。未移动或改写 Contract 规则，未修改生产代码、Skew 策略、golden/oracle、参考原件、SDK 或 experiments；M2/S2 及后续迁移未执行。自动 PASS 只证明登记与确定性结构约束，不证明自然语言语义等价、业务实现或现场验收。
 
 `python3 harness/run.py docs` 为 PASS，报告 `artifacts/harness/20260910T161215Z-docs-cbb04f60/result.json` 记录 `e67a9b0` 加 S1 工作树，两个步骤均实际执行；报告后的修改仅登记本证据。完整 `harness/tests` 共 29 项及 `git diff --check` 在提交前另行通过。
+
+<a id="semantic-authority-s2"></a>
+
+## Repository semantic embedding：repository scope authorities / S2
+
+2026-09-11，从干净的 `main@6994059` 恢复并核对 S1 登记、检查器和 15 项专项测试均已提交。本阶段将 repository-level Design/Architecture 从 `docs/` 原子迁至根 `DESIGN.md` / `ARCHITECTURE.md`，并删除旧地址；共享 Raw 所有权、writer 协调、WAL/只读和 Collector 诊断协议迁至 `docs/contracts/raw-boundary.md`。Collector、Read Path 与 Deployment 的原重复定义已改为指向共享 Contract，根与模块入口同步切换。
+
+尚待 S4/S6 下放的 Query/Monitoring 局部 Design/Architecture 段落仍只存在于根文件，并在登记中以具名 exception 保留原退出阶段；没有创建未来局部副本。Feature endpoint 的行为定义未改，Read Path 只移除可变的“待实现”判断并导航本 Acceptance。Architecture 现明确 C++ Collector runtime 不依赖 Query，而 Universe/native 属于工具或 repository integration 职责；允许的实际依赖仍由登记约束。
+
+本阶段未修改生产代码、业务数值、Skew 策略、golden/oracle、参考原件、SDK 或 experiments，也未执行 S3。结构检查只证明迁移路径、链接/锚点、claim/scope、依赖和受保护输入，不提升任何业务或现场验收状态。
+
+`python3 harness/run.py docs` 为 PASS，报告 `artifacts/harness/20260911T003901Z-docs-006eb907/result.json` 记录 `6994059` 加 S2 工作树，docs 与 authority 自测两个步骤均实际执行。完整 `harness/tests` 共 30 项通过，`git diff --check` 通过；报告后的修改仅登记本证据。提交前再次直接执行结构检查与 diff 检查。

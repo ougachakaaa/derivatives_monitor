@@ -5,18 +5,17 @@
 # 最小 Python 只读层与 JS 看板约束
 
 
-宿主 `collector/data/` 为已有持久目录；API 只读同一份数据，页面独立。当前操作见[Query](../../query/README.md)与[Dashboard](../../dashboard/README.md)。
+API 按共享 [Raw Boundary](raw-boundary.md) 只读同一份数据，页面独立。当前操作见[Query](../../query/README.md)与[Dashboard](../../dashboard/README.md)。
 
-## Feature 查询扩展（已冻结，待实现）
+## Feature 查询扩展（已冻结）
 
-新增只读 `POST /api/features/evaluate`，以 JSON body 承载一次单 Feature 查询，不写规则或应用状态。请求/响应、采样身份、Skew 映射及失败语义唯一由 [Feature Contract](features.md)定义；沿用本契约本地 HTTP、Raw 只读保护和 no-store。既有 Skew GET 与 Dashboard 不迁移，Query 不依赖 Monitoring。当前实现程度见 [Acceptance](../acceptance.md)，此声明不表示 endpoint 已存在。
+只读 `POST /api/features/evaluate` 以 JSON body 承载一次单 Feature 查询，不写规则或应用状态。请求/响应、采样身份、Skew 映射及失败语义唯一由 [Feature Contract](features.md)定义；沿用本契约本地 HTTP、[Raw 只读保护](raw-boundary.md#只读消费与-wal)和 no-store。既有 Skew GET 与 Dashboard 不迁移，Query 不依赖 Monitoring；当前实现与验证程度只见 [Acceptance](../acceptance.md)。
 
 ## 边界
 
-- 三个独立项目和容器：C++ `collector` 采集和唯一写入；Python `query` 使用 FastAPI/Uvicorn 提供只读 HTTP，Poetry 管理依赖并提交 lock；React `dashboard` 使用 Vite 构建，Nginx 提供静态资源并反向代理 `/api/` 至 query。Python 不提供 JS。
-- Python 对同一宿主 `collector/data/` 挂载为 `/data:ro`，SQLite 用 URI `mode=ro`、`query_only=ON`、短事务及参数绑定；不建立第二份行情库、不修改现有 schema。
-- Collector 不依赖 Python 启动、请求或健康。Compose 不给 Collector 添加 query 依赖。没有 Docker socket、CTP 凭据或 flow 文件挂入 Python。
-- 前端 HTTP 仅发布至宿主 `127.0.0.1:8101`，后端直接访问仅发布至 `127.0.0.1:8000`；浏览器通过前端同源 `/api/` 查询，无需宽泛 CORS；开发时 Vite 使用相同代理。服务用于本地观察，不引入认证、外网部署、交易或 WebSocket；MVP 下游分析与汇报页按[架构](../architecture.md)演进。
+- Query 使用 FastAPI/Uvicorn 提供 JSON，Dashboard 通过同源 `/api/` 消费；系统组件与依赖方向见 [Architecture](../../ARCHITECTURE.md)，镜像、挂载及 lifecycle 见 [Deployment](deployment.md)。
+- Query 按 [Raw Boundary](raw-boundary.md#只读消费与-wal) 打开日库，查询使用参数绑定；不接受任意 SQL 或文件路径。Query 的内部读取适配要求在后续局部迁移前仍由本节承接。
+- 前端 HTTP 仅发布至宿主 `127.0.0.1:8101`，后端直接访问仅发布至 `127.0.0.1:8000`；浏览器通过前端同源 `/api/` 查询，无需宽泛 CORS；开发时 Vite 使用相同代理。服务用于本地观察，不引入认证、外网部署、交易或 WebSocket。
 
 ## 最小接口与页面
 
@@ -30,21 +29,19 @@
 
 ## 健康证据
 
-- Collector 在持有原数据目录 writer 锁期间，每 2 秒原子替换 `.collector-status.json`，包括 schema_version、run_id、updated_us、process_state、连接/登录、订阅、accepted/written 与最后接收/提交时间。启动、正常停止、异常退出尽可能发布状态；不输出凭据。
-- 心跳来自主循环，独立于行情；超过 10 秒、时钟明显倒退、内容损坏或缺失时不能判定存活。SIGKILL 后历史文件不能继续证明健康。
-- 进程存活、CTP 已连接、行情最近更新是三个不同事实。休市无新行情不等于进程停止；只有采集连接/登录或已知错误才影响相应指标。
-- 状态输出失败记录日志并继续采集；Python/浏览器的失败不会进入采集控制路径。该 JSON 是运行诊断，不是新增行情 Source of Truth。
+`GET /api/health` 对 [Collector 运行诊断协议](raw-boundary.md#collector-运行诊断协议)做只读投影，不建立第二套心跳、存活或行情新鲜定义。
+
 - Docker healthcheck 分别检查 Collector 主循环新鲜心跳、Python `/healthz` 与前端静态服务 `/healthz`；页面显示的是应用健康证据，不声称通过 Docker 管理 API 查询容器状态。
 
 ## SQLite 只读限制
 
-WAL 策略：活跃数据库从只读挂载读取现存 WAL/SHM；离线且没有非空 WAL 时，仅在获得 Collector 共享目录锁后使用 immutable，并在连接关闭前持锁。不得根据文件年龄猜测 immutable 安全性。若 Collector 正在采集另一天、旧日缺少 sidecar，返回明确可重试的 503，提示正常停机后查询该历史日；不得绕过锁或修改持久目录。
+WAL、sidecar、immutable、共享锁、复制和 backup 的唯一约束见 [Raw Boundary](raw-boundary.md#只读消费与-wal)。本 HTTP 层将缺失合法日库映射为 404，将日库不可读、不兼容、锁/WAL 条件不成立或查询超时映射为 503。
 
 ## 验证与依据
 
 覆盖真实 SQLite/HTTP、并发写入只读消费、独立停启、心跳过期、坏参数/坏库、浏览器错误恢复及部署隔离。统一入口见[Harness](../../harness/README.md)。Docker 不可用时不能用宿主测试宣称容器通过。
 
-技术选型来源：[FastAPI 容器部署](https://fastapi.tiangolo.com/deployment/docker/)、[Poetry 锁定依赖](https://python-poetry.org/docs/basic-usage/)、[Vite 项目构建](https://vite.dev/guide/)。
+技术选型来源：[FastAPI 容器部署](https://fastapi.tiangolo.com/deployment/docker/)、[Poetry 锁定依赖](https://python-poetry.org/docs/basic-usage/)、[Vite 项目构建](https://vite.dev/guide/)。SQLite 依据由 [Raw Boundary](raw-boundary.md) 统一维护。
 
 ## 市场时段与覆盖
 
