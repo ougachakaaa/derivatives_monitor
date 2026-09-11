@@ -24,7 +24,6 @@ ROOT_MANIFEST = {
         'constrained_scopes': ['alpha', 'beta'],
     }],
     'claim_references': [],
-    'migration_exceptions': [],
     'cross_scope_dependencies': [],
 }
 
@@ -97,7 +96,7 @@ class AuthorityValidationTest(unittest.TestCase):
         errors = authority_errors(self.fixture(mutate))
         self.assertTrue(any('cannot define authority' in error for error in errors), errors)
 
-    def test_child_claim_for_shared_rule_is_rejected_without_exact_migration(self):
+    def test_child_claim_for_shared_rule_is_rejected(self):
         def mutate(manifests, files):
             claim = manifests['.authority.json']['claims'].pop()
             claim['definition'] = {'path': 'alpha/CONTRACT.md', 'anchor': 'shared'}
@@ -108,7 +107,7 @@ class AuthorityValidationTest(unittest.TestCase):
         errors = authority_errors(self.fixture(mutate))
         self.assertTrue(any('smallest common scope repo' in error for error in errors), errors)
 
-    def test_exact_named_migration_allows_current_wrong_scope(self):
+    def test_final_topology_rejects_all_migration_metadata(self):
         def mutate(manifests, files):
             claim = manifests['.authority.json']['claims'].pop()
             claim['definition'] = {'path': 'alpha/CONTRACT.md', 'anchor': 'shared'}
@@ -122,20 +121,26 @@ class AuthorityValidationTest(unittest.TestCase):
                 'target_scope': 'repo', 'exit_stage': 'S2'}]
             files['alpha/CONTRACT.md'] = '<a id="shared"></a>\n# Shared\n'
             files['alpha/README.md'] += '[Temporary contract](CONTRACT.md)\n'
-        self.assertEqual(authority_errors(self.fixture(mutate)), [])
+        errors = authority_errors(self.fixture(mutate))
+        self.assertTrue(any('forbids claim migration_exception' in error for error in errors), errors)
+        self.assertTrue(any('forbids migration_exceptions' in error for error in errors), errors)
+        self.assertTrue(any('smallest common scope repo' in error for error in errors), errors)
 
-    def test_migration_rejects_parent_and_windows_style_target_paths(self):
-        for target in ('../CONTRACT.md', 'C:\\repo\\CONTRACT.md'):
-            with self.subTest(target=target):
-                def mutate(manifests, _files):
-                    claim = manifests['.authority.json']['claims'][0]
-                    claim['migration_exception'] = 'bad-path'
-                    manifests['.authority.json']['migration_exceptions'] = [{
-                        'id': 'bad-path', 'claim': 'repository.shared',
-                        'current_path': 'CONTRACT.md', 'target_path': target,
-                        'target_scope': 'repo', 'exit_stage': 'S2'}]
-                errors = authority_errors(self.fixture(mutate))
-                self.assertTrue(any('invalid target path' in error for error in errors), errors)
+    def test_final_topology_rejects_pending_and_entrypoint_migration(self):
+        def mutate(manifests, _files):
+            manifests['alpha/.authority.json']['scope']['status'] = 'frozen_pending'
+            manifests['alpha/.authority.json']['scope']['entrypoint_migration'] = {
+                'current_path': 'alpha/README.md', 'target_path': 'alpha/README.md', 'exit_stage': 'S8'}
+            manifests['.authority.json']['pending_scopes'] = []
+        errors = authority_errors(self.fixture(mutate))
+        self.assertTrue(any('requires existing scope status' in error for error in errors), errors)
+        self.assertTrue(any('forbids entrypoint_migration' in error for error in errors), errors)
+        self.assertTrue(any('forbids pending_scopes' in error for error in errors), errors)
+
+    def test_unregistered_authority_shaped_document_is_rejected(self):
+        root = self.fixture(extra_files={'alpha/DESIGN.md': '# Hidden authority\n'})
+        errors = authority_errors(root)
+        self.assertIn('unregistered authority-shaped document: alpha/DESIGN.md', errors)
 
     def test_missing_explicit_claim_anchor_is_rejected(self):
         def mutate(_manifests, files):

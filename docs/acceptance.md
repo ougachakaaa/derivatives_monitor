@@ -58,7 +58,7 @@ Query 的数值核心、Skew JSON、reference adapter、Feature provider/HTTP �
 
 ## Repository semantic embedding：semantic freeze / M0
 
-2026-09-10，实施前复核 `main@351003e` 与同 HEAD 的 monitoring worktree，工作树干净。本阶段只冻结[治理规则](README.md#authority-rules)、[目标 topology / mapping](../ARCHITECTURE.md#knowledge-topology)和[迁移 ExecPlan](semantic-embedding-execplan.md)；对应原迁移计划 S0，与 Monitoring 业务 M0 不同。
+2026-09-10，实施前复核 `main@351003e` 与同 HEAD 的 monitoring worktree，工作树干净。本阶段只冻结[治理规则](README.md#authority-rules)、当时的目标 topology / mapping 和迁移计划；对应原迁移计划 S0，与 Monitoring 业务 M0 不同。现行 topology 见 [Architecture](../ARCHITECTURE.md#knowledge-topology)，迁移计划已在最终阶段退出。
 
 现有中央业务 Contracts 仍为当前定义，目标模块文档尚未迁移。S1–S8（scope 检查器、根/模块迁移、最终强制治理）均未执行；生产代码、业务 Contract、策略、oracle、实验、SDK 和原件保持不变。新 checks 尚未实现，不把 docs PASS 作为 scope/唯一性自动验证或 MVP 通过。
 
@@ -145,3 +145,17 @@ Read Path、Market Session 与 Query Skew 中的页面重复定义已改为链�
 本阶段只修改文档、authority registration 和文档必需路径检查；未修改 Harness runner 行为、生产代码、Skew 策略、oracle、fixtures/golden、SDK/originals、Docker 输入或 experiments，也未执行 S8。自动结构检查不提升 G1–G6/P1/P2 或任何模块业务状态。
 
 迁移前 `python3 harness/run.py docs` 为 PASS（`artifacts/harness/20260911T055251Z-docs-fb5f4375/result.json`）。迁移后完整 `harness/tests` 33 项全部通过；最终 docs profile 为 PASS（`artifacts/harness/20260911T055748Z-docs-1ebc8e2e/result.json`），docs 与 authority 自测两个 step 均实际执行。`git diff --check` 通过，且相对 HEAD 的受保护路径检查确认 experiments、oracle、fixtures/golden、Skew 机器策略、SDK/originals 均无 diff。报告后的修改只登记本段证据；提交前再次执行直接结构、链接与 diff 检查。
+
+<a id="semantic-authority-s8"></a>
+
+## Repository semantic embedding：final authority topology / S8
+
+2026-09-11，从干净的 `main@5ea47fc` 恢复并核对 M0/S1–S7 的连续提交、全部八个受管理 scopes、31 个 claims 及各级 Acceptance。本阶段关闭 semantic migration：机器检查只接受 `existing` scope，拒绝 pending scope、entrypoint/claim migration metadata、未登记的 authority-shaped 文档、重复规范段落和全部已退役中央路径；每个 claim 必须直接位于其 constrained scopes 的 smallest common scope。
+
+[Architecture](../ARCHITECTURE.md#knowledge-topology)现只描述当前 topology，[authority navigation](../ARCHITECTURE.md#authority-mapping)只列现行 SoR 与拆分边界；治理、登记、Harness 用法/证据规则和 Acceptance 已能独立解释仓库。Repository semantic embedding 的一次性 ExecPlan 及其活动导航已经删除，并列入退役路径检查；独立的 [Monitoring execution plan](monitoring-execution-plan.md)保留，Monitoring M2–M5 未执行。
+
+最终逐项 reconciliation 没有发现需要复制 authority、移动业务代码或重新选择业务 semantics 的冲突。Query Skew 数值/时间/失败定义仍在 Query 与共享 Raw/HTTP Contracts 的既有边界；Dashboard clear-on-failure 仍只在页面 Contract 并引用共享 HTTP；Universe 来源/发布与跨模块 Calendar/Universe 交接分别位于 tool 和 repository scope；experiment 仍沿自身 AGENTS/SPEC/REFERENCE 渐进读取且普通审阅遇到 `NO_SAMPLE` 不访问网络。根 Acceptance 继续只拥有系统门槛与跨模块证据导航，Query、Dashboard、Monitoring 状态仍由各自 Acceptance 拥有。
+
+实现工作树上的完整 `harness/tests` 共 35 项全部通过，包含 final topology 与退役计划负向回归。`python3 harness/run.py docs` 为 PASS（`artifacts/harness/20260911T061035Z-docs-daee3cc8/result.json`），docs 和 authority tests 两个 step 均实际执行、退出码为 0。该结构证据不改变 MVP、真实行情或 Monitoring 交付状态。
+
+候选提交 `234c26b` 的独立 clean checkout 通过直接 authority 检查，并确认八个 scopes 全为 `existing`、31 个 claims 无重复、无 migration metadata。一个不继承迁移对话的新 agent 只从根 README/AGENTS 出发完成四项导航演练：准确定位 Query Skew→Market State/Raw/HTTP、Dashboard clear-on-failure→共享 HTTP、Universe tool→Calendar/Universe 交接，以及 Data Coverage AGENTS/SPEC→单一数据类型/来源；没有读取 solver 或兄弟实验，没有访问网络，并在无本地 sample 时保持 `NO_SAMPLE`。它同时确认 semantic migration plan 缺失、Monitoring business execution plan 保留，未发现歧义、重复 authority 或断链。该 clean checkout 随后运行的 docs profile 为 PASS（`artifacts/harness/20260911T061223Z-docs-33469193/result.json`）；此后只追加本段证据登记。

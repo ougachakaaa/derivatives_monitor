@@ -15,4 +15,4 @@
 - 从 `python3 harness/run.py docs` 开始，再按 [README 的 profile 表](README.md#profiles)选择与改动相称的定向检查；检查日志中的实际测试数、退出码和 skip，不只看命令是否结束。
 - 文档与离线回归不读取真实配置或 `collector/data/`，不运行真实 `up`/update/stop，不发送 webhook，不做现场恢复，也不安装或升级依赖。需要依赖的 profile 缺条件时按 Contract 保留 `NOT_RUN`，修复环境后重跑。
 - 集成测试只用临时目录、随机 loopback 端口和隔离的 TEST DOUBLE 环境；超时或中断后确认 runner 控制的进程组已退出。Docker 只操作本次专用项目，并按脚本输出核对清理结果。
-- 至少运行受影响的 `harness/tests`，并执行 `git diff --check`。authority/checker 改动运行 `python3 -m unittest harness.tests.test_authority -v`；runner/result 改动运行 `python3 -m unittest harness.tests.test_runner -v`；Analytics 基线改动还需遵守 ExecPlan 的固定 oracle 验证要求。
+- 至少运行受影响的 `harness/tests`，并执行 `git diff --check`。authority/checker 改动运行 `python3 -m unittest harness.tests.test_authority -v`；runner/result 改动运行 `python3 -m unittest harness.tests.test_runner -v`；Analytics 基线改动还需按 [README](README.md#analytics-skew-baseline)运行固定的独立 oracle 流程并遵守 Query Skew Contract。

@@ -26,7 +26,6 @@ REQUIRED_PATHS = (
     'ARCHITECTURE.md',
     'docs/acceptance.md',
     'docs/operations.md',
-    'docs/semantic-embedding-execplan.md',
     'docs/references/README.md',
     'docs/archive/README.md',
     'harness/AGENTS.md',
@@ -89,7 +88,7 @@ RETIRED_AUTHORITY_PATHS = (
     'docs/design.md', 'docs/architecture.md', 'docs/contracts/collector.md',
     'docs/contracts/market-state.md', 'docs/contracts/analytics-skew.md',
     'docs/contracts/analytics-skew-v1.json', 'docs/references/analytics-skew-sources.md',
-    'docs/contracts/monitoring.md',
+    'docs/contracts/monitoring.md', 'docs/semantic-embedding-execplan.md',
 )
 
 

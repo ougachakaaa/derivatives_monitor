@@ -2,7 +2,7 @@
 
 # 长期文档入口
 
-本文件是 repository documentation governance 的唯一规则来源；[Architecture](../ARCHITECTURE.md#knowledge-topology)拥有目标布局和 authority mapping，[ExecPlan](semantic-embedding-execplan.md)只安排迁移执行与完成条件。当前业务定义由根与下方链接的现行 Contracts 分别拥有，冻结目标不表示剩余迁移已经完成。
+本文件是 repository documentation governance 的唯一规则来源；[Architecture](../ARCHITECTURE.md#knowledge-topology)拥有现行布局和 authority navigation。当前业务定义由根与下方链接的现行 Contracts 分别拥有；历史迁移过程从 Git 追溯，不参与当前 authority 裁决。
 
 <a id="authority-rules"></a>
 
@@ -40,11 +40,11 @@ Parent scope 只负责自身 scope 的语义、跨直接子级的 invariant，�
 3. 跨 scope 引用标明共享协议、依赖的公开能力、证据或参考；不得依赖兄弟私有设计取得隐含约束。父级可直链深层 authority，但不能代替其定义。
 4. 验证时只读取局部要求和 [Harness](../harness/README.md)相应 profile。新人了解产品时从 [MVP](mvp.md)、[Design](../DESIGN.md)、[Architecture](../ARCHITECTURE.md)进入，不把全仓 Contracts 作为局部任务前置。
 
-根 Design/Architecture、共享 Raw boundary、Collector/Collector tools、Query、Dashboard、Monitoring 以及 Harness 局部 authority 已迁移；其余最终治理工作按 [mapping](../ARCHITECTURE.md#authority-mapping)与 ExecPlan 处理。未来路径以代码格式表示，不链接不存在文件、不预建占位文档。每项迁移必须同时移动定义、删除重复并更新导航，旧位置不能成为第二 authority。
+根 Design/Architecture、共享 Contracts、Collector/Collector tools、Query、Dashboard、Monitoring 与 Harness 组成现行 authority topology，入口见 [authority navigation](../ARCHITECTURE.md#authority-mapping)。只链接实际存在的 authority，不预建占位文档；语义移动必须同时切换定义、登记和导航并删除旧副本，旧位置不能成为第二 authority。
 
 仓库级状态与操作：[Acceptance](acceptance.md) · [Operations](operations.md)。
 
-机器可读的 scope、claim、导航、迁移例外与依赖关系从根 [`.authority.json`](../.authority.json) 开始；JSON 只登记关系，业务正文仍由下列文档负责。
+机器可读的 scope、claim、导航与依赖关系从根 [`.authority.json`](../.authority.json) 开始；JSON 只登记关系，业务正文仍由下列文档负责。最终 topology 不接受 pending scope、entrypoint migration 或 claim migration exception。
 
 精确契约入口：
 
@@ -70,5 +70,3 @@ Parent scope 只负责自身 scope 的语义、跨直接子级的 invariant，�
 [Monitoring v1 execution plan](monitoring-execution-plan.md)同样只承载有完成边界的实施交接。当前交付进度从 [Monitoring Acceptance](../monitoring/ACCEPTANCE.md)核对，不根据计划中的历史 M0 叙述推断；产品、领域行为及状态分别以 MVP、Feature/Monitoring Contracts 和各自 Acceptance 为准，完成后移除活动导航。
 
 修改信息时只更新其 authority，并检查引用它的入口是否仍准确。文档状态用词中，“已实现”必须有代码证据，“已验证”必须说明版本、环境、数据来源与证据；“待实现/待验”不得省略。当前结论统一登记到 Acceptance，不回填为设计定义。旧过程 specs 不再维护，可从 Git 历史追溯。
-
-[Repository semantic embedding ExecPlan](semantic-embedding-execplan.md)负责本次迁移交接，阶段状态见 [Acceptance](acceptance.md#semantic-authority-s7)。它与 Monitoring 业务实施计划相互独立；已完成阶段不授权继续执行后续迁移或 Monitoring 实现。

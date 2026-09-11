@@ -22,7 +22,6 @@
     {"path": "docs/acceptance.md", "role": "acceptance"},
     {"path": "docs/operations.md", "role": "operations"},
     {"path": "docs/monitoring-execution-plan.md", "role": "execution-plan"},
-    {"path": "docs/semantic-embedding-execplan.md", "role": "execution-plan"},
     {"path": "docs/references/README.md", "role": "reference"},
     {"path": "docs/archive/README.md", "role": "reference"}
   ],

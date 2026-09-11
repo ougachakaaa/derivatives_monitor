@@ -78,6 +78,17 @@ class ProductionDependencyDirectionTest(unittest.TestCase):
         self.assertEqual(errors,
                          ['Retired repository authority path must not return: docs/contracts/monitoring.md'])
 
+    def test_retired_semantic_migration_plan_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            path = root / 'docs/semantic-embedding-execplan.md'
+            path.parent.mkdir(parents=True)
+            path.write_text('# completed migration plan\n')
+            errors = retired_authority_errors(root)
+        self.assertEqual(errors,
+                         ['Retired repository authority path must not return: '
+                          'docs/semantic-embedding-execplan.md'])
+
     def test_retired_query_authority_paths_are_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

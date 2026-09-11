@@ -2,7 +2,7 @@
 
 ## 阅读与 authority
 
-先读本文件和[文档入口](docs/README.md)，按其中的 [scope 与文档职责规则](docs/README.md#authority-rules)定位唯一 authority，再读取任务所需的局部入口及适用祖先 AGENTS，不默认加载全部文档。当前地址与已冻结目标的区别见[authority mapping](ARCHITECTURE.md#authority-mapping)；目标文件尚未落地时继续使用当前来源，不创建副本或把计划当业务规范。用户当前指令优先。
+先读本文件和[文档入口](docs/README.md)，按其中的 [scope 与文档职责规则](docs/README.md#authority-rules)定位唯一 authority，再读取任务所需的局部入口及适用祖先 AGENTS，不默认加载全部文档。现行 scope、authority 与导航见 [Architecture](ARCHITECTURE.md#authority-mapping)及从根开始的 `.authority.json` 登记；不创建未登记副本或把计划当业务规范。用户当前指令优先。
 
 ## 修改规则
 

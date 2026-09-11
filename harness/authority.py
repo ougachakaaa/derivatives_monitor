@@ -20,7 +20,6 @@ VERSION = 1
 AUTHORITY_ROLES = {'architecture', 'contract', 'design', 'governance', 'operations', 'product'}
 NON_AUTHORITY_ROLES = {'acceptance', 'agent-guidance', 'entrypoint', 'execution-plan', 'reference'}
 ALL_ROLES = AUTHORITY_ROLES | NON_AUTHORITY_ROLES
-EXIT_STAGES = {f'S{number}' for number in range(2, 9)}
 IGNORED_PARTS = {'.git', 'artifacts', 'archive', 'node_modules', '__pycache__'}
 
 
@@ -45,6 +44,21 @@ def _load_manifests(root: Path):
         else:
             loaded.append((path, data, None))
     return loaded
+
+
+def _authority_shaped_markdown(root: Path):
+    """Discover durable authority documents that must participate in registration."""
+    names = {'DESIGN.md', 'ARCHITECTURE.md', 'CONTRACT.md'}
+    special = {'docs/mvp.md', 'docs/operations.md'}
+    found = set()
+    for path in root.rglob('*.md'):
+        relative = path.relative_to(root)
+        if any(part in IGNORED_PARTS | {'experiments'} for part in relative.parts):
+            continue
+        value = relative.as_posix()
+        if path.name in names or value in special or 'contracts' in relative.parts:
+            found.add(value)
+    return found
 
 
 def _explicit_anchors(text: str):
@@ -138,21 +152,6 @@ def _path_scope(relative: str, scopes):
     return max(candidates)[1] if candidates else None
 
 
-def _claimed_section(text: str, anchor: str):
-    marker = re.search(rf'<a\s+(?:name|id)=["\']{re.escape(anchor)}["\']\s*>', text, re.I)
-    if not marker:
-        return ''
-    rest = text[marker.end():]
-    heading = re.search(r'^(#{1,6})\s+', rest, re.M)
-    if not heading:
-        return rest.strip()
-    level = len(heading.group(1))
-    start = heading.start()
-    later = re.search(rf'^#{{1,{level}}}\s+', rest[heading.end():], re.M)
-    end = heading.end() + later.start() if later else len(rest)
-    return rest[start:end].strip()
-
-
 def _normalized_paragraphs(text: str):
     text = re.sub(r'```.*?```', '', text, flags=re.S)
     paragraphs = re.split(r'\n\s*\n', text)
@@ -227,7 +226,6 @@ def authority_errors(root: Path, boundaries=None):
     claims = defaultdict(list)
     references = []
     relations = []
-    migrations = {}
     declared_dependencies = set()
 
     for path, data, load_error in manifests:
@@ -245,13 +243,15 @@ def authority_errors(root: Path, boundaries=None):
             continue
         if scope.get('root') != expected_root:
             errors.append(f'{relative_manifest}: scope root must be {expected_root!r}')
+        if scope.get('status') != 'existing':
+            errors.append(f'{relative_manifest}: final topology requires existing scope status')
+        if 'entrypoint_migration' in scope:
+            errors.append(f'{relative_manifest}: final topology forbids entrypoint_migration')
         scopes[scope_id] = dict(scope, manifest=relative_manifest)
-        for pending in data.get('pending_scopes', []):
-            pending_id = pending.get('id')
-            if not pending_id or pending_id in scopes:
-                errors.append(f'{relative_manifest}: missing or duplicate pending scope id {pending_id!r}')
-            else:
-                scopes[pending_id] = dict(pending, manifest=relative_manifest, virtual=True)
+        if 'pending_scopes' in data:
+            errors.append(f'{relative_manifest}: final topology forbids pending_scopes')
+        if 'migration_exceptions' in data:
+            errors.append(f'{relative_manifest}: final topology forbids migration_exceptions')
         for document in data.get('documents', []):
             doc_path, role = document.get('path'), document.get('role')
             if doc_path in documents:
@@ -260,15 +260,11 @@ def authority_errors(root: Path, boundaries=None):
                 errors.append(f'{relative_manifest}: invalid document role {role!r}: {doc_path}')
             documents[doc_path] = dict(document, scope=scope_id)
         for claim in data.get('claims', []):
+            if 'migration_exception' in claim:
+                errors.append(f'{relative_manifest}: final topology forbids claim migration_exception')
             claims[claim.get('id')].append(dict(claim, manifest_scope=scope_id))
         references.extend((scope_id, item) for item in data.get('claim_references', []))
         relations.extend((scope_id, item) for item in data.get('relations', []))
-        for migration in data.get('migration_exceptions', []):
-            migration_id = migration.get('id')
-            if not migration_id or migration_id in migrations:
-                errors.append(f'{relative_manifest}: missing or duplicate migration id {migration_id!r}')
-            else:
-                migrations[migration_id] = migration
         for edge in data.get('cross_scope_dependencies', []):
             declared_dependencies.add((edge.get('from'), edge.get('to'), edge.get('source'), edge.get('kind')))
 
@@ -282,21 +278,13 @@ def authority_errors(root: Path, boundaries=None):
         if _ancestor_chain(scope_id, scopes) is None:
             errors.append(f'{scope["manifest"]}: scope parent cycle or missing ancestor')
         entrypoint = scope.get('entrypoint')
-        if scope.get('virtual'):
-            if scope.get('status') != 'frozen_pending' or entrypoint is not None:
-                errors.append(f'{scope["manifest"]}: pending scope {scope_id} must be frozen_pending without entrypoint')
-            continue
         if not entrypoint or not (root / entrypoint).is_file():
             errors.append(f'{scope["manifest"]}: missing scope entrypoint {entrypoint!r}')
         elif _path_scope(entrypoint, scopes) != scope_id and scope_id != 'repo':
-            exception = scope.get('entrypoint_migration', {})
-            if exception.get('current_path') != entrypoint \
-                    or exception.get('target_path') != f'{scope["root"]}/README.md' \
-                    or exception.get('exit_stage') not in EXIT_STAGES:
-                errors.append(f'{scope["manifest"]}: entrypoint is outside scope without exact migration: {entrypoint}')
+            errors.append(f'{scope["manifest"]}: entrypoint is outside scope: {entrypoint}')
 
     for scope_id, scope in scopes.items():
-        if scope_id == 'repo' or scope.get('virtual'):
+        if scope_id == 'repo':
             continue
         parent = scopes.get(scope.get('parent'))
         if not parent:
@@ -357,6 +345,9 @@ def authority_errors(root: Path, boundaries=None):
         if owner != document['scope']:
             errors.append(f'{path}: registered by {document["scope"]}, physical owner is {owner}')
 
+    for path in sorted(_authority_shaped_markdown(root) - set(documents)):
+        errors.append(f'unregistered authority-shaped document: {path}')
+
     for claim_id, definitions in claims.items():
         if not claim_id or len(definitions) != 1:
             errors.append(f'claim must have exactly one definition: {claim_id!r} ({len(definitions)})')
@@ -381,20 +372,9 @@ def authority_errors(root: Path, boundaries=None):
         constrained = claim.get('constrained_scopes', [])
         expected_scope = _smallest_common_scope(constrained, scopes)
         actual_scope = _path_scope(path, scopes)
-        migration_id = claim.get('migration_exception')
-        migration = migrations.get(migration_id) if migration_id else None
-        if migration_id and (not migration or migration.get('claim') != claim_id
-                             or migration.get('current_path') != path
-                             or migration.get('target_scope') != expected_scope
-                             or migration.get('exit_stage') not in EXIT_STAGES):
-            errors.append(f'{claim_id}: invalid exact migration exception {migration_id!r}')
         if expected_scope != actual_scope:
-            if not migration or migration.get('claim') != claim_id \
-                    or migration.get('current_path') != path \
-                    or migration.get('target_scope') != expected_scope \
-                    or migration.get('exit_stage') not in EXIT_STAGES:
-                errors.append(f'{claim_id}: definition scope {actual_scope} is not smallest common scope '
-                              f'{expected_scope}; exact migration exception required')
+            errors.append(f'{claim_id}: definition scope {actual_scope} is not smallest common scope '
+                          f'{expected_scope}')
 
     for scope_id, reference in references:
         claim_id = reference.get('claim')
@@ -411,37 +391,16 @@ def authority_errors(root: Path, boundaries=None):
         if not relation.get('from') or not (root / relation.get('from', '')).is_file():
             errors.append(f'{scope_id}: relation source is missing: {relation.get("from")!r}')
 
-    used_migrations = {definitions[0].get('migration_exception') for definitions in claims.values()
-                       if len(definitions) == 1 and definitions[0].get('migration_exception')}
-    for migration_id, migration in migrations.items():
-        if migration_id not in used_migrations:
-            errors.append(f'unused migration exception: {migration_id}')
-        for field in ('claim', 'current_path', 'target_path', 'target_scope', 'exit_stage'):
-            if not migration.get(field):
-                errors.append(f'{migration_id}: migration exception missing {field}')
-        target = migration.get('target_path')
-        if target:
-            try:
-                _relative(root, target)
-            except (TypeError, ValueError) as error:
-                errors.append(f'{migration_id}: invalid target path: {error}')
-            else:
-                if _path_scope(target, scopes) != migration.get('target_scope'):
-                    errors.append(f'{migration_id}: target path is outside target scope')
-
     fingerprints = defaultdict(list)
-    for definitions in claims.values():
-        if len(definitions) != 1:
-            continue
-        definition = definitions[0].get('definition', {})
-        path, anchor = definition.get('path'), definition.get('anchor')
-        actual = root / path if path else None
-        if actual and actual.is_file() and anchor and actual.suffix.lower() in ('.md', '.markdown'):
-            for paragraph in _normalized_paragraphs(_claimed_section(actual.read_text(errors='replace'), anchor)):
-                fingerprints[hashlib.sha256(paragraph.encode()).hexdigest()].append(f'{path}#{anchor}')
+    for path, document in documents.items():
+        actual = root / path
+        if document['role'] in AUTHORITY_ROLES and actual.is_file() \
+                and actual.suffix.lower() in ('.md', '.markdown'):
+            for paragraph in _normalized_paragraphs(actual.read_text(errors='replace')):
+                fingerprints[hashlib.sha256(paragraph.encode()).hexdigest()].append(path)
     for locations in fingerprints.values():
-        if len({location.split('#', 1)[0] for location in locations}) > 1:
-            errors.append('duplicate normative paragraph in registered claims: ' + ', '.join(sorted(set(locations))))
+        if len(set(locations)) > 1:
+            errors.append('duplicate normative paragraph in registered authority: ' + ', '.join(sorted(set(locations))))
 
     discovered = _source_cross_scope_edges(root, scopes)
     if boundaries:

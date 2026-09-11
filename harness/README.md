@@ -21,7 +21,7 @@ python3 harness/run.py docker
 
 | Profile | 前提与动作 |
 |---|---|
-| `docs` | 检查 scope/claim 登记、本地链接与锚点、父子导航、具名迁移例外、跨 scope 依赖、重复规范段落、原件/SDK 哈希和必要 Docker 白名单，并运行 authority 负向自测；不访问外网 |
+| `docs` | 检查最终 scope/claim 登记、本地链接与锚点、父子导航、smallest common scope、跨 scope 依赖、未登记/重复/旧 authority、原件/SDK 哈希和必要 Docker 白名单，并运行 authority 负向自测；不访问外网 |
 | `analytics-contract` | 仅标准库；核对七项冻结状态、策略/生成器哈希，使用float64二分与固定独立oracle核对价格/IV/delta/远期/两翼；不运行生产Analytics |
 | `analytics` | 在 `analytics-contract` 基础上，用 `query/.venv` 运行生产 Analytics 及 Skew HTTP 切片正常、异常和边界回归；不读取实盘、不证明官方参考可用 |
 | `offline` | CMake/G++/SQLite 开发库、Python 3.12 的 `query/.venv`、Linux Node 22.12+/npm/已安装前端依赖、SQLite CLI；重新 configure/build Release，执行 CTest、developer runner 显式语义/隔离测试及实际 `./dev` TEST DOUBLE 链路、Query、Universe、deploy 替身、verify 真 SQLite CLI、React 和构建 |
@@ -32,7 +32,7 @@ python3 harness/run.py docker
 
 `docs` 运行 authority 检查器的专门自测；其他 profile 还会先运行完整 Harness 自测。`docker` 包含 packaging 检查；基础镜像仓库不可达时可定向运行 packaging。各 profile 独立，选择与修改相关的范围；需要完整工程证据时分别运行 offline、browser、docker。浏览器 profile 的 read-path 已含 native HTTP，不必为同一版本重复运行 native。如何解释未运行项和不同 profile 的证据强度见 [Contract](CONTRACT.md#结果分类与传播)。
 
-`docs` 只执行可确定的结构检查。文档治理由[repository authority 规则](../docs/README.md#authority-rules)定义；机器关系从根 [`.authority.json`](../.authority.json) 开始，逐项 migration exception 是迁移前地址的临时允许项，不是永久 topology。目标布局与切换关系见 [mapping](../ARCHITECTURE.md#authority-mapping)，最终旧路径禁令与例外退出顺序见 [ExecPlan](../docs/semantic-embedding-execplan.md)。检查器区分生产、工具、测试和实验依赖；历史 archive、外部材料和 experiment 局部正文不作为生产 authority lint 输入。相同规范段落的精确重复可自动拒绝，语义改写的重复、实现状态措辞、Design/Architecture 分工和业务等价仍需按 authority 人工审查。
+`docs` 只执行可确定的结构检查。文档治理由 [repository authority 规则](../docs/README.md#authority-rules)定义，现行布局与职责导航见 [Architecture](../ARCHITECTURE.md#authority-mapping)，机器关系从根 [`.authority.json`](../.authority.json) 开始。检查器拒绝任何 pending/migration 登记、未登记的 authority-shaped 文档、已退役中央路径和相同规范段落，并区分生产、工具、测试和实验依赖；历史 archive、外部材料和 experiment 局部正文不作为生产 authority lint 输入。语义改写的重复、实现状态措辞、Design/Architecture 分工和业务等价仍需按 authority 人工审查。
 
 所有命令和日志写到被 Git 忽略的 `artifacts/harness/<UTC>-<profile>-<id>/`。查看 `result.json` 获取当次状态和各 step 日志名；归档或引用报告时按 [Contract 的证据身份与可复现性边界](CONTRACT.md#证据身份与可复现性边界)处理。
 
@@ -66,6 +66,8 @@ PYTHONDONTWRITEBYTECODE=1 python3 tests/dev_runner_smoke.py
 ```
 
 第二条还要求已构建的共享模式 Collector 与 TEST DOUBLE SDK、`query/.venv`、Linux Node 和已安装 Vite；它只在临时配置/data/flow 与随机 loopback 端口运行。实际开发启动前的本机条件检查使用 `./dev doctor`，不是工程验收报告。
+
+<a id="analytics-skew-baseline"></a>
 
 ## Analytics / Skew 契约数值基线
 
