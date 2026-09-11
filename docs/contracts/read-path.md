@@ -1,7 +1,6 @@
 <a id="read-path-http-contract"></a>
-<a id="dashboard-read-contract"></a>
 
-# 最小 Python 只读层与 JS 看板约束
+# 最小 Python 只读 HTTP 契约
 
 
 API 按共享 [Raw Boundary](raw-boundary.md) 只读同一份数据，页面独立。当前操作见[Query](../../query/README.md)与[Dashboard](../../dashboard/README.md)。
@@ -16,7 +15,7 @@ API 按共享 [Raw Boundary](raw-boundary.md) 只读同一份数据，页面独�
 - Query 的日库适配遵守 [Raw Boundary](raw-boundary.md#只读消费与-wal)，内部读取与错误适配见 [Query Contract](../../query/CONTRACT.md#只读数据适配)；公共接口不接受任意 SQL 或文件路径。
 - 前端 HTTP 仅发布至宿主 `127.0.0.1:8101`，后端直接访问仅发布至 `127.0.0.1:8000`；浏览器通过前端同源 `/api/` 查询，无需宽泛 CORS；开发时 Vite 使用相同代理。服务用于本地观察，不引入认证、外网部署、交易或 WebSocket。
 
-## 最小接口与页面
+## 最小接口
 
 - `GET /healthz`：Python HTTP 服务自身存活，与 Collector/行情是否可用独立。
 - `GET /api/health`：Python 状态、共享目录可读性、Collector 心跳/进程状态、CTP 连接登录、接收及写入计数和最后时间。
@@ -24,7 +23,8 @@ API 按共享 [Raw Boundary](raw-boundary.md) 只读同一份数据，页面独�
 - `GET /api/summary?day=YYYYMMDD`：该日确切 snapshot 总行数、逐合约行数/最后接收时间、文件占用字节。
 - `GET /api/snapshots?day=YYYYMMDD&instrument=CODE&limit=50`：返回最近行情事实；instrument 可省略，limit 限制 1–200，不允许任意 SQL/路径。
 - 非法参数返回 400，缺失日文件 404，数据库不可读/不兼容/查询超时返回 503；空目录和空数据明确显示，不能伪造成“采集失败”。
-- JS 每 5 秒轮询，展示 Python 与 Collector 状态、CTP 连接状态、交易日选择、日数据行数/体积、逐合约数量及少量最新行情。错误会清除相应的健康/新鲜标识，保留旧数据时注明旧值，不继续显示绿色成功。
+
+Dashboard 如何轮询、布局和清理显示状态由[页面契约](../../dashboard/CONTRACT.md)定义；本契约不从消费者实现反推 HTTP 行为。
 
 ## 健康证据
 
@@ -57,12 +57,6 @@ WAL、sidecar、immutable、共享锁、复制和 backup 的唯一约束见 [Raw
 | `/api/skew/series` | `day=YYYYMMDD` | 该日截至评估时刻的已封口连续分钟、首个有效基准与变化 |
 
 公共可选参数：`month=YYMM`（否则用 `SKEW_TARGET_MONTH`，不自动换月）、`at=带时区ISO时间`（默认请求时钟，作为 Market State `evaluated_at` / Analytics `requested_at`）、非负整数 `raw_revision`、`bundle_id`。后两者用于固定输入回放，不是 SQL 或文件路径。`at` 显式传入时是在该评估时刻下重建；`current_usable` 也是相对此时刻的判断。实际盯盘省略 `at`。历史分钟估值与 quote age 仍以 minute end 为准。参数未知、重复、类型错误、无时区、非整分钟、MO 月格式错误、day/minute 不匹配、未来分钟或超出可见 revision 返回400。
-
-### React 汇报投影
-
-Dashboard 的首屏业务投影只消费上述 JSON：按 coverage 中的 MO 月份显式选择 `month`，展示 latest 的对象、`skew_25d_vp`、`valuation_at`、`historical/current_usable`、`quality`和 `reasons`，展示 series 直接返回的 `baseline/change_vp/points`，并用 minute 接口完成指定分钟回看。图表只对 API 数值做显示缩放，不求 IV、delta、forward 或 Skew，不对失败分钟补点。
-
-latest 请求失败会同时清空当前值和旧序列；series 单独失败会清空变化与走势，但可保留本次已成功 latest 响应并明确标注。历史回看不复用当前日变化，`SYNTHETIC` 参考包在首屏显式标记 `TEST DOUBLE`。Collector/CTP/coverage/database/session 诊断保留在折叠区，不与 Skew 业务可用性混为一个状态。
 
 最新分钟选择、封口、BREAK/CLOSED/竞价、缺数据不回退和 current usability 统一由 [Skew Contract](../../query/contracts/analytics-skew.md#时间入口)定义；本 HTTP contract 只投影其结果。
 

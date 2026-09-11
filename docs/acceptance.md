@@ -9,7 +9,7 @@
 | G1 | 固定环境连续 3 个完整交易日，AU/AG 真实跨午夜至日盘/新交易日 | [CFFEX 短时实连](archive/acceptance/CFFEX_Coverage_Acceptance_CN.md)、[SHFE 短时夜盘](archive/acceptance/Market_Session_SHFE_Acceptance_CN.md)；合成夜盘脚本 | 持久保存三日检查点、run/配置身份、接收/提交推进、断线说明、真实夜盘各边界；待验 |
 | G2 | 数据质量诚实，历史与当前分开 | Collector/Query/Calendar/Market State 测试；Skew JSON 当前/分钟/日序列、质量/历史/失败缺口及参考拒绝已做 TEST DOUBLE 回归；浏览器断线恢复 | 真实完整 MO 月链的分钟质量及异常证据；业务 JSON 已实现，真实业务待验 |
 | G3 | 一个 MO 月 Skew 闭环，10 时点独立对账和追溯 | [七项 Analytics 契约与数值核心](../query/contracts/analytics-skew.md)、独立 oracle；Query 局部工程证据见 [Query Acceptance](../query/ACCEPTANCE.md) | 取得并审核真实官方日参考包；按固定误差做至少10个真实时点独立对账（≥6可算、≥4异常）；JSON 切片已实现，G3仍待验 |
-| G4 | 30 秒理解汇报首页，3 次日常使用无需 SQL/日志 | React 汇报首页已实现月份选择、当前值/当日变化/时间/质量/原因、指定分钟回看和折叠诊断；组件回归为 TEST DOUBLE | 在已审核真实日包与完整 MO 月链上取得3次日常使用记录，实测30秒理解与无需 SQL/日志；待验 |
+| G4 | 30 秒理解汇报首页，3 次日常使用无需 SQL/日志 | React 汇报首页已实现月份选择、当前值/当日变化/时间/质量/原因、指定分钟回看和折叠诊断；局部 TEST DOUBLE 证据见 [Dashboard Acceptance](../dashboard/ACCEPTANCE.md) | 在已审核真实日包与完整 MO 月链上取得3次日常使用记录，实测30秒理解与无需 SQL/日志；待验 |
 | G5 | 故障后恢复，保留已提交数据，备份恢复可读 | CTest、原生/容器独立停启/重启追加/心跳过期 | 本版本选择部署方式的回归；真实数据备份恢复的哈希/完整性/查询记录；现场待验 |
 | G6 | 固定验收版本、可复现部署、说明完整、无阻断问题 | 原生/Docker 入口、锁文件、操作与契约已提供 | 对最终版本部署，保存构建/环境和结果，审核限制与阻断项；待验 |
 | P1 | 真实一天库、完整目标链、单人核心查询 P95 ≤ 2 秒 | 既有 3 秒 SQL 预算是失败上限，不是性能证据 | 取得真实官方日包后，通过业务 API 记录≥100次业务查询耗时/错误、机器与库规模、冷热条件 |
@@ -71,13 +71,7 @@ M1 没有实现或测试 Rule Engine、application SQLite、Monitoring runtime�
 备份恢复演练只能在隔离恢复目录进行，具体步骤见[运行与恢复](operations.md)。测试可用合成数据验证机制，但 G5 的真实数据恢复仍须单独取得证据。
 
 
-Query 的数值核心、Skew JSON、reference adapter、Feature provider/HTTP 与参考路径修复工程记录已迁至 [Query Acceptance](../query/ACCEPTANCE.md)。根矩阵只据此映射 G2/G3/P1/P2，并继续保留真实官方包、完整 MO 月链、10 时点独立对账和性能证据缺口。
-
-## 汇报首页工程证据（2026-09-09）
-
-React 组件 7 项通过，覆盖当前 Skew、当日变化、完整性与 TEST DOUBLE 标记、PARTIAL、STALE、UNAVAILABLE、指定分钟回看、Skew API 断线清值/恢复以及诊断独立失效；`npm run build` 通过。`browser` 结果为 `artifacts/harness/20260909T005859Z-browser-2446e812/result.json`（PASS），在实际 Chromium 中覆盖同样的 Skew TEST DOUBLE 状态、移动端无整页溢出，并保留真实临时 C++ → SQLite → FastAPI 诊断路径。`packaging` 结果为 `artifacts/harness/20260909T005808Z-packaging-957813a7/result.json`（PASS），证明 Dashboard 生产构建输入仍符合镜像 allowlist。
-
-这些数值和参考均为 TEST DOUBLE，没有已审核的真实官方日包、真实完整 MO 月链或人工日常使用记录。因此本节只表明汇报页工程行为可回归，**不签收 G4**。
+Query 的数值核心、Skew JSON、reference adapter、Feature provider/HTTP 与参考路径修复工程记录已迁至 [Query Acceptance](../query/ACCEPTANCE.md)；汇报首页的 React/浏览器/打包记录已迁至 [Dashboard Acceptance](../dashboard/ACCEPTANCE.md)。根矩阵只据此映射 G2/G3/G4/P1/P2，并继续保留真实官方包、完整 MO 月链、10 时点独立对账、三次日常使用和性能证据缺口。
 
 
 <a id="semantic-freeze"></a>
@@ -137,3 +131,13 @@ Collector callback、配置、采样、session、提交与正常停止语义只�
 `python3 harness/run.py analytics` 为 PASS，报告 `artifacts/harness/20260911T031153Z-analytics-a75593bc/result.json`，其中 docs、32 项 harness tests、analytics-contract 与 production Analytics 均实际执行通过。固定环境 `artifacts/analytics-oracle-env` 使用 QuantLib 1.40 / mpmath 1.3.0 独立比较 12 个价格向量、2 条 tick-rounded chains 和插值例，退出码 0。最终 docs profile 为 PASS，报告 `artifacts/harness/20260911T031326Z-docs-3415e4cb/result.json`，docs 与 authority 自测均实际执行。迁移不读取真实配置/Raw、不运行服务、不改变生产行为，也不执行 S5；这些工程结果不提升 G1–G6/P1/P2。
 
 `python3 harness/run.py docs` 为 PASS，报告 `artifacts/harness/20260911T010603Z-docs-d7abef93/result.json` 记录 `c15b229` 加 S3 工作树，docs 与 authority 自测两个步骤均实际执行；完整 `harness/tests` 共 31 项通过，`git diff --check` 通过。报告后的修改仅登记本证据；提交前再次执行结构与 diff 检查。
+
+<a id="semantic-authority-s5"></a>
+
+## Repository semantic embedding：Dashboard authority / S5
+
+2026-09-11，从干净的 `main@414e043` 恢复并核对 S1–S4 提交与登记。本阶段只执行 S5：Dashboard guidance、页面 Contract、局部 Acceptance 与 authority registration 已落位；页面布局、5 秒轮询、4 秒请求超时、失败清值、两位显示精度、当前/历史交互和独立市场时段表归入 Dashboard。公共 HTTP/wire shape、Feature 与 Calendar/Universe 协议继续位于 repository scope，Market State、Skew/Analytics、solver 和 reference semantics 继续属于 Query。
+
+Read Path、Market Session 与 Query Skew 中的页面重复定义已改为链接，三个 S5 migration exceptions 已退出；历史汇报首页证据原样迁入 [Dashboard Acceptance](../dashboard/ACCEPTANCE.md#dashboard-presentation-evidence)，根只保留 G4/P2 与本阶段迁移映射。仅由 React 代码体现而无既有规范来源的控件、文案和表列细节仍作为局部 evidence/gap，没有提升为业务 Contract。
+
+本阶段没有修改生产 React、样式、测试或 Query 生产行为，也没有改动 Skew 策略、golden/oracle、原件、SDK 或 experiments；没有读取真实配置/Raw、运行服务或执行 S6。`python3 harness/run.py docs` 为 PASS，报告 `artifacts/harness/20260911T032509Z-docs-f11ea30c/result.json`，docs 与 authority 自测均实际执行；完整 `harness/tests` 32 项通过。Dashboard 的 7 项组件测试与生产构建通过，局部边界见 [Dashboard Acceptance](../dashboard/ACCEPTANCE.md)。报告后的修改只登记这些证据；结构与前端工程结果不提升 G1–G6/P1/P2。

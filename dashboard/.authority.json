@@ -1,11 +1,29 @@
 {
   "version": 1,
   "scope": {"id": "dashboard", "root": "dashboard", "parent": "repo", "entrypoint": "dashboard/README.md", "status": "existing"},
-  "documents": [{"path": "dashboard/README.md", "role": "entrypoint"}],
-  "claims": [],
+  "documents": [
+    {"path": "dashboard/README.md", "role": "entrypoint"},
+    {"path": "dashboard/AGENTS.md", "role": "agent-guidance"},
+    {"path": "dashboard/CONTRACT.md", "role": "contract"},
+    {"path": "dashboard/ACCEPTANCE.md", "role": "acceptance"}
+  ],
+  "claims": [
+    {"id": "dashboard.read-contract", "definition": {"path": "dashboard/CONTRACT.md", "anchor": "dashboard-read-contract"}, "constrained_scopes": ["dashboard"]},
+    {"id": "dashboard.session-contract", "definition": {"path": "dashboard/CONTRACT.md", "anchor": "dashboard-session-contract"}, "constrained_scopes": ["dashboard"]},
+    {"id": "dashboard.skew-contract", "definition": {"path": "dashboard/CONTRACT.md", "anchor": "dashboard-skew-contract"}, "constrained_scopes": ["dashboard"]}
+  ],
   "claim_references": [
     {"claim": "dashboard.read-contract", "path": "dashboard/README.md"},
+    {"claim": "dashboard.session-contract", "path": "dashboard/README.md"},
     {"claim": "dashboard.skew-contract", "path": "dashboard/README.md"},
+    {"claim": "repository.read-path-http", "path": "dashboard/CONTRACT.md"},
+    {"claim": "repository.market-session", "path": "dashboard/CONTRACT.md"},
+    {"claim": "query.skew-contract", "path": "dashboard/CONTRACT.md"},
     {"claim": "repository.deployment-contract", "path": "dashboard/README.md"}
+  ],
+  "relations": [
+    {"kind": "evidence", "from": "dashboard/ACCEPTANCE.md", "to_claim": "dashboard.read-contract"},
+    {"kind": "evidence", "from": "dashboard/ACCEPTANCE.md", "to_claim": "dashboard.session-contract"},
+    {"kind": "evidence", "from": "dashboard/ACCEPTANCE.md", "to_claim": "dashboard.skew-contract"}
   ]
 }

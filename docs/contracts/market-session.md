@@ -1,5 +1,4 @@
 <a id="market-session-shared-contract"></a>
-<a id="dashboard-session-contract"></a>
 
 # Market Calendar / Session 与 SHFE AU、AG 设计
 
@@ -30,7 +29,7 @@ Query 的 Calendar/coverage 适配见 [Query Contract](../../query/CONTRACT.md#c
 
 - Universe manifest v1 保留原 `products` 键，并向生产者与消费者共享 exchange、各产品 requested day、来源、完整性及 stale/error 状态。清单只提供精确订阅代码与审核元数据，不把来源价格转成 Raw 行情，也不改写 CTP `TradingDay`。
 - Universe 工具使用本 Calendar 的逻辑交易日选择 SHFE 来源日；显式日期同时作为两交易所 requested day。Calendar 无法确认时必须以未知/失败交接，不能由消费者按自然日期补猜。具体来源抓取、字段校验、旧代码保留、generation 发布与可选重启归 [Universe Tool Contract](../../collector/scripts/CONTRACT.md)。
-- Query coverage 按 exchange/product 分组，SHFE 以各自目标日期核对清单；保留原订阅、无推送、缺口与心跳语义。Dashboard 增加独立市场时段表，支持同时 CFFEX CLOSED / SHFE OPEN；时段请求失败清空旧状态，绝不改变 Collector 健康的定义。
+- Query coverage 按 exchange/product 分组，SHFE 以各自目标日期核对清单；保留原订阅、无推送、缺口与心跳语义。页面如何并列展示各市场及在请求失败时清理状态由 [Dashboard Contract](../../dashboard/CONTRACT.md#dashboard-session-contract)定义。
 - Market Session 只解释市场时段，不据此启动或停止 Collector，也不新增 Runtime Scheduler。repository manager 的三服务生命周期见 [Deployment Contract](deployment.md)。
 
 ## 维护与验收

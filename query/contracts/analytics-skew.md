@@ -105,7 +105,7 @@ MO 的法律标的是中证1000指数；v1 的估值输入是该到期月的**�
 
 产品“最新值”选择规则也冻结：连续交易中只选**当前 period 最近已结束的整分钟**，首分钟未结束返回 `WAITING_FOR_MINUTE`；BREAK/CLOSED/竞价时，选日历上最近结束的连续交易分钟，输出 `historical=true`。这是按日历定位，不是查找有数据的旧分钟；所选分钟缺数据就失败，不再后退。调用 `reader.minute(..., evaluated_at=requested_at, stale_after_us=30000000)`，不消费或重写 `reader.latest()` 的盘后陈旧标志。
 
-历史数值的输入 age 始终以历史 minute_end 计算；展示另给 `display_age_us=requested_at−valuation_at`、`historical` 和 `current_usable=false`，不能把历史有效数据当当前新报价。交易中正常显示最新封口分钟时，current_usable 还要求非历史、display_age≤60秒且所有实际使用报价相对requested_at的age≤30秒；任何显示/计算错误不能留下有效绿色标志。数值有效但当前报价已陈旧时保留分钟结果并设current_usable=false，页面标明“已封口分钟/当前报价已陈旧”，不能显示实时有效。P2仍需独立测量首次计算/显示时刻，封口等待与late Raw可见性不能从延迟统计中删除。不新增定时器/常驻缓存。
+历史数值的输入 age 始终以历史 minute_end 计算；结果另给 `display_age_us=requested_at−valuation_at`、`historical` 和 `current_usable=false`，不能把历史有效数据当当前新报价。交易中正常返回最新封口分钟时，current_usable 还要求非历史、display_age≤60秒且所有实际使用报价相对requested_at的age≤30秒。数值有效但当前报价已陈旧时保留分钟结果并设current_usable=false。对应页面标识和失败清值由 [Dashboard Contract](../../dashboard/CONTRACT.md#dashboard-skew-contract)定义。P2仍需独立测量首次计算/显示时刻，封口等待与late Raw可见性不能从延迟统计中删除。不新增定时器/常驻缓存。
 
 ### 基础报价筛选
 
@@ -141,7 +141,7 @@ MO 的法律标的是中证1000指数；v1 的估值输入是该到期月的**�
 
 确定处理顺序：输入结构/参考身份 → 日历/分钟封口/expiry → 基础报价 → forward → IV → 两翼/最终同步 → Skew。收集阶段内全部原因，按 instrument/reason 排序；前置阶段失败不执行后续阶段。保留原始质量字段和剔除计数。常见状态包括 `REFERENCE_INVALID, RATE_MISSING, UNIVERSE_INCOMPLETE, MINUTE_UNSEALED, UNSUPPORTED_SESSION, WAITING_FOR_MINUTE, EXPIRY_DAY_UNSUPPORTED, EXPIRED, FORWARD_PAIRS_MISSING, FORWARD_UNSYNCHRONIZED, FORWARD_INCONSISTENT, PRICE_OUT_OF_BOUNDS, TIME_VALUE_TOO_SMALL, IV_OUT_OF_RANGE, LOW_VEGA, IV_NOT_CONVERGED, NUMERICAL_ERROR, NON_MONOTONE_DELTA, WING_UNBRACKETED, WING_GAP_TOO_WIDE, INPUTS_UNSYNCHRONIZED`；不把失败变成成功数字。
 
-当日序列只枚举该交易日连续时段已封口分钟，竞价/午休留空；每个分钟独立计算，失败保留缺口，不 forward-fill。一次序列请求固定同一个日库 revision、同一 Universe/Calendar/参考包，所有逐分钟读取显式传该 revision。首个 frame 取得 revision 后其余固定，不直接读 Raw MAX(id)。“当日变化”为当前有效值减去同日首个有效分钟值，标出基准时刻；无基准则null，不暗中使用昨日收盘。月切换后基准与序列一起切换。
+当日序列只枚举该交易日连续时段已封口分钟，竞价/午休留空；每个分钟独立计算，失败保留缺口，不 forward-fill。一次序列请求固定同一个日库 revision、同一 Universe/Calendar/参考包，所有逐分钟读取显式传该 revision。首个 frame 取得 revision 后其余固定，不直接读 Raw MAX(id)。“当日变化”为当前有效值减去同日首个有效分钟值，标出基准时刻；无基准则null，不暗中使用昨日收盘。页面切月行为见 [Dashboard Contract](../../dashboard/CONTRACT.md#dashboard-skew-contract)。
 
 ## 8. 独立验证与收尾门槛
 

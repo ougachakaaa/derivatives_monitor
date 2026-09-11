@@ -2,7 +2,7 @@
 
 日期：2026-09-10。冻结基线：`main@351003e`，`feature/realtime-monitoring-alerts` worktree 同 HEAD，freeze 开始时两个工作树均干净。Semantic freeze / M0（原计划 S0）已由 `e67a9b0` 交付；后续 session 仍必须以用户明确指定的单一阶段为边界。此 M0 与 Monitoring 业务计划的 M0 不是同一阶段。
 
-本文只拥有执行顺序、验证、恢复、停止与计划生命周期，不拥有长期规则。治理唯一见 [docs README](README.md#authority-rules)，目标布局/归属唯一见 [Architecture mapping](../ARCHITECTURE.md#authority-mapping)，机器导航关系见 [Architecture](../ARCHITECTURE.md#authority-registration)。业务仍以各现行 Contract 为准；阶段实现与验证状态唯一登记 [Acceptance](acceptance.md#semantic-authority-s4)，不从本表推断完成程度。
+本文只拥有执行顺序、验证、恢复、停止与计划生命周期，不拥有长期规则。治理唯一见 [docs README](README.md#authority-rules)，目标布局/归属唯一见 [Architecture mapping](../ARCHITECTURE.md#authority-mapping)，机器导航关系见 [Architecture](../ARCHITECTURE.md#authority-registration)。业务仍以各现行 Contract 为准；阶段实现与验证状态唯一登记 [Acceptance](acceptance.md#semantic-authority-s5)，不从本表推断完成程度。
 
 <a id="resume"></a>
 
@@ -72,6 +72,12 @@ Market Session 中只有来源抓取、字段校验、旧代码保留、generati
 S4 以 `main@8008722` 的干净工作树为实际基线。Query 的 guidance、Design、Architecture、组件 Contract 与 Acceptance 已建立；Market State、Skew、机器策略、ReferenceBundle adapter 及来源说明归入 Query scope。公共 HTTP/Skew wire shape、Feature envelope/Skew 映射、Raw 及 Calendar/Universe protocol 留在 repository scope；Dashboard 投影、时段与 Skew 页面 claim 继续由 S5 具名例外承接。
 
 `analytics-skew-v1.json` 从旧中央路径按字节迁移，SHA-256 仍为 `d520d8a2831f81df1372efe280898e2e682f5e039669488417c1f4fe7ec56f14`。oracle 生成器只因策略路径变化更新，fixture 只更新对应 `generator_sha256`；新增去除该 provenance 字段后的固定基线哈希检查，拒绝 vectors/chains/expected 或其他 fixture 字段漂移。所有 S4 例外已退出，旧中央 Query authority 路径进入退役检查。
+
+### S5 reconciliation 清单
+
+S5 以 `main@414e043` 的干净工作树为实际基线。Dashboard 的 guidance、页面 Contract、局部 Acceptance 与登记已建立；Read Path 的 React 布局/轮询/失败清值、Market Session 的页面时段表，以及原 Skew Contract 的两位显示精度归入 Dashboard scope。公共 HTTP/wire shape、Calendar/Universe 交接与 Feature 语义继续留在 repository scope，Market State、Skew/Analytics、solver 和 reference semantics 继续属于 Query。
+
+三个 S5 migration exceptions 已退出，旧中央位置改为链接而不保留页面定义。历史汇报首页证据原样迁入 Dashboard Acceptance，根 Acceptance 只映射 G4/P2 和本阶段迁移证据。生产 React、样式、测试、Analytics 策略、golden、原件、SDK 与 experiments 均未修改；React 中没有既有规范来源的控件/文案细节只登记为 evidence/gap，不提升为 Contract。
 
 ## 3. Harness 工作规格
 

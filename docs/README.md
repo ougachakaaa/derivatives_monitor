@@ -40,7 +40,7 @@ Parent scope 只负责自身 scope 的语义、跨直接子级的 invariant，�
 3. 跨 scope 引用标明共享协议、依赖的公开能力、证据或参考；不得依赖兄弟私有设计取得隐含约束。父级可直链深层 authority，但不能代替其定义。
 4. 验证时只读取局部要求和 [Harness](../harness/README.md)相应 profile。新人了解产品时从 [MVP](mvp.md)、[Design](../DESIGN.md)、[Architecture](../ARCHITECTURE.md)进入，不把全仓 Contracts 作为局部任务前置。
 
-根 Design/Architecture、共享 Raw boundary、Collector/Collector tools 以及 Query 局部 authority 已迁移；其余尚未迁移项继续使用下面的现行地址，并按 [mapping](../ARCHITECTURE.md#authority-mapping)逐项切换。未来路径以代码格式表示，不链接不存在文件、不预建占位文档。每项迁移必须同时移动定义、删除重复并更新导航，旧位置不能成为第二 authority。
+根 Design/Architecture、共享 Raw boundary、Collector/Collector tools、Query 以及 Dashboard 局部 authority 已迁移；其余尚未迁移项继续使用下面的现行地址，并按 [mapping](../ARCHITECTURE.md#authority-mapping)逐项切换。未来路径以代码格式表示，不链接不存在文件、不预建占位文档。每项迁移必须同时移动定义、删除重复并更新导航，旧位置不能成为第二 authority。
 
 仓库级状态与操作：[Acceptance](acceptance.md) · [Operations](operations.md)。
 
@@ -56,9 +56,10 @@ Parent scope 只负责自身 scope 的语义、跨直接子级的 invariant，�
 - [Deployment](contracts/deployment.md)
 - [Query Analytics / Skew v1](../query/contracts/analytics-skew.md)及其[机器策略](../query/contracts/analytics-skew-v1.json)
 - [Feature 查询 v1](contracts/features.md)（已冻结；实现与验证状态见 [Acceptance](acceptance.md)）
+- [Dashboard presentation](../dashboard/CONTRACT.md)及其[局部证据](../dashboard/ACCEPTANCE.md)
 - [Monitoring / Opportunity / Notification v1](contracts/monitoring.md)（已冻结，待实现）
 
-可执行模块手册：[Collector](../collector/README.md)、[Query](../query/README.md)、[Dashboard](../dashboard/README.md)。Query 的内部读取、Calendar adapter、Analytics、参考适配与局部证据从其本级入口渐进读取；验证入口和证据语义见 [Harness](../harness/README.md)。
+可执行模块手册：[Collector](../collector/README.md)、[Query](../query/README.md)、[Dashboard](../dashboard/README.md)。Query 的内部读取、Calendar adapter、Analytics 和参考适配从其本级入口渐进读取；Dashboard 的页面行为与局部证据从其本级入口渐进读取；验证入口和证据语义见 [Harness](../harness/README.md)。
 
 ## 维护约定
 
@@ -68,4 +69,4 @@ Parent scope 只负责自身 scope 的语义、跨直接子级的 invariant，�
 
 修改信息时只更新其 authority，并检查引用它的入口是否仍准确。文档状态用词中，“已实现”必须有代码证据，“已验证”必须说明版本、环境、数据来源与证据；“待实现/待验”不得省略。当前结论统一登记到 Acceptance，不回填为设计定义。旧过程 specs 不再维护，可从 Git 历史追溯。
 
-[Repository semantic embedding ExecPlan](semantic-embedding-execplan.md)负责本次迁移交接，阶段状态见 [Acceptance](acceptance.md#semantic-authority-s4)。它与 Monitoring 业务实施计划相互独立；已完成阶段不授权继续执行后续迁移或 Monitoring 实现。
+[Repository semantic embedding ExecPlan](semantic-embedding-execplan.md)负责本次迁移交接，阶段状态见 [Acceptance](acceptance.md#semantic-authority-s5)。它与 Monitoring 业务实施计划相互独立；已完成阶段不授权继续执行后续迁移或 Monitoring 实现。

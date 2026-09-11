@@ -1,8 +1,8 @@
 # React MO Skew 业务汇报
 
-Dashboard 是独立 React/Vite 前端，用于展示 MO Skew 业务结果和运行诊断。它通过 JSON API 工作，不在浏览器内计算 IV / Skew；页面在系统中的位置见[系统架构](../ARCHITECTURE.md)，产品目标见 [MVP](../docs/mvp.md)，API 投影与失败行为见 [Read Path Contract](../docs/contracts/read-path.md)。
+Dashboard 是独立 React/Vite 前端，用于展示 MO Skew 业务结果和运行诊断。它通过 JSON API 工作，不在浏览器内计算 IV / Skew；页面在系统中的位置见[系统架构](../ARCHITECTURE.md)，产品目标见 [MVP](../docs/mvp.md)。页面布局、轮询、显示、当前/历史交互与失败清值见[本级 Contract](CONTRACT.md)，公共 HTTP 协议和 wire shape 见[共享 Read Path](../docs/contracts/read-path.md)。
 
-相关入口：[Deployment Contract](../docs/contracts/deployment.md) · [Operations](../docs/operations.md) · [Acceptance](../docs/acceptance.md) · [Harness](../harness/README.md)
+相关入口：[本级 Acceptance](ACCEPTANCE.md) · [Deployment Contract](../docs/contracts/deployment.md) · [Operations](../docs/operations.md) · [根 Acceptance](../docs/acceptance.md) · [Harness](../harness/README.md)
 
 统一前台开发入口位于仓库根：`./dev doctor dashboard` 检查本组件，`./dev up dashboard` 运行本组件，`./dev up` 运行完整开发会话。参数示例和与持久部署的区别见 [Operations](../docs/operations.md#前台开发会话)；下面保留 Dashboard 自身的依赖安装、直接运行和测试用法。
 
@@ -21,7 +21,7 @@ npm run dev
 QUERY_URL=http://127.0.0.1:18000 npm run dev
 ```
 
-页面默认每 5 秒刷新，单次请求超时 4 秒。业务字段、历史/当前状态、质量和错误清理规则不在 README 重复，统一见 [Read Path Contract](../docs/contracts/read-path.md) 与 [Analytics / Skew Contract](../query/contracts/analytics-skew.md)。
+页面行为不在 README 重复，统一见[本级 Contract](CONTRACT.md)；API 字段与指标语义分别见[共享 Read Path](../docs/contracts/read-path.md)和 [Analytics / Skew Contract](../query/contracts/analytics-skew.md)。
 
 ## 构建与组件测试
 
@@ -63,7 +63,7 @@ Docker 合成闭环：
 KEEP_RUNNING=1 bash tests/read_path_docker_smoke.sh
 ```
 
-`KEEP_RUNNING=1` 会保留隔离测试容器，并输出随机 localhost 端口及停止脚本。这些场景使用明确的 TEST DOUBLE；它们验证页面和集成行为，但不等价于真实 CTP、真实 Skew 值或 G4 日常使用验收。当前工程与现场证据边界见 [Acceptance](../docs/acceptance.md)。
+`KEEP_RUNNING=1` 会保留隔离测试容器，并输出随机 localhost 端口及停止脚本。这些场景使用明确的 TEST DOUBLE；它们验证页面和集成行为，但不等价于真实 CTP、真实 Skew 值或 G4 日常使用验收。当前页面证据见[本级 Acceptance](ACCEPTANCE.md)，系统门槛见[根 Acceptance](../docs/acceptance.md)。
 
 ## 常见问题
 

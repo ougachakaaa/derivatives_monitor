@@ -53,6 +53,10 @@ REQUIRED_PATHS = (
     'query/contracts/analytics-skew-v1.json',
     'query/contracts/references.md',
     'query/references/analytics-skew-sources.md',
+    'dashboard/README.md',
+    'dashboard/AGENTS.md',
+    'dashboard/CONTRACT.md',
+    'dashboard/ACCEPTANCE.md',
     *(f'docs/contracts/{name}.md' for name in
       ('raw-boundary', 'read-path', 'market-session', 'deployment',
        'features', 'monitoring')),

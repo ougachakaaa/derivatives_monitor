@@ -39,10 +39,7 @@
     {"id": "monitoring.internal-architecture", "definition": {"path": "ARCHITECTURE.md", "anchor": "monitoring-internal-architecture"}, "constrained_scopes": ["monitoring"], "migration_exception": "monitoring-architecture-to-s6"},
     {"id": "repository.raw-boundary", "definition": {"path": "docs/contracts/raw-boundary.md", "anchor": "raw-shared-boundary"}, "constrained_scopes": ["collector", "query"]},
     {"id": "repository.read-path-http", "definition": {"path": "docs/contracts/read-path.md", "anchor": "read-path-http-contract"}, "constrained_scopes": ["query", "dashboard"]},
-    {"id": "dashboard.read-contract", "definition": {"path": "docs/contracts/read-path.md", "anchor": "dashboard-read-contract"}, "constrained_scopes": ["dashboard"], "migration_exception": "dashboard-read-to-s5"},
     {"id": "repository.market-session", "definition": {"path": "docs/contracts/market-session.md", "anchor": "market-session-shared-contract"}, "constrained_scopes": ["collector-tools", "query", "dashboard"]},
-    {"id": "dashboard.session-contract", "definition": {"path": "docs/contracts/market-session.md", "anchor": "dashboard-session-contract"}, "constrained_scopes": ["dashboard"], "migration_exception": "dashboard-session-to-s5"},
-    {"id": "dashboard.skew-contract", "definition": {"path": "docs/contracts/read-path.md", "anchor": "dashboard-read-contract"}, "constrained_scopes": ["dashboard"], "migration_exception": "dashboard-skew-to-s5"},
     {"id": "repository.feature-contract", "definition": {"path": "docs/contracts/features.md", "anchor": "feature-shared-contract"}, "constrained_scopes": ["query", "monitoring"]},
     {"id": "monitoring.application-contract", "definition": {"path": "docs/contracts/monitoring.md", "anchor": "monitoring-application-contract"}, "constrained_scopes": ["monitoring"], "migration_exception": "monitoring-contract-to-s6"},
     {"id": "repository.deployment-contract", "definition": {"path": "docs/contracts/deployment.md", "anchor": "repository-deployment-contract"}, "constrained_scopes": ["repo"]},
@@ -50,7 +47,6 @@
     {"id": "repository.operations", "definition": {"path": "docs/operations.md", "anchor": "repository-operations"}, "constrained_scopes": ["repo"]}
   ],
   "claim_references": [
-    {"claim": "dashboard.read-contract", "path": "dashboard/README.md"},
     {"claim": "repository.documentation-governance", "path": "AGENTS.md"}
   ],
   "relations": [
@@ -61,9 +57,6 @@
   "migration_exceptions": [
     {"id": "monitoring-design-to-s6", "claim": "monitoring.design-rationale", "current_path": "DESIGN.md", "target_path": "monitoring/DESIGN.md", "target_scope": "monitoring", "exit_stage": "S6"},
     {"id": "monitoring-architecture-to-s6", "claim": "monitoring.internal-architecture", "current_path": "ARCHITECTURE.md", "target_path": "monitoring/ARCHITECTURE.md", "target_scope": "monitoring", "exit_stage": "S6"},
-    {"id": "dashboard-read-to-s5", "claim": "dashboard.read-contract", "current_path": "docs/contracts/read-path.md", "target_path": "dashboard/CONTRACT.md", "target_scope": "dashboard", "exit_stage": "S5"},
-    {"id": "dashboard-session-to-s5", "claim": "dashboard.session-contract", "current_path": "docs/contracts/market-session.md", "target_path": "dashboard/CONTRACT.md", "target_scope": "dashboard", "exit_stage": "S5"},
-    {"id": "dashboard-skew-to-s5", "claim": "dashboard.skew-contract", "current_path": "docs/contracts/read-path.md", "target_path": "dashboard/CONTRACT.md", "target_scope": "dashboard", "exit_stage": "S5"},
     {"id": "monitoring-contract-to-s6", "claim": "monitoring.application-contract", "current_path": "docs/contracts/monitoring.md", "target_path": "monitoring/CONTRACT.md", "target_scope": "monitoring", "exit_stage": "S6"},
     {"id": "monitoring-lifecycle-to-s6", "claim": "monitoring.lifecycle-contract", "current_path": "docs/contracts/deployment.md", "target_path": "monitoring/CONTRACT.md", "target_scope": "monitoring", "exit_stage": "S6"}
   ],
