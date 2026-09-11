@@ -2,7 +2,7 @@
 
 # Monitoring / Opportunity / Notification 契约 v1
 
-状态：**FROZEN / 待实现**，2026-09-09。本契约冻结用户机会检测、状态推进、事件与投递失败语义；当前证据只登记在 [Acceptance](../acceptance.md)。产品与永久不交易边界见 [MVP](../mvp.md)，模块和数据所有权见 [Architecture](../../ARCHITECTURE.md)，行情输入只经 [Feature Contract](features.md)。
+状态：**FROZEN / 待实现**，2026-09-09。本契约冻结用户机会检测、状态推进、事件与投递失败语义；当前证据只登记在[本级 Acceptance](ACCEPTANCE.md)。产品与永久不交易边界见 [MVP](../docs/mvp.md)，模块和数据所有权见[根 Architecture](../ARCHITECTURE.md)与 [Raw Boundary](../docs/contracts/raw-boundary.md)，行情输入只经[共享 Feature Contract](../docs/contracts/features.md)。
 
 ## 1. Rule 与 Evaluation
 
@@ -16,7 +16,7 @@
 
 v1 Rule 只支持一个标量与常量阈值的 `< / <= / > / >=` 比较。阈值必须有限且不是布尔值，unit 必须与 Feature 单位完全一致；不隐式换算、不用显示舍入或额外容差判断。请求时刻由 runtime 每轮注入，不属于静态 Rule。
 
-Rule Engine 只消费通用 Feature envelope，不能读 Raw、调用金融公式或依赖 Skew/MO/IM 字段。Feature ID、parameters 和 scope 中请求指定的字段必须与本次请求一致；响应补充的实际逻辑交易日属于 provider 的结果，不要求出现在静态请求中。schema/身份/单位/时间或值不合法的响应为 UNKNOWN，不能做比较。
+Rule Engine 只消费通用 Feature envelope；Raw 与 Query 的访问禁令继承[共享 Deployment Contract](../docs/contracts/deployment.md#monitoring-v1-跨系统边界已冻结待实现)。它不调用金融公式或依赖 Skew/MO/IM 字段。Feature ID、parameters 和 scope 中请求指定的字段必须与本次请求一致；响应补充的实际逻辑交易日属于 provider 的结果，不要求出现在静态请求中。schema/身份/单位/时间或值不合法的响应为 UNKNOWN，不能做比较。
 
 只有 `status=OK`、有限 value、`historical=false`、`current_usable=true` 且采样身份/时间成立的响应可得到 MATCH 或 NOT_MATCH。输入是否当前可用由 provider 按指标契约决定；Monitoring 不以 healthz、HTTP 200、非 null 或通用 Market State usable 替代它。请求失败、超时、休市、历史、陈旧、不可算及不可解释响应均为 UNKNOWN，并记录原因。
 
@@ -43,7 +43,7 @@ crossing 只表示两次有效观测之间发现条件由不满足变为满足�
 - 先检查通用有效性；UNKNOWN 不消耗采样位置，因此同一位置恢复可用后可首次进入判断。
 - 有效响应的 sample_key 与已接受键相同，或 effective_at 不晚于已接受位置时，不再推进有效状态，不用修订结果覆盖先前证据；记录重复/旧响应诊断即可。
 - 后续位置即使数值未变，也更新最近有效证据；持续 MATCH 仍不产生 Event。
-- Skew 的分钟/revision 含义由 [Feature Contract](features.md)决定；引擎不解析分钟或 raw_revision。
+- Skew 的分钟/revision 含义由[共享 Feature Contract](../docs/contracts/features.md)决定；引擎不解析分钟或 raw_revision。
 
 规则状态跨正常重启、午休和交易日延续，不按自然日清零。停机期间不枚举历史补发机会，恢复只请求当前输入；可能漏掉未被轮询观察的短暂机会。已经提交但未投递的 Event 恢复投递，不属于历史机会补算。
 
@@ -57,7 +57,7 @@ crossing 只表示两次有效观测之间发现条件由不满足变为满足�
 
 通知 target 是独立本地配置，Rule 仅引用 ID。含秘密的 URL/token/header 值仅通过环境变量引用，不能进入 Rule/Event/日志/Git。target ID 表达稳定接收目标；更换接收目标使用新 ID，旧待投递项不得静默改投新目标。旧事件可在规则停用或换版本后继续投递；缺少其 target 配置时保留 pending 并报告阻断，不删除、不改目标、不计为网络尝试。
 
-Monitoring 在专属目录维护一份 application SQLite，保存 Rule 版本、Evaluation State、不可变 Event、Delivery 和 Attempts。不放入 Collector 数据目录、不写 Raw、不复制连续行情；事件中的 Feature 证据快照用于解释当时的应用事实，不是新的行情 authority。
+Monitoring 按[共享目录隔离](../docs/contracts/deployment.md#monitoring-v1-跨系统边界已冻结待实现)维护一份 application SQLite，保存 Rule 版本、Evaluation State、不可变 Event、Delivery 和 Attempts。事件中的 Feature 证据快照用于解释当时的应用事实，不是新的行情 authority。
 
 只持久化最近评估诊断、有效状态/证据、缺口与 Event 必需的前后证据，不要求完整轮询日志库。Event 保存 Feature 的完整 evidence，不仅保存可能失效的临时 URL 或单个哈希。日后复算可以核对事件输入，但不能修改已有 Event。
 
@@ -69,11 +69,13 @@ Monitoring 在专属目录维护一份 application SQLite，保存 Rule 版本�
 
 事务提交前失败或进程崩溃，状态/事件/初始投递项全部不成立；提交后崩溃则全部可恢复。提交是否成功不确定时从库恢复，不用内存假设补发或重复插入。应用库不可写时停止状态推进并报告失败，不通过通知补偿未提交事件。
 
-单规则无效输入、provider 失败只影响相关规则，其他规则继续评估。Query 不可用可导致全部规则 UNKNOWN，但不能调用管理器重启 Query 或 Collector。应用库的共同故障属于 Monitoring 故障域，不影响 Collector 的数据写入路径。
+单规则无效输入、provider 失败只影响相关规则，其他规则继续评估。Query 不可用可导致全部规则 UNKNOWN；系统服务管理与故障隔离继续由[共享 Deployment Contract](../docs/contracts/deployment.md#monitoring-v1-跨系统边界已冻结待实现)约束。应用库的共同故障属于 Monitoring 故障域。
+
+<a id="monitoring-lifecycle-contract"></a>
 
 ## 5. Runtime 与时间
 
-首版独立前台进程内设评估循环与一个投递循环；二者独立调度，通知网络等待不能阻塞规则评估。共享 SQLite 仅通过短事务协调，任何网络请求期间均不持有数据库事务。部署和本地进程范围见 [Deployment Contract](deployment.md)。
+首版独立前台进程内设评估循环与一个投递循环；二者独立调度，通知网络等待不能阻塞规则评估。共享 SQLite 仅通过短事务协调，任何网络请求期间均不持有数据库事务。部署和本地进程范围见[共享 Deployment Contract](../docs/contracts/deployment.md)。
 
 - 默认每 5 秒轮询。同轮相同 Feature 请求复用一次结果（包括失败），不跨轮缓存；每轮显式固定 requested_at。
 - 同一规则串行评估；周期超时不积累待补跑任务，不并发追赶历史周期。实际周期可长于间隔，需可见地报告延迟。
@@ -81,7 +83,7 @@ Monitoring 在专属目录维护一份 application SQLite，保存 Rule 版本�
 - 时间字段带时区；采样顺序使用 Feature effective_at，不能以源 UpdateTime、自然日或本地字符串猜测。调度等待使用单调时钟，不因墙钟调整补跑机会。
 - 轮询不是 tick 订阅，既有采样/封口/新鲜度要求可能使某些周期或分钟无有效样本；不为提高通知率修改 Analytics Contract。
 
-正常停止结束本进程循环并关闭自有资源，不清理库或调用其他组件的服务管理器。崩溃恢复依据持久状态，不依赖上次终端日志。
+正常停止结束本进程循环并关闭自有资源，不清理库。停止或升级保留 application SQLite；未知 schema 按 §3 明确失败，不自动迁移或清库。对其他组件的 lifecycle ownership 见[共享 Deployment Contract](../docs/contracts/deployment.md#monitoring-v1-跨系统边界已冻结待实现)。崩溃恢复依据持久状态，不依赖上次终端日志。
 
 ## 6. Notification adapter 与 delivery state
 
@@ -108,6 +110,6 @@ Attempt 记录开始/结束时间、HTTP 状态（若有）、结果 `ACCEPTED /
 
 去重来自采样位置、状态机和事务唯一性，不借 cooldown 替代。未来持续满足、cooldown、hysteresis 属于版本化触发策略与 Evaluation State；市场 rolling window 属于 Feature。v1 不预建未使用的字段、表、策略框架或复合规则表达式。
 
-必须覆盖首次基线、四种比较的等号边界、单位/非有限值拒绝、持续满足/重入、UNKNOWN 前后两种 crossing、同分钟修订/旧响应、重启/规则修订/停用、原子提交前后崩溃、双实例及库失败。通知验证成功、非 2xx、超时、接收后崩溃、次数耗尽和重启续投；证明发送等待不阻塞判断，下游退出不影响隔离 Collector 继续提交。
+必须覆盖首次基线、四种比较的等号边界、单位/非有限值拒绝、持续满足/重入、UNKNOWN 前后两种 crossing、同分钟修订/旧响应、重启/规则修订/停用、原子提交前后崩溃、双实例及库失败。通知验证成功、非 2xx、超时、接收后崩溃、次数耗尽和重启续投，并证明发送等待不阻塞判断；跨进程隔离证据按[共享 Deployment Contract](../docs/contracts/deployment.md#monitoring-v1-跨系统边界已冻结待实现)取得。
 
-basis、5 分钟 return、ATM IV 和 Skew representative cases 使用同一纯引擎；前三者只用标明 TEST DOUBLE 的 Feature 输出验证接口，不把它们登记为生产指标。真实 Skew 的输入与官方参考验证仍沿用 [Analytics Contract](../../query/contracts/analytics-skew.md)。工程、现场和未执行证据分开登记 [Acceptance](../acceptance.md)，不得用通知闭环替代主线 MVP 验收。
+basis、5 分钟 return、ATM IV 和 Skew representative cases 使用同一纯引擎；前三者只用标明 TEST DOUBLE 的 Feature 输出验证接口，不把它们登记为生产指标。真实 Skew 的输入与官方参考验证仍沿用 [Analytics Contract](../query/contracts/analytics-skew.md)。工程、现场和未执行证据分开登记[本级 Acceptance](ACCEPTANCE.md)，不得用通知闭环替代主线 MVP 验收。

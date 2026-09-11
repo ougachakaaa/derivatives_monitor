@@ -7,9 +7,6 @@
     "entrypoint": "README.md",
     "status": "existing"
   },
-  "pending_scopes": [
-    {"id": "monitoring", "root": "monitoring", "parent": "repo", "entrypoint": null, "status": "frozen_pending"}
-  ],
   "documents": [
     {"path": "README.md", "role": "entrypoint"},
     {"path": "AGENTS.md", "role": "agent-guidance"},
@@ -22,7 +19,6 @@
     {"path": "docs/contracts/market-session.md", "role": "contract"},
     {"path": "docs/contracts/deployment.md", "role": "contract"},
     {"path": "docs/contracts/features.md", "role": "contract"},
-    {"path": "docs/contracts/monitoring.md", "role": "contract"},
     {"path": "docs/acceptance.md", "role": "acceptance"},
     {"path": "docs/operations.md", "role": "operations"},
     {"path": "docs/monitoring-execution-plan.md", "role": "execution-plan"},
@@ -34,16 +30,12 @@
     {"id": "repository.documentation-governance", "definition": {"path": "docs/README.md", "anchor": "repository-documentation-governance"}, "constrained_scopes": ["repo"]},
     {"id": "repository.product-boundary", "definition": {"path": "docs/mvp.md", "anchor": "repository-product-boundary"}, "constrained_scopes": ["repo"]},
     {"id": "repository.design-principles", "definition": {"path": "DESIGN.md", "anchor": "repository-design-principles"}, "constrained_scopes": ["repo"]},
-    {"id": "monitoring.design-rationale", "definition": {"path": "DESIGN.md", "anchor": "monitoring-design-rationale"}, "constrained_scopes": ["monitoring"], "migration_exception": "monitoring-design-to-s6"},
     {"id": "repository.system-architecture", "definition": {"path": "ARCHITECTURE.md", "anchor": "repository-system-architecture"}, "constrained_scopes": ["repo"]},
-    {"id": "monitoring.internal-architecture", "definition": {"path": "ARCHITECTURE.md", "anchor": "monitoring-internal-architecture"}, "constrained_scopes": ["monitoring"], "migration_exception": "monitoring-architecture-to-s6"},
     {"id": "repository.raw-boundary", "definition": {"path": "docs/contracts/raw-boundary.md", "anchor": "raw-shared-boundary"}, "constrained_scopes": ["collector", "query"]},
     {"id": "repository.read-path-http", "definition": {"path": "docs/contracts/read-path.md", "anchor": "read-path-http-contract"}, "constrained_scopes": ["query", "dashboard"]},
     {"id": "repository.market-session", "definition": {"path": "docs/contracts/market-session.md", "anchor": "market-session-shared-contract"}, "constrained_scopes": ["collector-tools", "query", "dashboard"]},
     {"id": "repository.feature-contract", "definition": {"path": "docs/contracts/features.md", "anchor": "feature-shared-contract"}, "constrained_scopes": ["query", "monitoring"]},
-    {"id": "monitoring.application-contract", "definition": {"path": "docs/contracts/monitoring.md", "anchor": "monitoring-application-contract"}, "constrained_scopes": ["monitoring"], "migration_exception": "monitoring-contract-to-s6"},
     {"id": "repository.deployment-contract", "definition": {"path": "docs/contracts/deployment.md", "anchor": "repository-deployment-contract"}, "constrained_scopes": ["repo"]},
-    {"id": "monitoring.lifecycle-contract", "definition": {"path": "docs/contracts/deployment.md", "anchor": "monitoring-lifecycle-contract"}, "constrained_scopes": ["monitoring"], "migration_exception": "monitoring-lifecycle-to-s6"},
     {"id": "repository.operations", "definition": {"path": "docs/operations.md", "anchor": "repository-operations"}, "constrained_scopes": ["repo"]}
   ],
   "claim_references": [
@@ -53,12 +45,6 @@
     {"kind": "evidence", "from": "docs/acceptance.md", "to_claim": "repository.product-boundary"},
     {"kind": "evidence", "from": "docs/acceptance.md", "to_claim": "query.skew-contract"},
     {"kind": "projection", "from": "harness/fixtures/analytics-skew-v1.json", "to_claim": "query.skew-policy"}
-  ],
-  "migration_exceptions": [
-    {"id": "monitoring-design-to-s6", "claim": "monitoring.design-rationale", "current_path": "DESIGN.md", "target_path": "monitoring/DESIGN.md", "target_scope": "monitoring", "exit_stage": "S6"},
-    {"id": "monitoring-architecture-to-s6", "claim": "monitoring.internal-architecture", "current_path": "ARCHITECTURE.md", "target_path": "monitoring/ARCHITECTURE.md", "target_scope": "monitoring", "exit_stage": "S6"},
-    {"id": "monitoring-contract-to-s6", "claim": "monitoring.application-contract", "current_path": "docs/contracts/monitoring.md", "target_path": "monitoring/CONTRACT.md", "target_scope": "monitoring", "exit_stage": "S6"},
-    {"id": "monitoring-lifecycle-to-s6", "claim": "monitoring.lifecycle-contract", "current_path": "docs/contracts/deployment.md", "target_path": "monitoring/CONTRACT.md", "target_scope": "monitoring", "exit_stage": "S6"}
   ],
   "cross_scope_dependencies": [
     {"from": "collector", "to": "collector-tools", "source": "collector/scripts/healthcheck.sh", "kind": "build-input", "constraint_claim": "repository.deployment-contract"},

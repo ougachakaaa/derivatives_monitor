@@ -1,5 +1,4 @@
 <a id="repository-design-principles"></a>
-<a id="monitoring-design-rationale"></a>
 
 # 长期设计原则与取舍
 
@@ -61,8 +60,6 @@ Market State 解释事实，Feature 描述市场，Monitoring 表达用户规则
 
 只有出现独立 Python 消费者、独立发布需求，或性能证据表明 HTTP 边界不合适时，才值得提取共享 Analytics 包；新增一个指标本身不足以触发拆包。提取保持 Feature ID、数值、时间、质量和追溯语义，并用相同输入对等验证，不借搬迁变更业务。当前及目标物理边界见 [Architecture](ARCHITECTURE.md)，公共语义见 [Feature Contract](docs/contracts/features.md)。
 
-## 10. 将机会事实与投递结果分开保存
+## 10. Market Facts 与应用事实保持独立
 
-市场派生值可重建，但“系统当时观察到机会并提交了事件”是应用事实，不能被后来的 Raw/参考修订或通知结果覆盖。为恢复和解释保留规则、前后输入及缺口，承认轮询只能发现观察之间的变化，不声称完整捕获每次穿越。这也使去重来自已提交状态，而不是通知发送是否成功。
-
-将事件提交与状态推进作为同一原子动作，再由内部通知 adapter 消费，可以避免通知失败反向改变判断。v1 用同一 application SQLite 和一个独立进程内的两个循环满足这个真实失败模式，不引入消息队列或独立通知服务。网络送达和本地登记无法原子完成，因此保留不确定性、有限重试和稳定事件身份，不承诺端到端 exactly-once。精确状态机和恢复规则只维护在 [Monitoring Contract](docs/contracts/monitoring.md)。
+Raw、参考输入和可重建 Feature 继续由各自 owner 负责；下游观察后提交的 Opportunity Event 是应用事实，既不成为新的 Market Facts，也不能反向覆盖或修订上游事实。跨模块所有权见 [Architecture](ARCHITECTURE.md)，Monitoring 为何分开保存事件与投递结果见[其本级 Design](monitoring/DESIGN.md)，精确状态机和恢复规则只见 [Monitoring Contract](monitoring/CONTRACT.md)。

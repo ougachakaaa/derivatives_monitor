@@ -2,7 +2,7 @@
 
 日期：2026-09-10。冻结基线：`main@351003e`，`feature/realtime-monitoring-alerts` worktree 同 HEAD，freeze 开始时两个工作树均干净。Semantic freeze / M0（原计划 S0）已由 `e67a9b0` 交付；后续 session 仍必须以用户明确指定的单一阶段为边界。此 M0 与 Monitoring 业务计划的 M0 不是同一阶段。
 
-本文只拥有执行顺序、验证、恢复、停止与计划生命周期，不拥有长期规则。治理唯一见 [docs README](README.md#authority-rules)，目标布局/归属唯一见 [Architecture mapping](../ARCHITECTURE.md#authority-mapping)，机器导航关系见 [Architecture](../ARCHITECTURE.md#authority-registration)。业务仍以各现行 Contract 为准；阶段实现与验证状态唯一登记 [Acceptance](acceptance.md#semantic-authority-s5)，不从本表推断完成程度。
+本文只拥有执行顺序、验证、恢复、停止与计划生命周期，不拥有长期规则。治理唯一见 [docs README](README.md#authority-rules)，目标布局/归属唯一见 [Architecture mapping](../ARCHITECTURE.md#authority-mapping)，机器导航关系见 [Architecture](../ARCHITECTURE.md#authority-registration)。业务仍以各现行 Contract 为准；阶段实现与验证状态唯一登记 [Acceptance](acceptance.md#semantic-authority-s6)，不从本表推断完成程度。
 
 <a id="resume"></a>
 
@@ -78,6 +78,12 @@ S4 以 `main@8008722` 的干净工作树为实际基线。Query 的 guidance、D
 S5 以 `main@414e043` 的干净工作树为实际基线。Dashboard 的 guidance、页面 Contract、局部 Acceptance 与登记已建立；Read Path 的 React 布局/轮询/失败清值、Market Session 的页面时段表，以及原 Skew Contract 的两位显示精度归入 Dashboard scope。公共 HTTP/wire shape、Calendar/Universe 交接与 Feature 语义继续留在 repository scope，Market State、Skew/Analytics、solver 和 reference semantics 继续属于 Query。
 
 三个 S5 migration exceptions 已退出，旧中央位置改为链接而不保留页面定义。历史汇报首页证据原样迁入 Dashboard Acceptance，根 Acceptance 只映射 G4/P2 和本阶段迁移证据。生产 React、样式、测试、Analytics 策略、golden、原件、SDK 与 experiments 均未修改；React 中没有既有规范来源的控件/文案细节只登记为 evidence/gap，不提升为 Contract。
+
+### S6 reconciliation 清单
+
+S6 以 `main@8a1550a` 的干净工作树为实际基线。Monitoring 的 guidance、README、Design、Architecture、Contract、Acceptance 与登记已建立；Rule/Evaluation、crossing、UNKNOWN、配置、application state、Opportunity Event、事务、恢复和 delivery/retry 语义归入 Monitoring。共享 Feature protocol、Raw/Market Facts ownership、Monitoring↔Query access、system lifecycle 与永久不自动交易边界继续位于 repository scope并由 Monitoring 引用。
+
+四个 S6 migration exceptions 已退出，旧中央 Monitoring Contract 路径进入退役检查；根 Design/Architecture/Deployment 仅保留跨模块 rationale、目标流、所有权和部署隔离。Monitoring 业务 execution plan 继续独立存续并切换 authority/recovery 导航；本阶段不实现代码、不提供虚构命令、不创建子模块，也不执行其 M2–M5。
 
 ## 3. Harness 工作规格
 

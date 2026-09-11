@@ -57,9 +57,15 @@ REQUIRED_PATHS = (
     'dashboard/AGENTS.md',
     'dashboard/CONTRACT.md',
     'dashboard/ACCEPTANCE.md',
+    'monitoring/AGENTS.md',
+    'monitoring/README.md',
+    'monitoring/DESIGN.md',
+    'monitoring/ARCHITECTURE.md',
+    'monitoring/CONTRACT.md',
+    'monitoring/ACCEPTANCE.md',
     *(f'docs/contracts/{name}.md' for name in
       ('raw-boundary', 'read-path', 'market-session', 'deployment',
-       'features', 'monitoring')),
+       'features')),
     'harness/fixtures/analytics-skew-v1.json',
 )
 
@@ -81,6 +87,7 @@ RETIRED_AUTHORITY_PATHS = (
     'docs/design.md', 'docs/architecture.md', 'docs/contracts/collector.md',
     'docs/contracts/market-state.md', 'docs/contracts/analytics-skew.md',
     'docs/contracts/analytics-skew-v1.json', 'docs/references/analytics-skew-sources.md',
+    'docs/contracts/monitoring.md',
 )
 
 

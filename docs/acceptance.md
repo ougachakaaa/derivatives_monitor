@@ -17,27 +17,7 @@
 
 ## Monitoring v1 平行扩展状态
 
-2026-09-10，分支 `feature/realtime-monitoring-alerts` 已在 M0 文档冻结之上完成 M1 Feature service / HTTP 工程切片；M2–M5 仍未实现。交接见 [Monitoring execution plan](monitoring-execution-plan.md)。精确要求归 [Feature](contracts/features.md)和 [Monitoring](contracts/monitoring.md) Contracts，目标结构与当前部署的区别见 [Architecture](../ARCHITECTURE.md)。
-
-| 交付层次 | 当前状态/证据 | 缺口 |
-|---|---|---|
-| M0 设计冻结 | 产品平行边界、领域模型、依赖/ownership、状态机、事务和投递恢复已落位 authority；milestone 拆为独立 commits | 文档证据仅证明设计和结构检查，不证明业务运行 |
-| M1 Feature service / HTTP | 已实现；Query 局部实现与测试证据见 [Query Acceptance](../query/ACCEPTANCE.md#query-feature-evidence) | 当时 packaging 因 Docker 不可用未执行成功；真实 MO/官方参考仍沿用 G2/G3 缺口 |
-| M2 Rule Engine | 待实现 | 纯规则、crossing、UNKNOWN、去重及 representative TEST DOUBLE 回归未执行 |
-| M3 持久事件 / runtime | 待实现 | application SQLite、原子提交、独立进程和恢复验证未执行 |
-| M4 webhook delivery | 待实现 | 独立投递、尝试记录、有限重试和不确定性恢复验证未执行 |
-| M5 工程交付 | 待实现 | 隔离端到端与故障回归、实际运行手册待交付 |
-| 真实运行 / 通知 | 未验 | 无本扩展真实 Skew 运行、实际 webhook 接收或用户收到通知的证据；既有官方参考与真实指标缺口仍保留 |
-
-M0 文档基线检查：`artifacts/harness/20260909T152645Z-docs-a8bc6e08/result.json`（PASS）；领域文档检查：`artifacts/harness/20260909T153512Z-docs-0b2c4144/result.json`（PASS）。报告保留当时 HEAD/dirty patch、平台与日志哈希，只检查文档链接/authority 入口、既有依赖与构建边界，不验证新状态机或未来接口。
-
-完整交接文档检查：`artifacts/harness/20260909T154127Z-docs-30337ce2/result.json`（PASS），`git diff --check` 通过；人工核对仅有 Markdown 变更，业务实现、Skew 机器策略及 oracle 未变。报告后的改动仅补充此证据登记，并澄清响应 scope 的实际交易日与缺口关闭的去重边界；最终内容以 M0 两个 Git commits 为准。
-
-本次没有执行 analytics/offline/native/browser/packaging/docker，没有启动/停止真实服务、读取实盘数据或发送 webhook。basis、return、ATM IV 只有扩展性测试规划，未实现生产指标，也尚未执行这些 TEST DOUBLE 测试。原 G1–G6/P1/P2 均不因 M0 文档冻结签收。
-
-M1 的两个提交、service/provider 与 HTTP 测试数、完整 Query/analytics/docs 结果和 packaging NOT_RUN 边界均保存在 [Query Acceptance](../query/ACCEPTANCE.md#query-feature-evidence)；根只保留 Monitoring milestone 与系统门槛映射。
-
-M1 没有实现或测试 Rule Engine、application SQLite、Monitoring runtime、webhook 或 basis/return/ATM IV，也没有启动/停止真实服务、读取实盘或发送通知。工程 TEST DOUBLE 通过不签收真实 Feature/通知证据，不改变 G1–G6/P1/P2 及 M2–M5 缺口。
+Monitoring 的实现、工程证据与 M2–M5 缺口只见 [Monitoring Acceptance](../monitoring/ACCEPTANCE.md)；Feature provider/HTTP 证据仍见 [Query Acceptance](../query/ACCEPTANCE.md#query-feature-evidence)，实施交接见 [Monitoring execution plan](monitoring-execution-plan.md)。该平行扩展不增加或替代本文件的 G1–G6/P1/P2，工程 TEST DOUBLE 或通知闭环也不能签收主线门槛。
 
 ## 本地开发入口交付状态
 
@@ -141,3 +121,15 @@ Collector callback、配置、采样、session、提交与正常停止语义只�
 Read Path、Market Session 与 Query Skew 中的页面重复定义已改为链接，三个 S5 migration exceptions 已退出；历史汇报首页证据原样迁入 [Dashboard Acceptance](../dashboard/ACCEPTANCE.md#dashboard-presentation-evidence)，根只保留 G4/P2 与本阶段迁移映射。仅由 React 代码体现而无既有规范来源的控件、文案和表列细节仍作为局部 evidence/gap，没有提升为业务 Contract。
 
 本阶段没有修改生产 React、样式、测试或 Query 生产行为，也没有改动 Skew 策略、golden/oracle、原件、SDK 或 experiments；没有读取真实配置/Raw、运行服务或执行 S6。`python3 harness/run.py docs` 为 PASS，报告 `artifacts/harness/20260911T032509Z-docs-f11ea30c/result.json`，docs 与 authority 自测均实际执行；完整 `harness/tests` 32 项通过。Dashboard 的 7 项组件测试与生产构建通过，局部边界见 [Dashboard Acceptance](../dashboard/ACCEPTANCE.md)。报告后的修改只登记这些证据；结构与前端工程结果不提升 G1–G6/P1/P2。
+
+<a id="semantic-authority-s6"></a>
+
+## Repository semantic embedding：Monitoring frozen authority / S6
+
+2026-09-11，从干净的 `main@8a1550a` 恢复并核对 S1–S5 提交与登记。本阶段只执行 S6：建立非空 [Monitoring scope](../monitoring/README.md)，将内部 Design、Architecture、Rule/Evaluation/crossing/UNKNOWN、配置、application state、Opportunity Event、原子事务、恢复和 delivery/retry authority 迁入本级文档；四个 S6 migration exceptions 已退出，旧中央 Monitoring Contract 已退役。
+
+共享 Feature protocol、Raw/Market Facts ownership、Monitoring↔Query access、system lifecycle 和永久不自动交易边界继续位于 repository scope。根 Design/Architecture/Deployment 只保留共同边界并导航局部 authority；Monitoring execution plan 仅更新恢复与 authority 链接，仍独立存续，M2–M5 没有执行。
+
+本阶段没有实现 Monitoring 代码、可执行入口、配置样例或 application SQLite，没有创建未来子模块或虚构启动命令；生产代码、Skew 策略、golden/oracle、原件、SDK 和 experiments 均未修改。局部实现状态和历史证据见 [Monitoring Acceptance](../monitoring/ACCEPTANCE.md)；结构检查不提升其业务交付状态，也不改变根 G1–G6/P1/P2。
+
+`python3 harness/run.py docs` 为 PASS，报告 `artifacts/harness/20260911T054957Z-docs-90006cb0/result.json`；完整 `harness/tests` 33 项通过，`git diff --check` 通过。报告后的修改只登记本次证据；提交前再次执行结构与链接检查。

@@ -20,6 +20,7 @@
 - 当前状态与证据缺口：[Acceptance](docs/acceptance.md)
 - 实际部署、维护与恢复：[Operations](docs/operations.md)
 - Build / run / usage / examples / troubleshooting：[Collector](collector/README.md)、[Query](query/README.md)、[Dashboard](dashboard/README.md)
+- 已冻结、尚未实现的 Monitoring authority：[Monitoring](monitoring/README.md)
 - 安全回归与证据语义：[Harness](harness/README.md)
 - 外部来源与历史记录：[References](docs/references/README.md)、[Archive](docs/archive/README.md)
 

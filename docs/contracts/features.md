@@ -13,7 +13,7 @@
 | Conclusion | 用户规则在一次 Evaluation 中得到的 MATCH / NOT_MATCH / UNKNOWN | 新市场事实、盈利保证 |
 | Opportunity Event | 系统实际观察并提交的一次机会成立记录 | 可随行情修订重算覆盖的指标、通知成功证明 |
 
-Market State 的精确行为沿用 [Market State Contract](../../query/contracts/market-state.md)。Feature 的公式、输入质量、时间选择、窗口和参考要求由对应指标 Contract 决定；通用层不把某个金融指标的规则推广为全部指标的默认口径。Conclusion 与 Event 属于 [Monitoring Contract](monitoring.md)。
+Market State 的精确行为沿用 [Market State Contract](../../query/contracts/market-state.md)。Feature 的公式、输入质量、时间选择、窗口和参考要求由对应指标 Contract 决定；通用层不把某个金融指标的规则推广为全部指标的默认口径。Conclusion 与 Event 属于 [Monitoring Contract](../../monitoring/CONTRACT.md)。
 
 Query 的注册表、provider 与内部依赖规则见 [Query Contract](../../query/CONTRACT.md#feature-provider)。
 
@@ -47,7 +47,7 @@ Query 的注册表、provider 与内部依赖规则见 [Query Contract](../../qu
 | `sample_key` | 同一逻辑采样位置的稳定、不透明字符串；位置未知为 null |
 | `evidence` | provider 的完整公共业务结果，含算法身份、输入 revision、参考身份/哈希及 provenance；不输出私有路径或整张 Raw frame |
 
-一个规则固定 Feature 定义、scope 和参数。该流内 `effective_at` 是采样的时间顺序，`sample_key` 用于同一位置相等判断，消费者不得解析键或以字符串排序推断时间。相同位置的 Raw/参考修订不改变键；修订身份属于 evidence。请求时钟也不进入键。首版 provider 每个有效时间位置只有一个样本；需要其他排序模型的未来 provider 必须先扩展契约，不能让引擎猜测。
+一个规则固定 Feature 定义、scope 和参数。该流内 `effective_at` 是采样的时间顺序，`sample_key` 用于同一位置相等判断，消费者不得解析键或以字符串排序推断时间。相同位置的 Raw/参考修订不改变键；修订身份属于 evidence。请求时钟也不进入键。首版 provider 每个有效时间位置只有一个样本；需要其他排序模型的未来 provider 必须先扩展契约，不能让引擎猜测。Monitoring 如何接受、去重和推进该位置见[其本级 Contract](../../monitoring/CONTRACT.md)。
 
 UNAVAILABLE 仍保留已经知道的时间/身份/原因，未知身份保持 null 或空，不伪造证据。Raw 读取的 QueryError 404/503 原样保留；不把读库错误包装为正常不可算数值。provider 未预期异常通过 HTTP 失败暴露，不复用此前结果；Monitoring 按请求失败处理。
 

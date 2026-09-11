@@ -1,5 +1,4 @@
 <a id="repository-system-architecture"></a>
-<a id="monitoring-internal-architecture"></a>
 
 # 当前系统架构
 
@@ -67,7 +66,7 @@ flowchart LR
 
 ## Monitoring v1 目标结构（已冻结，待实现）
 
-本节是 [MVP 平行扩展](docs/mvp.md)的目标边界，不将现有三组件部署改称已部署四组件。当前实现/验证程度见 [Acceptance](docs/acceptance.md)；结构变化以 additive development 落地。
+本节是 [MVP 平行扩展](docs/mvp.md)的目标边界，不将现有三组件部署改称已部署四组件。Monitoring 当前实现/验证程度见 [Monitoring Acceptance](monitoring/ACCEPTANCE.md)；结构变化以 additive development 落地。
 
 ```mermaid
 flowchart LR
@@ -79,24 +78,22 @@ flowchart LR
     A --> F[Query Feature service / HTTP]
     A --> API[现有 Skew HTTP]
     API --> D[Dashboard]
-    F -->|Feature JSON| M[Monitoring evaluation loop]
+    F -->|Feature JSON| M[Monitoring]
     CFG[用户 Rule 配置] --> M
-    M -->|原子状态推进与事件提交| DB[(Monitoring application SQLite)]
-    DB -->|已提交 Event| N[进程内 notification loop / adapter]
-    N -->|delivery / attempts| DB
-    N --> W[Webhook 接收端]
+    M -->|拥有| DB[(Monitoring application state)]
+    M -->|出站 webhook| W[Webhook 接收端]
     W --> H[Human]
 ```
 
-图中箭头表示数据流；运行调用为 Monitoring → Query HTTP，以及 Notification → 用户接收端。不存在 Collector → Analytics/Monitoring、Query → Monitoring、Rule Evaluation → Notification 复判或 Dashboard 本地规则判断的代码依赖。
+图中箭头表示跨模块数据流；运行调用为 Monitoring → Query HTTP，以及 Monitoring → 用户配置的 webhook 接收端。不存在 Collector → Analytics/Monitoring、Query → Monitoring 或 Dashboard 本地规则判断的代码依赖；Monitoring 内部判断、提交和投递关系只见[本级 Architecture](monitoring/ARCHITECTURE.md)。
 
 ### 必须落地的边界与保留的实现
 
-- Market State、Feature、Conclusion、Opportunity Event 的语义分别由 [Market State](query/contracts/market-state.md)、[Feature](docs/contracts/features.md)和 [Monitoring](docs/contracts/monitoring.md) Contracts 定义；目录归属不混淆语义归属。
+- Market State、Feature、Conclusion、Opportunity Event 的语义分别由 [Market State](query/contracts/market-state.md)、[Feature](docs/contracts/features.md)和 [Monitoring](monitoring/CONTRACT.md) Contracts 定义；目录归属不混淆语义归属。
 - Market State、Analytics 数值核心、参考包适配和 SkewService 暂留 `query/`。新增薄 Feature service 和 HTTP 投影复用它们；现有 API 与 Dashboard 保持兼容，不迁移首页。
-- 拟新增 `monitoring/` 是独立前台进程，内含纯规则核心、application store、HTTP consumer/scheduler 和 Notification adapter。评估和投递独立循环，同进程不同职责，不要求拆成独立项目或服务。
+- `monitoring/` 目标为一个可选独立前台进程，经 Feature HTTP 消费输入并拥有专属 application state；内部职责关系见 [Monitoring Architecture](monitoring/ARCHITECTURE.md)。
 - Monitoring 只经 Feature HTTP 消费指标，不读 Raw、不导入 Query 内部模块、不挂载行情目录。Query 不依赖 Monitoring 启动，也不为显示指标读取规则状态。
-- Analytics/provider 不依赖 Monitoring；Notification 只消费已提交事件，不参与规则判断。任何下游错误都不能成为 Collector 停启、写入或健康的前置条件。
+- Analytics/provider 不依赖 Monitoring；任何 Monitoring 或通知错误都不能成为 Query/Collector 停启、写入或健康的前置条件。规则判断与投递的内部分工见 [Monitoring Architecture](monitoring/ARCHITECTURE.md)。
 - 首版不提取顶层 `analytics/`，不新增消息队列、Derived Market DB 或 distributed runtime。共享包提取以独立 Python 消费者、独立发布需求或 HTTP 性能证据为触发条件，理由见 [Design](DESIGN.md)；提取不得改变 Feature 业务语义。
 
 ### 扩展数据所有权
@@ -106,12 +103,10 @@ flowchart LR
 | Raw / Market State / ReferenceBundle | 沿用上文 Collector 与 Query 所有权 | Monitoring 无直接行情访问权；参考输入仍由独立审核流程维护 |
 | Feature 结果 | Query Analytics / provider | 按请求计算、可重建；Query API、Dashboard API 消费者和 Monitoring 可消费 |
 | rolling market window | Feature provider | 后续指标按需从 Market State 重建；可丢弃缓存，不归 Rule Engine，不成为新 Market Facts |
-| Rule configuration | 用户定义；Monitoring 应用已校验版本 | 本地 JSON，已应用版本保存至 application store；无管理 UI/热更新 |
-| Evaluation State | Monitoring | 专属 SQLite，跨重启恢复；保存最近有效证据及缺口 |
-| Opportunity Event | Monitoring | 同一 SQLite 中不可变应用事实；证据快照不取代原行情与参考 authority |
-| Delivery / Attempts | Notification 逻辑拥有 | 物理复用同一 SQLite，与 Event 独立；目标秘密只通过环境引用 |
+| Rule configuration | 用户定义；Monitoring 负责校验 | 本地配置；已应用版本保存至 application state |
+| Monitoring application facts | Monitoring | 专属 application state，包含 Evaluation State、Opportunity Event 与 delivery evidence；不取代原行情与参考 authority |
 
-application store 是专属应用持久目录，不位于 Collector 数据目录。原子提交、去重、缺口、配置版本和投递恢复的唯一行为来源为 [Monitoring Contract](docs/contracts/monitoring.md)，不得用物理共库推导通知可以修改事件或规则状态。
+application store 是专属应用持久目录，不位于 Collector 数据目录。原子提交、去重、缺口、配置版本和投递恢复的唯一行为来源为 [Monitoring Contract](monitoring/CONTRACT.md)，不得用物理共库推导通知可以修改事件或规则状态。
 
 目标 runtime 仅增加一个可选本地进程，不接入当前 Compose/systemd 或平行 developer runner；生命周期约束见 [Deployment Contract](docs/contracts/deployment.md)。故障隔离是调用、进程和写所有权边界，不承诺同宿主 CPU/磁盘资源完全隔离；轮询负载与延迟需实际验证，不能以进程独立替代性能证据。
 
@@ -119,11 +114,11 @@ application store 是专属应用持久目录，不位于 Collector 数据目录
 
 ## Repository knowledge architecture：冻结目标
 
-本节拥有 documentation topology 和语义归属 mapping；治理规则唯一见[文档入口](docs/README.md#authority-rules)。目标布局保持冻结，表格逐项反映尚未迁移部分的当前来源。根、Collector/Collector tools、Query 及 Dashboard authority 已归位；其余业务定义仍由表中现行 Contracts 提供。实施状态见 [Acceptance](docs/acceptance.md#semantic-authority-s5)，执行顺序见 [ExecPlan](docs/semantic-embedding-execplan.md)。
+本节拥有 documentation topology 和语义归属 mapping；治理规则唯一见[文档入口](docs/README.md#authority-rules)。目标布局保持冻结，表格逐项反映当前归属及尚未执行的目标。根、Collector/Collector tools、Query、Dashboard 及 Monitoring 的业务 authority 已归位；Harness 文档职责仍按后续阶段处理。实施状态见 [Acceptance](docs/acceptance.md#semantic-authority-s6)，执行顺序见 [ExecPlan](docs/semantic-embedding-execplan.md)。
 
-当前导航为根 AGENTS/README/DESIGN/ARCHITECTURE → docs 入口与共享 Contracts；Collector、tools、Query 与 Dashboard 已有局部入口和对应 authority，Harness 有局部验证入口。尚未下放的 Monitoring 局部设计与结构暂由根文件承接并以具名 migration exception 约束退出阶段；其他中央 Contracts 仍须按规则组分配，不能整份按文件名搬迁。实验区继续沿用逐层 SPEC/REFERENCE 组织。
+当前导航为根 AGENTS/README/DESIGN/ARCHITECTURE → docs 入口与共享 Contracts；Collector、tools、Query、Dashboard 与 Monitoring 已有局部入口和对应 authority，Harness 当前以其 README 为验证与证据入口。Harness 的 guidance/Contract 分责留待 S7，不能因目标树已冻结而提前创建。实验区继续沿用逐层 SPEC/REFERENCE 组织。
 
-冻结目标文件如下；未列出的对称文件不创建。根 DESIGN/ARCHITECTURE 已承接原 docs 地址，旧中央副本不保留；其内以 migration exception 暂存的局部内容仍按后续阶段下放。
+冻结目标文件如下；未列出的对称文件不创建。已完成迁移的旧中央副本不保留，尚未执行的目标不预先视为当前 authority。
 
 ```text
 /
@@ -160,7 +155,7 @@ application store 是专属应用持久目录，不位于 Collector 数据目录
 
 `query/contracts/` 是扁平 Query 的文档分卷，不是代码子模块；Calendar 解释算法仍归 Query，`query/calendars/` 只拥有参考文件维护入口。`collector/scripts/` 是现有真实工具 scope。根 `scripts/` 当前承担 repository integration，由系统 Operations/Deployment 导航，不另加空文档。
 
-已冻结的 Monitoring 设计足以支持后续建立非空文档 scope，README 初期只导航设计和状态；没有实现时不提供虚构运行命令。不预建 rules/notification/storage 子目录，不创建顶层 analytics 包。
+Monitoring 已建立非空文档 scope，README 当前只导航设计和状态；没有实现时不提供虚构运行命令。不预建 rules/notification/storage 子目录，不创建顶层 analytics 包。
 
 实验入口为 [CTP](experiments/ctp/README.md) 和 [Data Coverage](experiments/data_coverage/README.md)。后者已有 AGENTS/DESIGN/SPEC → 数据类型 SPEC → 来源 REFERENCE/coverage/templates，是 progressive disclosure 案例；本次不更改其内容、命名、样本或局部规则。
 
@@ -175,8 +170,8 @@ application store 是专属应用持久目录，不位于 Collector 数据目录
 | [根 AGENTS](AGENTS.md)、[docs 入口](docs/README.md) | 根 AGENTS 工作纪律及导航；docs README 治理规则。根不列全仓领域必读清单 |
 | [根 Design](DESIGN.md) §1–8、[Query Design](query/DESIGN.md) | 跨模块原则在根；Analytics 按请求计算等局部理由已归 Query |
 | 根 Design §9、Query Design | HTTP 共享、拆包触发和反向依赖理由留根；薄 provider 组织理由已归 Query |
-| 根 Design §10 | 机会记录/通知恢复内部取舍后续到 Monitoring DESIGN；与 Market Facts 的跨模块边界留根并引用 |
-| [本文](ARCHITECTURE.md)、[Query Architecture](query/ARCHITECTURE.md) | 一级模块、跨模块流、当前/目标 runtime 在根；Query 内部文件关系已归本级，Monitoring 循环/存储结构后续下放 |
+| [根 Design](DESIGN.md) §10、[Monitoring Design](monitoring/DESIGN.md) | 与 Market Facts 的跨模块边界留根；机会记录/通知恢复内部取舍已归 Monitoring |
+| [本文](ARCHITECTURE.md)、[Query Architecture](query/ARCHITECTURE.md)、[Monitoring Architecture](monitoring/ARCHITECTURE.md) | 一级模块、跨模块流、当前/目标 runtime 在根；Query 文件关系与 Monitoring 循环/存储结构分别归本级 |
 | [Collector Contract](collector/CONTRACT.md)、[Raw Boundary](docs/contracts/raw-boundary.md) | Raw 共享读写、锁、诊断协议归 raw-boundary；callback、采样、session、配置、重连、提交和 Collector 自身停止归本地 Contract |
 | [Read Path](docs/contracts/read-path.md)、[Query Contract](query/CONTRACT.md)：边界/健康/SQLite | 公共 HTTP 留 read-path；Query 内部读取要求已归本级；系统 lifecycle 与共享 Raw/心跳各引用其协议 |
 | Read Path：Skew | HTTP 参数、wire shape、状态映射保留根 read-path；分钟选择、series 计算引用 Query Skew，删除重复定义 |
@@ -186,12 +181,12 @@ application store 是专属应用持久目录，不位于 Collector 数据目录
 | [Skew](query/contracts/analytics-skew.md)、[Reference adapter](query/contracts/references.md)、[Query Acceptance](query/ACCEPTANCE.md)、[Dashboard Contract](dashboard/CONTRACT.md) | 数值、solver、参考适配和 Query 证据归 Query；显示精度、状态标识与页面交互归 Dashboard |
 | [Skew 策略](query/contracts/analytics-skew-v1.json)、[来源说明](query/references/analytics-skew-sources.md) | 已按字节/原文归 Query；共享原件档案不动 |
 | [Feature](docs/contracts/features.md)、[Query Contract](query/CONTRACT.md) | 通用 envelope、身份/采样键、时间、错误、版本、消费者与窗口归属边界留根；registry/provider 内部要求已归 Query；Skew 映射留根并引用 Query 数值契约 |
-| [Monitoring](docs/contracts/monitoring.md) | monitoring/CONTRACT.md 拥有规则、crossing、UNKNOWN、配置、事务、恢复、投递；跨模块访问和生命周期引用根，删除重复约束 |
-| [Deployment](docs/contracts/deployment.md) | 保留真实跨组件约束；Collector 自身停机引用 Collector；Monitoring 自有锁/重试引用 Monitoring |
+| [Monitoring](monitoring/CONTRACT.md) | Rule、crossing、UNKNOWN、配置、事务、恢复和投递归 Monitoring；跨模块访问和系统 lifecycle 引用根 |
+| [Deployment](docs/contracts/deployment.md) | 保留真实跨组件约束；Collector 自身停机引用 Collector；Monitoring 自有停止、锁与重试引用 Monitoring |
 | [Collector README](collector/README.md)、[scripts README](collector/scripts/README.md) | Collector 配置/直接运行用法与工具命令已分开；已有规范归各自 Contract；三服务部署教程归根 Operations |
 | [Query README](query/README.md)、[Dashboard README](dashboard/README.md) | 保留实际用法、故障定位并增加本级导航；Query 增加已实现 Feature 用法 |
 | [Calendar README](query/calendars/README.md) | 保留参考数据维护步骤，不承接 Query 解释算法 |
-| [Acceptance](docs/acceptance.md)、[Query Acceptance](query/ACCEPTANCE.md)、[Dashboard Acceptance](dashboard/ACCEPTANCE.md) | G1–G6/P1/P2、跨进程/部署/runner 证据留根；Query 与 Dashboard 局部记录已迁入各自 ACCEPTANCE，Monitoring 后续迁入；根只链接，不复制进度 |
+| [Acceptance](docs/acceptance.md)、[Query Acceptance](query/ACCEPTANCE.md)、[Dashboard Acceptance](dashboard/ACCEPTANCE.md)、[Monitoring Acceptance](monitoring/ACCEPTANCE.md) | G1–G6/P1/P2、跨进程/部署/runner 证据留根；Query、Dashboard 与 Monitoring 局部记录已迁入各自 ACCEPTANCE，根只链接，不复制进度 |
 | [Operations](docs/operations.md) | 系统组合、部署、备份恢复保留根；模块操作归所属 README，根导航而不重复步骤 |
 | [Harness README](harness/README.md) | 用法/依赖保留；PASS/FAIL/NOT_RUN、证据身份和结果边界归 harness/CONTRACT.md，工作指导归 harness/AGENTS.md |
 | [Monitoring execution plan](docs/monitoring-execution-plan.md) | 仍为独立一次性交接；只更新链接与恢复说明，不成为规则定义，不因文档迁移执行业务里程碑 |
@@ -206,4 +201,4 @@ application store 是专属应用持久目录，不位于 Collector 数据目录
 
 claim 按可独立修改的接口或规则组划分，不为每句话建 ID。Markdown 与机器策略各自登记职责：Skew 已有机器字段值以原 JSON 为机器 authority，Markdown 解释含义，重复数值展示只作为受一致性检查的投影。登记不能制造第二套规则或把 evidence/ExecPlan 注册为规范。
 
-登记从根 [`.authority.json`](.authority.json) 开始，局部 scope 由各自同名文件登记；冻结待实现且尚无目录的 scope 只在父登记中声明，不预建空目录。离线检查实现位于 `harness/authority.py`，迁移例外与关闭条件仍只由 [ExecPlan](docs/semantic-embedding-execplan.md)安排；当前完成状态见 [Acceptance](docs/acceptance.md#semantic-authority-s5)。
+登记从根 [`.authority.json`](.authority.json) 开始，局部 scope 由各自同名文件登记；冻结待实现且尚无目录的 scope 只在父登记中声明，不预建空目录。离线检查实现位于 `harness/authority.py`，迁移例外与关闭条件仍只由 [ExecPlan](docs/semantic-embedding-execplan.md)安排；当前完成状态见 [Acceptance](docs/acceptance.md#semantic-authority-s6)。

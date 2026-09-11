@@ -1,21 +1,22 @@
 # 实时监控 v1：Execution plan
 
-日期：2026-09-09。运行代码基线 `23672a5`，分支 `feature/realtime-monitoring-alerts`；领域冻结首个提交为 `5711078`。本文是有完成边界的实施交接，不是长期 system of record；当前交付/证据状态唯一登记在 [Acceptance](acceptance.md)。
+日期：2026-09-09。运行代码基线 `23672a5`，分支 `feature/realtime-monitoring-alerts`；领域冻结首个提交为 `5711078`。本文是有完成边界的实施交接，不是长期 system of record；当前交付/证据状态唯一登记在 [Monitoring Acceptance](../monitoring/ACCEPTANCE.md)。
 
-本次只交付 **M0 文档冻结**，不开始 M1–M5 业务实现。后续每个 milestone 可分别交给 Sol 的 Goal 模式，实施者无需读取原对话。每个 session 以用户指定 Goal 为工作边界，不因本文件列出全部任务就一次执行全部里程碑。
+本计划安排 M0–M5，但不从表格推断实际进度；每个后续 milestone 必须由用户单独授权。每个 session 以用户指定 Goal 为工作边界，不因本文件列出全部任务就一次执行多个里程碑。
 
 ## 1. 阅读入口与 reconciliation
 
-先读 [AGENTS.md](../AGENTS.md)与[文档入口](README.md)，检查分支、Git 历史、工作树和 Acceptance，运行 `python3 harness/run.py docs`。后续分支可能继续演进，不能用本基线覆盖新的实现或现场证据。
+先读[根 AGENTS](../AGENTS.md)、[文档入口](README.md)、[Monitoring AGENTS](../monitoring/AGENTS.md)与[本级入口](../monitoring/README.md)，检查分支、Git 历史、工作树和 [Monitoring Acceptance](../monitoring/ACCEPTANCE.md)，运行 `python3 harness/run.py docs`。后续分支可能继续演进，不能用本基线覆盖新的实现或现场证据。
 
 | Authority / 实现 | 对本任务的约束或已确认事实 |
 |---|---|
-| [MVP](mvp.md) / [Design](../DESIGN.md) / [Architecture](../ARCHITECTURE.md) | Monitoring 是平行扩展；主线 Skew 收尾不变；冻结目标结构与当前三组件部署分开 |
+| [MVP](mvp.md) / [根 Design](../DESIGN.md) / [根 Architecture](../ARCHITECTURE.md) | Monitoring 是平行扩展；永久不自动交易；主线 Skew 收尾不变；跨模块目标与当前三组件部署分开 |
+| [Monitoring Design](../monitoring/DESIGN.md) / [Monitoring Architecture](../monitoring/ARCHITECTURE.md) | 机会/投递恢复取舍，以及进程内职责、循环与 application store 关系 |
 | [Feature Contract](contracts/features.md) | 公共语义、单 Feature 查询、Skew 投影、采样身份、共享/窗口边界 |
-| [Monitoring Contract](contracts/monitoring.md) | Rule/Evaluation、crossing、事务、恢复和投递语义；实施不得另选状态机 |
+| [Monitoring Contract](../monitoring/CONTRACT.md) | Rule/Evaluation、crossing、事务、恢复和投递语义；实施不得另选状态机 |
 | [Market State](../query/contracts/market-state.md) / [Market Session](contracts/market-session.md) | 时间、session、revision、质量及显式 Universe 不变量 |
 | [Skew Contract](../query/contracts/analytics-skew.md)及[机器策略](../query/contracts/analytics-skew-v1.json) | 金融模型、单位、参考准入、质量和 oracle 容差全部保持 |
-| [Read Path](contracts/read-path.md) / [Deployment](contracts/deployment.md) | HTTP 只读、错误和进程/存储边界；不接管现有部署 |
+| [Read Path](contracts/read-path.md) / [Deployment](contracts/deployment.md) | HTTP 只读、Monitoring↔Query、系统 lifecycle 和存储隔离；不接管现有部署 |
 | [Market State 实现](../query/market_state.py) | 已有显式读取接口，Monitoring 无需重建第二条 Raw 读取路径 |
 | [Skew service](../query/skew_service.py) / [数值核心](../query/analytics.py) | 已有业务时间选择与完整公共结果；只增加 Feature 投影，不复制金融实现 |
 | [Query app](../query/app.py) / [项目配置](../query/pyproject.toml) | 既有 FastAPI、扁平导入、非 package 模式；新增 HTTP 避免跨项目导入改造 |
@@ -71,9 +72,9 @@ Harness 父进程超时/中断必须清理本测试创建的子进程，不能�
 
 ## 4. 交付与计划生命周期
 
-每个 Goal 完成时报告 commits、所执行测试及剩余证据，不自动关闭其他 milestone。后续状态从 Git/Acceptance 核对，不根据本表猜测已经实现。M0 两个 commits 完成后即停止本次工作。
+每个 Goal 完成时报告 commits、所执行测试及剩余证据，不自动关闭其他 milestone。后续状态从 Git/Acceptance 核对，不根据本表猜测已经实现；到达用户指定 milestone 的完成边界后即停止。
 
-M3 起在拟新增 `monitoring/README.md` 维护已经可用的配置/启动/停止与检查方式；M4 后补 target 环境引用和失败排障；M5 在 Operations 链接实际运行/恢复说明。README 不复制领域状态机。不要在 CLI 尚未实现时将建议命令写成当前操作能力。
+M3 起在现有 [Monitoring README](../monitoring/README.md) 增加已经可用的配置/启动/停止与检查方式；M4 后补 target 环境引用和失败排障；M5 在 Operations 链接实际运行/恢复说明。README 不复制领域状态机。不要在 CLI 尚未实现时将建议命令写成当前操作能力。
 
 M5 完成后本文标记完成并移除 docs/README 活动导航；长期接口和不变量留在对应 Contracts，当前证据留在 Acceptance，历史从 Git 追溯。不得新增 `docs/tasks/` 或按 commit 积累过程 specs。
 
