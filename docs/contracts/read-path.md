@@ -1,5 +1,4 @@
 <a id="read-path-http-contract"></a>
-<a id="query-read-contract"></a>
 <a id="dashboard-read-contract"></a>
 
 # 最小 Python 只读层与 JS 看板约束
@@ -14,7 +13,7 @@ API 按共享 [Raw Boundary](raw-boundary.md) 只读同一份数据，页面独�
 ## 边界
 
 - Query 使用 FastAPI/Uvicorn 提供 JSON，Dashboard 通过同源 `/api/` 消费；系统组件与依赖方向见 [Architecture](../../ARCHITECTURE.md)，镜像、挂载及 lifecycle 见 [Deployment](deployment.md)。
-- Query 按 [Raw Boundary](raw-boundary.md#只读消费与-wal) 打开日库，查询使用参数绑定；不接受任意 SQL 或文件路径。Query 的内部读取适配要求在后续局部迁移前仍由本节承接。
+- Query 的日库适配遵守 [Raw Boundary](raw-boundary.md#只读消费与-wal)，内部读取与错误适配见 [Query Contract](../../query/CONTRACT.md#只读数据适配)；公共接口不接受任意 SQL 或文件路径。
 - 前端 HTTP 仅发布至宿主 `127.0.0.1:8101`，后端直接访问仅发布至 `127.0.0.1:8000`；浏览器通过前端同源 `/api/` 查询，无需宽泛 CORS；开发时 Vite 使用相同代理。服务用于本地观察，不引入认证、外网部署、交易或 WebSocket。
 
 ## 最小接口与页面
@@ -49,7 +48,7 @@ WAL、sidecar、immutable、共享锁、复制和 backup 的唯一约束见 [Raw
 
 ## MVP MO Skew JSON 业务查询
 
-已实现于 `query/skew_service.py` / `skew_references.py`；数学定义和时间选择严格沿用 [mo-skew-25d-v1](analytics-skew.md)，不新增行情时间模型。当前证据为 TEST DOUBLE 工程回归，G2/G3 真实业务门槛仍待验。
+已实现于 `query/skew_service.py` / `skew_references.py`；数学定义和时间选择严格沿用 [mo-skew-25d-v1](../../query/contracts/analytics-skew.md)，不新增行情时间模型。当前证据见 [Query Acceptance](../../query/ACCEPTANCE.md)，G2/G3 真实业务门槛仍见[根 Acceptance](../acceptance.md)。
 
 | GET 路径 | 必需参数 | 能力 |
 |---|---|---|
@@ -65,14 +64,14 @@ Dashboard 的首屏业务投影只消费上述 JSON：按 coverage 中的 MO 月
 
 latest 请求失败会同时清空当前值和旧序列；series 单独失败会清空变化与走势，但可保留本次已成功 latest 响应并明确标注。历史回看不复用当前日变化，`SYNTHETIC` 参考包在首屏显式标记 `TEST DOUBLE`。Collector/CTP/coverage/database/session 诊断保留在折叠区，不与 Skew 业务可用性混为一个状态。
 
-最新值不消费 Market State `latest()` 的盘后陈旧标志，而是复用 Calendar periods 定位并调用 `reader.minute(..., stale_after_us=30000000)`。首分钟未封口返回 WAITING_FOR_MINUTE；BREAK/CLOSED/竞价只选择最近结束的连续分钟并明确 historical。缺数据不搜索更旧行情；日历下一 trading_day 与实际历史分钟 day 分开返回。UNKNOWN 返回 CALENDAR_UNKNOWN，无猜测时间。
+最新分钟选择、封口、BREAK/CLOSED/竞价、缺数据不回退和 current usability 统一由 [Skew Contract](../../query/contracts/analytics-skew.md#时间入口)定义；本 HTTP contract 只投影其结果。
 
 单点返回 `schema_version=1`、契约/算法版本、业务 scope（exchange/product/month/trading_day）、minute、valuation_at/effective_as_of、requested_at/evaluated_at、session、historical/current_usable/reconstructed/display_age_us、status/reasons、`skew_25d_vp` 和 `unit=vol_point`。`quality` 保留 Market State 完整性及 expected/observed/usable/missing/stale/invalid 计数；Analytics eligible/excluded 与计算原因单独表达。原始 Raw rows、内部 scope 清单、表结构和本地路径不公开。
 
 追溯字段包括 raw_revision、Universe/Calendar/ReferenceBundle 版本与实际原文件 SHA-256、参考 manifest 和官方清单原响应哈希、冻结模型参数、平价三对、两翼端点及权重、provenance。每个 provenance 提供 instrument、observation_id、run_id、received_us、snapshot_us、源 trading_day/action_day/time/millisec、bid/ask/mid、质量、排除原因、使用角色和求解结果。源时间保留原值；不拼造交易所时间戳。Market State 的四个 `invalid_BidPrice1/AskPrice1/BidVolume1/AskVolume1` 原因在 HTTP 中对应 `invalid_bid/invalid_ask/invalid_bid_size/invalid_ask_size`，其余质量语义不变。完整数值不按页面显示精度舍入。
 
-当日响应 `points` 按分钟升序，固定首帧返回的同一 revision、同一参考包、Universe 和 Calendar；后续每帧显式传 revision。MVP 日历当前最多237个 MO 连续分钟；不枚举竞价/午休，不 forward-fill，失败分钟保留 null 与原因。`baseline={minute,skew_25d_vp}` 取首个 OK；`change_vp` 为最后枚举分钟值减基准，同时给出 `change_minute`。最后一分钟失败、无基准或当前连续段仍 WAITING 时变化为null，不回退到最近成功值。所有点均失败则序列 UNAVAILABLE；至少一点有效可为OK，但每点 status 和 reasons 仍必须检查。无封口分钟返回空 points、null revision/baseline/change；不因此读取 Raw。历史日序列的变化仍明确属于该历史日。
+当日响应直接投影 [Skew Contract 的序列结果](../../query/contracts/analytics-skew.md#7-输出错误及当日变化)：`points`、`baseline`、`change_vp` 与 `change_minute` 保持原顺序、值、null 和逐点状态，不在 HTTP 层重新枚举、forward-fill、回退或计算。
 
 缺目标月、参考包、无效/不匹配参考、未知日历、非连续/未封口分钟以及不能计算的行情前提返回200和 UNAVAILABLE/null/原因，current_usable=false；尚未读取 Raw 时 revision/quality/provenance 明确未知或空，不伪造完整性。日库实际读取抛出的404/503原样保留，不变成业务缺翼。序列采用10秒执行预算（逐分钟检查，单帧仍受 Store 的3秒 SQL预算约束），超限503并丢弃部分响应；这不是 P95≤2秒的性能证明。所有响应 no-store，不启用派生持久化或缓存。
 
-参考选择只在请求入口读取一次 `<day>/<month>.json` 的 bundle_id，然后核对不可变输入包的原文件哈希；显式 bundle_id 可重放旧包。历史查询不使用 Collector 的 universe/current；最新定位所用 Calendar 必须与参考包 Calendar 一致。Production 只接受 OFFICIAL 及已归档官方来源字节，SYNTHETIC 仅可通过测试构造器注入，HTTP/环境变量没有绕过开关。导入工具不会自动抓取或审核金融数据，审核者仍须核对原发布内容和归一化值；详见 [Query 手册](../../query/README.md)。
+参考选择、不可变包核对、历史 Universe/Calendar 固定及生产/TEST DOUBLE 准入由 [Reference adapter](../../query/contracts/references.md)和 [Skew Contract](../../query/contracts/analytics-skew.md)定义；HTTP/环境变量不增加绕过开关。

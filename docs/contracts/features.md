@@ -1,5 +1,4 @@
 <a id="feature-shared-contract"></a>
-<a id="query-feature-provider-contract"></a>
 
 # Feature 查询契约 v1
 
@@ -14,9 +13,9 @@
 | Conclusion | 用户规则在一次 Evaluation 中得到的 MATCH / NOT_MATCH / UNKNOWN | 新市场事实、盈利保证 |
 | Opportunity Event | 系统实际观察并提交的一次机会成立记录 | 可随行情修订重算覆盖的指标、通知成功证明 |
 
-Market State 的精确行为沿用 [Market State Contract](market-state.md)。Feature 的公式、输入质量、时间选择、窗口和参考要求由对应指标 Contract 决定；通用层不把某个金融指标的规则推广为全部指标的默认口径。Conclusion 与 Event 属于 [Monitoring Contract](monitoring.md)。
+Market State 的精确行为沿用 [Market State Contract](../../query/contracts/market-state.md)。Feature 的公式、输入质量、时间选择、窗口和参考要求由对应指标 Contract 决定；通用层不把某个金融指标的规则推广为全部指标的默认口径。Conclusion 与 Event 属于 [Monitoring Contract](monitoring.md)。
 
-Query 内部增加薄 Feature service 和简单的 `feature_id → provider` 注册表，复用既有业务 service。provider 不依赖 Monitoring；引擎不认识 provider 的金融字段。生产注册表只纳入已有指标契约的实现，TEST DOUBLE 通过测试注入，不增加生产绕过开关。无动态插件加载、DSL、通用计算图或后台指标调度器。
+Query 的注册表、provider 与内部依赖规则见 [Query Contract](../../query/CONTRACT.md#feature-provider)。
 
 ## 2. 只读 HTTP 接口
 
@@ -65,7 +64,7 @@ UNAVAILABLE 仍保留已经知道的时间/身份/原因，未知身份保持 nu
 | `sample_key` | 实际交易日、业务 scope 与封口分钟的确定性身份；不含 raw_revision、参考修订或请求时间 |
 | `evidence` | 包括 algorithm、quality、raw_revision、Universe/Calendar/ReferenceBundle 身份和哈希、provenance 的完整公共结果 |
 
-冻结的模型、单位、数值容差、官方参考准入、封口分钟选择及当前报价质量全部沿用 [mo-skew-25d-v1](analytics-skew.md)及其[机器策略](analytics-skew-v1.json)。特别是 PARTIAL 可以有合格 Skew；历史有效值或当前陈旧值可以保留数值，但不能因此成为当前有效判断。未选到分钟时不构造采样键。
+冻结的模型、单位、数值容差、官方参考准入、封口分钟选择及当前报价质量全部沿用 [mo-skew-25d-v1](../../query/contracts/analytics-skew.md)及其[机器策略](../../query/contracts/analytics-skew-v1.json)。特别是 PARTIAL 可以有合格 Skew；历史有效值或当前陈旧值可以保留数值，但不能因此成为当前有效判断。未选到分钟时不构造采样键。
 
 这里新增的是通用投影，不新增 basis、return 或 ATM IV 定义。Skew 中的单合约求解结果、两翼 IV 和平价远期不自动成为独立 ATM IV 或 IM basis。basis 的现货输入尚无本次授权的正式来源；示例测试不得替代数据源及指标契约。
 
@@ -75,7 +74,7 @@ rolling market window 属于 Feature provider 的输入选择/计算状态，不
 
 窗口必须由对应指标 Contract 冻结长度、采样时钟、session 边界、缺口、参考身份和读取一致性；同一 Raw 日内固定 revision，多输入的实际身份必须显式保留，不能假称跨库原子快照。当前不新增窗口库或通用窗口框架。需要缓存时保持可重建、可失效，不能获得 Market Facts 写所有权。
 
-新 provider 需有明确指标定义及证据，再注册到同一接口；规则判断和通知不增加品种/指标分支。拆包条件属于 [Design](../../DESIGN.md)，实现位置属于 [Architecture](../../ARCHITECTURE.md)。拆分前后相同输入必须保持数值、时间、质量和追溯语义一致。
+新 provider 需有明确指标定义及证据；注册要求见 [Query Contract](../../query/CONTRACT.md#feature-provider)。规则判断和通知不增加品种/指标分支。拆包条件属于 [Design](../../DESIGN.md)，实现位置属于 [Architecture](../../ARCHITECTURE.md)。拆分前后相同输入必须保持数值、时间、质量和追溯语义一致。
 
 ## 5. 验证与变更
 

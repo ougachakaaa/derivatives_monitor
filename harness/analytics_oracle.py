@@ -14,7 +14,7 @@ import QuantLib as ql
 import mpmath as mp
 
 ROOT = Path(__file__).resolve().parents[1]
-POLICY = ROOT / 'docs/contracts/analytics-skew-v1.json'
+POLICY = ROOT / 'query/contracts/analytics-skew-v1.json'
 FIXTURES = ROOT / 'harness/fixtures/analytics-skew-v1.json'
 
 

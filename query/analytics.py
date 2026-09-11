@@ -1,7 +1,7 @@
 """Pure MVP MO IV/Skew analytics over a Market State minute frame.
 
 The module never opens Raw storage, reads current reference files, or supplies
-fallback inputs.  Contract: docs/contracts/analytics-skew.md (mo-skew-25d-v1).
+fallback inputs.  Contract: query/contracts/analytics-skew.md (mo-skew-25d-v1).
 """
 from datetime import datetime, timedelta
 import math

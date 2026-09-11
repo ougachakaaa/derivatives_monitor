@@ -1,8 +1,8 @@
 # 只读查询后端
 
-Query 是 Python 3.12 / FastAPI 服务：读取 Collector 的 Raw 数据，提供诊断、Market Session、Market State 和 MO Skew JSON。这里提供安装、启动、调用和排障方法；组件边界见[系统架构](../ARCHITECTURE.md)，共享 Raw 协议见 [Raw Boundary](../docs/contracts/raw-boundary.md)，HTTP 与 Query 读取行为见 [Read Path Contract](../docs/contracts/read-path.md)。
+Query 是 Python 3.12 / FastAPI 服务：读取 Collector 的 Raw 数据，提供诊断、Market Session、Market State、MO Skew 与 Feature JSON。这里提供安装、启动、调用和排障方法；内部设计与结构见本级 [Design](DESIGN.md)和 [Architecture](ARCHITECTURE.md)，共享 Raw 与 HTTP 分别见 [Raw Boundary](../docs/contracts/raw-boundary.md)和 [Read Path](../docs/contracts/read-path.md)。
 
-领域契约：[Market State](../docs/contracts/market-state.md) · [Market Session](../docs/contracts/market-session.md) · [Analytics / Skew](../docs/contracts/analytics-skew.md) · [Acceptance](../docs/acceptance.md) · [Harness](../harness/README.md)
+本级 authority：[组件 Contract](CONTRACT.md) · [Market State](contracts/market-state.md) · [Analytics / Skew](contracts/analytics-skew.md) · [Reference adapter](contracts/references.md) · [Query Acceptance](ACCEPTANCE.md)。共享协议：[Market Session](../docs/contracts/market-session.md) · [Feature](../docs/contracts/features.md)。系统状态与验证入口见[根 Acceptance](../docs/acceptance.md)和 [Harness](../harness/README.md)。
 
 统一前台开发入口位于仓库根：`./dev doctor query` 检查本组件，`./dev up query` 运行本组件，`./dev up` 运行完整开发会话。参数示例和与持久部署的区别见 [Operations](../docs/operations.md#前台开发会话)；下面保留 Query 自身的安装、直接运行和调用用法。
 
@@ -49,6 +49,7 @@ Query 不需要 CTP 凭据。生产挂载、只读权限、端口和服务生命
 | `GET /api/skew/latest?month=YYMM` | 最近可展示的 MO Skew |
 | `GET /api/skew/series?day=YYYYMMDD&month=YYMM` | 当日分钟序列和变化 |
 | `GET /api/skew/minute?day=YYYYMMDD&minute=ISO&month=YYMM` | 指定分钟回看 |
+| `POST /api/features/evaluate` | 单 Feature 只读查询 |
 | `GET /docs` | OpenAPI 交互文档 |
 
 上表用于快速调用，不定义参数校验、状态、错误或业务语义。诊断及 HTTP 失败语义见 [Read Path Contract](../docs/contracts/read-path.md)；Market Session 和 Skew 结果分别见对应领域 Contract。
@@ -89,7 +90,7 @@ frame = reader.minute(
 query/.venv/bin/python query/market_state.py minute --data-dir collector/data --day 20260908 --instrument MO2609-C-5000 --at '2026-09-08T09:30:00+08:00' --evaluated-at '2026-09-08T09:31:00+08:00'
 ```
 
-产品、月份或期权链读取需要通过 `--universe` 显式提供保存的 Universe；查看完整参数用 `--help`。Scope、分钟选择、revision、quality、freshness、完整性和失败语义只由 [Market State Contract](../docs/contracts/market-state.md) 定义。
+产品、月份或期权链读取需要通过 `--universe` 显式提供保存的 Universe；查看完整参数用 `--help`。Scope、分钟选择、revision、quality、freshness、完整性和失败语义只由 [Market State Contract](contracts/market-state.md) 定义。
 
 ## Skew API
 
@@ -103,7 +104,19 @@ curl --get http://127.0.0.1:8000/api/skew/series --data-urlencode 'month=2610' -
 curl --get http://127.0.0.1:8000/api/skew/minute --data-urlencode 'month=2610' --data-urlencode 'day=20260916' --data-urlencode 'minute=2026-09-16T09:30:00+08:00'
 ```
 
-示例日期和月份只展示调用格式，不代表存在生产参考包或真实市场验收。查询参数和 JSON 投影见 [Read Path Contract](../docs/contracts/read-path.md)；算法、ReferenceBundle、质量、重放和不可计算原因见 [Analytics / Skew Contract](../docs/contracts/analytics-skew.md)。
+示例日期和月份只展示调用格式，不代表存在生产参考包或真实市场验收。查询参数和 JSON 投影见 [Read Path Contract](../docs/contracts/read-path.md)；算法、质量、重放和不可计算原因见 [Analytics / Skew Contract](contracts/analytics-skew.md)，参考包适配见 [Reference adapter](contracts/references.md)。
+
+## Feature API
+
+已实现的 Feature 查询复用同一 Skew service。示例只展示请求格式：
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/features/evaluate \
+  -H 'Content-Type: application/json' \
+  -d '{"schema_version":1,"feature_id":"mo-skew-25d-v1","scope":{"exchange":"CFFEX","product":"MO","month":"2610"},"parameters":{},"requested_at":"2026-09-16T09:31:00+08:00"}'
+```
+
+共享 request/envelope、sample key 与错误语义见 [Feature Contract](../docs/contracts/features.md)；注册表和 provider 约束见[本级 Contract](CONTRACT.md#feature-provider)。
 
 ## 审核参考包的离线导入
 
@@ -120,7 +133,7 @@ audited-package/
   rate.source
 ```
 
-包内容必须符合 [Analytics / Skew Contract](../docs/contracts/analytics-skew.md)。导入器会验证并复制已有审核包，但不会联网抓取、替代人工审核或修改 Raw：
+包内容必须符合 [Analytics / Skew Contract](contracts/analytics-skew.md)和 [Reference adapter Contract](contracts/references.md)。导入器会验证并复制已有审核包，但不会联网抓取、替代人工审核或修改 Raw：
 
 ```bash
 query/.venv/bin/python query/skew_references.py /path/to/audited-package --directory /path/to/references/analytics

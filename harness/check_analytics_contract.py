@@ -6,8 +6,9 @@ import math
 from pathlib import Path
 
 ROOT=Path(__file__).resolve().parents[1]
-POLICY=ROOT/'docs/contracts/analytics-skew-v1.json'
+POLICY=ROOT/'query/contracts/analytics-skew-v1.json'
 FIXTURES=ROOT/'harness/fixtures/analytics-skew-v1.json'
+BASELINE_WITHOUT_GENERATOR_SHA256='4ae593379952b70006fb977c906dec29909a48423f7e492f98283513d6c46b56'
 
 
 def near(actual, expected, tolerance, label):
@@ -166,6 +167,10 @@ def check(policy, fixtures):
 def main():
     p=json.loads(POLICY.read_text())
     fixture=json.loads(FIXTURES.read_text())
+    baseline_payload={key:value for key,value in fixture.items() if key!='generator_sha256'}
+    baseline_bytes=json.dumps(baseline_payload,sort_keys=True,separators=(',',':')).encode()
+    assert hashlib.sha256(baseline_bytes).hexdigest()==BASELINE_WITHOUT_GENERATOR_SHA256, \
+        'Frozen fixture changed outside generator provenance'
     assert hashlib.sha256(POLICY.read_bytes()).hexdigest()==fixture['policy_sha256'],'Frozen policy differs from oracle input'
     generator=ROOT/'harness/analytics_oracle.py'
     assert hashlib.sha256(generator.read_bytes()).hexdigest()==fixture['generator_sha256'],'Oracle generator changed'

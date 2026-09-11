@@ -1,6 +1,6 @@
 # Reviewed market reference calendars
 
-本目录保存随 Query 发布、经过审核的版本化交易日历。它是参考输入，不是行情来源；交易日、夜盘归属、Session 状态、UNKNOWN 和 source TradingDay 的精确语义只由 [Market Session Contract](../../docs/contracts/market-session.md) 定义。
+本目录保存随 Query 发布、经过审核的版本化交易日历。它是参考输入，不是行情来源；交易日、夜盘归属、Session 状态、UNKNOWN 和 source TradingDay 的精确语义只由 [Market Session Contract](../../docs/contracts/market-session.md) 定义，Query 加载与 coverage 适配见[组件 Contract](../CONTRACT.md#calendar-与-coverage-适配)。
 
 ## 更新日历
 

@@ -1,5 +1,4 @@
 <a id="market-session-shared-contract"></a>
-<a id="query-calendar-contract"></a>
 <a id="dashboard-session-contract"></a>
 
 # Market Calendar / Session 与 SHFE AU、AG 设计
@@ -7,7 +6,7 @@
 
 Calendar 和 Universe 是独立参考能力，不进入 C++ callback 或 Raw 写入链路。C++ 接受精确代码、源 TradingDay 分区、默认 15 秒物化，无交易所专用分支。当前覆盖原有 11 个 CFFEX 品种与 SHFE AU/AG 期货。
 
-`query/market_calendar.py` 为纯标准库模块，`query/calendars/2026.json` 为版本化年历。Query 提供只读接口；独立 universe 工具使用日历选择来源日期。来源链接是 2026-09-07/08 的既有设计依据，整理时未重新核对交易所规则。
+Query 的 Calendar/coverage 适配见 [Query Contract](../../query/CONTRACT.md#calendar-与-coverage-适配)；独立 universe 工具使用同一共享日历协议选择来源日期。来源链接是 2026-09-07/08 的既有设计依据，整理时未重新核对交易所规则。
 
 ## 已核对的官方依据
 

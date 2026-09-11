@@ -21,7 +21,7 @@ npm run dev
 QUERY_URL=http://127.0.0.1:18000 npm run dev
 ```
 
-页面默认每 5 秒刷新，单次请求超时 4 秒。业务字段、历史/当前状态、质量和错误清理规则不在 README 重复，统一见 [Read Path Contract](../docs/contracts/read-path.md) 与 [Analytics / Skew Contract](../docs/contracts/analytics-skew.md)。
+页面默认每 5 秒刷新，单次请求超时 4 秒。业务字段、历史/当前状态、质量和错误清理规则不在 README 重复，统一见 [Read Path Contract](../docs/contracts/read-path.md) 与 [Analytics / Skew Contract](../query/contracts/analytics-skew.md)。
 
 ## 构建与组件测试
 

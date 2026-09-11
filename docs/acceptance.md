@@ -8,7 +8,7 @@
 |---|---|---|---|
 | G1 | 固定环境连续 3 个完整交易日，AU/AG 真实跨午夜至日盘/新交易日 | [CFFEX 短时实连](archive/acceptance/CFFEX_Coverage_Acceptance_CN.md)、[SHFE 短时夜盘](archive/acceptance/Market_Session_SHFE_Acceptance_CN.md)；合成夜盘脚本 | 持久保存三日检查点、run/配置身份、接收/提交推进、断线说明、真实夜盘各边界；待验 |
 | G2 | 数据质量诚实，历史与当前分开 | Collector/Query/Calendar/Market State 测试；Skew JSON 当前/分钟/日序列、质量/历史/失败缺口及参考拒绝已做 TEST DOUBLE 回归；浏览器断线恢复 | 真实完整 MO 月链的分钟质量及异常证据；业务 JSON 已实现，真实业务待验 |
-| G3 | 一个 MO 月 Skew 闭环，10 时点独立对账和追溯 | [七项 Analytics 契约与数值核心](contracts/analytics-skew.md)、独立 oracle；审核包离线导入、当前/日序列/历史 JSON、输入哈希与固定 revision 回放已实现并做合成回归 | 取得并审核真实官方日参考包；按固定误差做至少10个真实时点独立对账（≥6可算、≥4异常）；JSON 切片已实现，G3仍待验 |
+| G3 | 一个 MO 月 Skew 闭环，10 时点独立对账和追溯 | [七项 Analytics 契约与数值核心](../query/contracts/analytics-skew.md)、独立 oracle；Query 局部工程证据见 [Query Acceptance](../query/ACCEPTANCE.md) | 取得并审核真实官方日参考包；按固定误差做至少10个真实时点独立对账（≥6可算、≥4异常）；JSON 切片已实现，G3仍待验 |
 | G4 | 30 秒理解汇报首页，3 次日常使用无需 SQL/日志 | React 汇报首页已实现月份选择、当前值/当日变化/时间/质量/原因、指定分钟回看和折叠诊断；组件回归为 TEST DOUBLE | 在已审核真实日包与完整 MO 月链上取得3次日常使用记录，实测30秒理解与无需 SQL/日志；待验 |
 | G5 | 故障后恢复，保留已提交数据，备份恢复可读 | CTest、原生/容器独立停启/重启追加/心跳过期 | 本版本选择部署方式的回归；真实数据备份恢复的哈希/完整性/查询记录；现场待验 |
 | G6 | 固定验收版本、可复现部署、说明完整、无阻断问题 | 原生/Docker 入口、锁文件、操作与契约已提供 | 对最终版本部署，保存构建/环境和结果，审核限制与阻断项；待验 |
@@ -22,7 +22,7 @@
 | 交付层次 | 当前状态/证据 | 缺口 |
 |---|---|---|
 | M0 设计冻结 | 产品平行边界、领域模型、依赖/ownership、状态机、事务和投递恢复已落位 authority；milestone 拆为独立 commits | 文档证据仅证明设计和结构检查，不证明业务运行 |
-| M1 Feature service / HTTP | 已实现通用 v1 envelope、显式注册表、复用 SkewService 的 `mo-skew-25d-v1` provider 及只读 `POST /api/features/evaluate`；新旧接口相同 TEST DOUBLE 输入的数值、时间、状态、质量、scope 与完整 evidence 对等；严格参数/失败和只读边界已有工程回归 | Docker 输入白名单已同步并通过结构检查；本机 Docker 命令不可用，实际 packaging context 导出未执行成功；真实 MO/官方参考仍沿用 G2/G3 缺口 |
+| M1 Feature service / HTTP | 已实现；Query 局部实现与测试证据见 [Query Acceptance](../query/ACCEPTANCE.md#query-feature-evidence) | 当时 packaging 因 Docker 不可用未执行成功；真实 MO/官方参考仍沿用 G2/G3 缺口 |
 | M2 Rule Engine | 待实现 | 纯规则、crossing、UNKNOWN、去重及 representative TEST DOUBLE 回归未执行 |
 | M3 持久事件 / runtime | 待实现 | application SQLite、原子提交、独立进程和恢复验证未执行 |
 | M4 webhook delivery | 待实现 | 独立投递、尝试记录、有限重试和不确定性恢复验证未执行 |
@@ -35,9 +35,7 @@ M0 文档基线检查：`artifacts/harness/20260909T152645Z-docs-a8bc6e08/result
 
 本次没有执行 analytics/offline/native/browser/packaging/docker，没有启动/停止真实服务、读取实盘数据或发送 webhook。basis、return、ATM IV 只有扩展性测试规划，未实现生产指标，也尚未执行这些 TEST DOUBLE 测试。原 G1–G6/P1/P2 均不因 M0 文档冻结签收。
 
-M1 由两个独立提交交付：`feat(query): add shared feature projection`（`8c6c900`）和 `feat(query): expose read-only feature evaluation`。第一提交的 6 项 service/provider 测试使用真实临时 SQLite、Market State、生产 Analytics 与明确的 SYNTHETIC / TEST DOUBLE 参考包，验证 envelope 有限标量约束、注册表、严格 scope/参数/时间、Skew 公共结果逐字段投影、同一采样位置跨 Raw revision/请求时钟的稳定 sample key，以及未知位置不伪造 sample key。第二提交的 7 项 HTTP 测试在同类隔离输入上验证只读 POST、新旧接口对等、PARTIAL/历史/陈旧/不可用、未知/重复/非有限 JSON 与字段/版本/Feature/scope/参数拒绝、生产拒绝 SYNTHETIC、Raw 404/503 原样传播和未预期 provider 异常为 HTTP 失败；测试前后 Raw SQLite 字节一致。
-
-本次完整 Query 回归 89 项通过；`python3 harness/run.py analytics` 为 PASS，报告 `artifacts/harness/20260910T151944Z-analytics-beea795b/result.json`，包含既有 frozen contract/oracle 与生产 Skew 回归，未修改模型、参数、质量门槛或数值容差。构建输入已同步至 Query Dockerfile、deny-by-default allowlist 与 harness 精确输入清单；docs 结构检查为 PASS，报告 `artifacts/harness/20260910T152100Z-docs-b207185b/result.json`，验证必要文件均被声明。`python3 harness/run.py packaging` 报告 `artifacts/harness/20260910T151708Z-packaging-e477e8ee/result.json` 为 FAIL：docs 与 harness tests 通过，但当前 WSL 未启用 Docker Desktop integration，`docker version` 失败，实际 context 导出因此 NOT_RUN；不能把结构检查写成 packaging PASS。
+M1 的两个提交、service/provider 与 HTTP 测试数、完整 Query/analytics/docs 结果和 packaging NOT_RUN 边界均保存在 [Query Acceptance](../query/ACCEPTANCE.md#query-feature-evidence)；根只保留 Monitoring milestone 与系统门槛映射。
 
 M1 没有实现或测试 Rule Engine、application SQLite、Monitoring runtime、webhook 或 basis/return/ATM IV，也没有启动/停止真实服务、读取实盘或发送通知。工程 TEST DOUBLE 通过不签收真实 Feature/通知证据，不改变 G1–G6/P1/P2 及 M2–M5 缺口。
 
@@ -48,14 +46,6 @@ M1 没有实现或测试 Rule Engine、application SQLite、Monitoring runtime�
 `python3 harness/run.py offline` 报告为 `artifacts/harness/20260910T063104Z-offline-c6268769/result.json`（PASS，14 步均实际执行）。报告基线 revision 为 `c4501e7`，记录的工作树补丁 SHA-256 `40ac99918056b21e2cc5257baf3534b1a4a2cb68aba6fafdac359af53913be83` 与 `c4501e7..fd8ba28` 的 Git binary diff 一致。该次运行通过 docs、harness-tests、configure/build、7 项 CTest、显式 credentials/CLI 语义、32 项 runner tests、实际 runner smoke、76 项 Query、Universe、deploy、verify、React 和 frontend-build。实际 smoke 只使用临时配置/data/flow、随机 loopback 端口和 TEST DOUBLE SDK，经过 Collector → SQLite → Uvicorn → Vite，验证共享 Raw、Dashboard 代理、下游隔离、writer/端口冲突、会话清理及重启保留追加。
 
 这些证据不包含真实 CTP/行情、真实配置写入、现场恢复、当前版本浏览器或 Docker runtime，也不改变 native/Docker 行为。账号空值被本地接受不证明真实前置允许匿名接入；进程与 HTTP 工程闭环不证明行情推进或业务就绪。本轮不签收 G1–G6，TEST DOUBLE 和监督测试不能替代三日行情、真实恢复及最终部署验收。
-
-## Query 参考目录路径一致性修复（2026-09-10）
-
-提交 `9cc5870` 将单 Query 和联合启动共用的参考目录环境准备逻辑对齐 [Deployment Contract](contracts/deployment.md)：已设置的 `MARKET_CALENDAR_DIR`、`SKEW_REFERENCE_DIR` 基于调用目录转为绝对路径，缺省保持缺省，空字符串映射到调用目录；不展开占位符、不解引用符号链接、不创建目录，也不改父进程及其他组件环境。此记录不替换上文历史 offline 报告的版本归属。
-
-该修复工作树（随后提交为 `9cc5870`）执行 `python3 -m unittest discover -s tests -p 'test_dev*.py' -v`，34 项通过。新增 TEST DOUBLE 回归覆盖单组件/联合启动的相对、绝对、空、缺省、空格/`..`、符号链接、未展开字符、无持久写入及环境隔离；标准库子进程使用实际构造的 Query cwd/env 验证参考路径仍指向临时调用目录。`python3 harness/check_dev_semantics.py --scope all` 的 credentials 和 CLI 均 PASS；`python3 harness/run.py docs` 为 PASS，报告 `artifacts/harness/20260910T081747Z-docs-41e87148/result.json` 保存提交前修复工作树信息；`git diff --check` 通过。
-
-本次未重跑完整 offline、浏览器或 Docker runtime，未启动真实行情、读取真实配置或加载业务参考包。以上仅证明路径与文档一致，不签收真实行情或 MVP 门槛。
 
 ## 工程 harness 与门槛映射
 
@@ -81,18 +71,7 @@ M1 没有实现或测试 Rule Engine、application SQLite、Monitoring runtime�
 备份恢复演练只能在隔离恢复目录进行，具体步骤见[运行与恢复](operations.md)。测试可用合成数据验证机制，但 G5 的真实数据恢复仍须单独取得证据。
 
 
-## Skew JSON 垂直切片工程证据（2026-09-08）
-
-实现入口：[业务 API 契约](contracts/read-path.md)、[Query 用法与审核包导入](../query/README.md)。新业务测试为 `query/tests/test_skew_api.py`；真实临时 SQLite 与 FastAPI，报价/参考均为明确 TEST DOUBLE（官方格式导入用伪造原件只检验机制，不作为 OFFICIAL 实盘证据）。覆盖：
-
-- 最新封口、首分钟等待、午休/竞价/次日历史归属、当前报价陈旧、指定分钟历史与未封口拒绝。
-- 单日237个连续分钟及失败缺口、首有效基准/变化、逐帧同 revision；请求中迟到写入不混入，显式旧 revision/bundle 回放一致。
-- 原文件哈希、官方来源归档校验、前一交易日/元数据不匹配拒绝、参考字节固定、生产拒绝 SYNTHETIC、离线导入不覆盖。
-- HTTP 400/404/503、无 SQL/Raw字段投影、有限 JSON 数值；冻结 oracle 的 Black 时间缩放恒等式核对，容差未改变。
-
-`python3 harness/run.py analytics` 最终代码工程结果：`artifacts/harness/20260908T113644Z-analytics-3e874a2f/result.json`，PASS，覆盖固定独立 oracle、16项生产核心和14项切片回归。完整 Query 回归命令 `cd query && .venv/bin/python -m unittest discover -s tests -v` 同版本76项通过。`packaging` 结果：`artifacts/harness/20260908T113722Z-packaging-e1ec0ecc/result.json`，PASS，仅证明真实 Docker scratch COPY 包含必要源码且排除运行数据，不代表 runtime 镜像或服务部署。报告保存当时工作树补丁及未跟踪源码哈希；报告后的文档更新仅登记这些结果，生产代码未变。
-
-本轮范围为工程切片，暂不执行真实业务验收。G2/G3 **未签收**：本轮没有已审核生产日包、真实完整 MO 月分钟质量证据或10个真实时点独立对账。HTTP 工程切片可用不能替代这些证据；G4 的汇报页代码已实现，但真实三次日常使用未取证，因此 G4 仍未签收；P1/P2 也尚无真实性能证据。本轮未启动或重启真实服务。
+Query 的数值核心、Skew JSON、reference adapter、Feature provider/HTTP 与参考路径修复工程记录已迁至 [Query Acceptance](../query/ACCEPTANCE.md)。根矩阵只据此映射 G2/G3/P1/P2，并继续保留真实官方包、完整 MO 月链、10 时点独立对账和性能证据缺口。
 
 ## 汇报首页工程证据（2026-09-09）
 
@@ -146,5 +125,15 @@ React 组件 7 项通过，覆盖当前 Skew、当日变化、完整性与 TEST 
 Collector callback、配置、采样、session、提交与正常停止语义只迁址、不重新设计；共享 Raw owner/锁/WAL/诊断继续留根。Universe 的来源抓取、校验、保留和发布行为下沉到工具 scope，Calendar/Universe 跨模块交接继续留根；C++ runtime 不依赖 Query，只有既有 `universe.py` → `query/market_calendar.py` 工具边。三服务 native/Docker 教程归根 Operations，repository deployment lifecycle 未下沉。
 
 本阶段只修改文档、authority registration 和相应 Harness 文档路径检查；没有移动或修改 `native.py`、`universe.py` 或其他生产代码，没有读取配置/Raw、运行真实服务或执行 S4。结构检查证明路径、锚点、claim/scope、依赖和受保护输入，不提升业务或现场验收状态。
+
+<a id="semantic-authority-s4"></a>
+
+## Repository semantic embedding：Query / Market / Analytics authority / S4
+
+2026-09-11，从干净的 `main@8008722` 恢复并核对 S1–S3 提交与登记。本阶段只执行 S4：Query guidance、Design、Architecture、组件 Contract、领域 Contracts 与局部 Acceptance 已落位；Market State、Skew、机器策略、ReferenceBundle adapter 和来源说明迁入 Query。共享 HTTP、Feature、Raw、Calendar/Universe protocol 继续位于 repository scope，Dashboard 专属规则及 S5 例外未执行。
+
+冻结策略按字节迁移，SHA-256 保持 `d520d8a2831f81df1372efe280898e2e682f5e039669488417c1f4fe7ec56f14`。oracle 只更新策略路径，fixture 只更新相应 `generator_sha256` provenance；新增忽略该 provenance 后的整份固定基线检查，未重新生成 expected，也未修改 vectors、chains、数学、参数或容差。旧中央 Query authority 路径已纳入退役检查，S4 migration exceptions 已退出。
+
+`python3 harness/run.py analytics` 为 PASS，报告 `artifacts/harness/20260911T031153Z-analytics-a75593bc/result.json`，其中 docs、32 项 harness tests、analytics-contract 与 production Analytics 均实际执行通过。固定环境 `artifacts/analytics-oracle-env` 使用 QuantLib 1.40 / mpmath 1.3.0 独立比较 12 个价格向量、2 条 tick-rounded chains 和插值例，退出码 0。最终 docs profile 为 PASS，报告 `artifacts/harness/20260911T031326Z-docs-3415e4cb/result.json`，docs 与 authority 自测均实际执行。迁移不读取真实配置/Raw、不运行服务、不改变生产行为，也不执行 S5；这些工程结果不提升 G1–G6/P1/P2。
 
 `python3 harness/run.py docs` 为 PASS，报告 `artifacts/harness/20260911T010603Z-docs-d7abef93/result.json` 记录 `c15b229` 加 S3 工作树，docs 与 authority 自测两个步骤均实际执行；完整 `harness/tests` 共 31 项通过，`git diff --check` 通过。报告后的修改仅登记本证据；提交前再次执行结构与 diff 检查。

@@ -42,11 +42,20 @@ REQUIRED_PATHS = (
     'collector/scripts/AGENTS.md',
     'collector/scripts/README.md',
     'collector/scripts/CONTRACT.md',
+    'query/AGENTS.md',
+    'query/README.md',
+    'query/DESIGN.md',
+    'query/ARCHITECTURE.md',
+    'query/CONTRACT.md',
+    'query/ACCEPTANCE.md',
+    'query/contracts/market-state.md',
+    'query/contracts/analytics-skew.md',
+    'query/contracts/analytics-skew-v1.json',
+    'query/contracts/references.md',
+    'query/references/analytics-skew-sources.md',
     *(f'docs/contracts/{name}.md' for name in
-      ('raw-boundary', 'read-path', 'market-state', 'market-session', 'deployment', 'analytics-skew',
+      ('raw-boundary', 'read-path', 'market-session', 'deployment',
        'features', 'monitoring')),
-    'docs/contracts/analytics-skew-v1.json',
-    'docs/references/analytics-skew-sources.md',
     'harness/fixtures/analytics-skew-v1.json',
 )
 
@@ -64,7 +73,11 @@ NON_IMAGE_PRODUCTION_INPUTS = (
 
 EXPERIMENT_PATH = re.compile(r'(?<![A-Za-z0-9_-])experiments[/\\]')
 EXPERIMENT_IMPORT = re.compile(r'^\s*(?:from|import)\s+experiments(?:\.|\s|$)')
-RETIRED_AUTHORITY_PATHS = ('docs/design.md', 'docs/architecture.md', 'docs/contracts/collector.md')
+RETIRED_AUTHORITY_PATHS = (
+    'docs/design.md', 'docs/architecture.md', 'docs/contracts/collector.md',
+    'docs/contracts/market-state.md', 'docs/contracts/analytics-skew.md',
+    'docs/contracts/analytics-skew-v1.json', 'docs/references/analytics-skew-sources.md',
+)
 
 
 def docker_included(relative, rules):

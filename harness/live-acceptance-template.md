@@ -24,7 +24,7 @@
 
 ## G3：指标对账
 
-按[冻结的 mo-skew-25d-v1](../docs/contracts/analytics-skew.md)记录契约/算法版本、ReferenceBundle及输入身份。至少10个不同真实时点（≥6可计算、≥4异常；定点扰动需另标SYNTHETIC_MUTATION），按契约固定IV/delta/F/Skew容差及选点规则对账；不能用同一实现计算两次冒充独立验证，不得在看到误差后放宽阈值。
+按[冻结的 mo-skew-25d-v1](../query/contracts/analytics-skew.md)记录契约/算法版本、ReferenceBundle及输入身份。至少10个不同真实时点（≥6可计算、≥4异常；定点扰动需另标SYNTHETIC_MUTATION），按契约固定IV/delta/F/Skew容差及选点规则对账；不能用同一实现计算两次冒充独立验证，不得在看到误差后放宽阈值。
 
 | 时点/scope | revision/Universe/Calendar/输入 ID | 参数与版本 | 系统值或失败原因 | 独立值/预期失败 | 差异/阈值/结论 | 证据 |
 |---|---|---|---|---|---|---|

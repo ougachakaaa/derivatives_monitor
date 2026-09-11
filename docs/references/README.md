@@ -28,7 +28,7 @@
 
 ## 市场参考与技术依据
 
-[Analytics / Skew 来源记录](analytics-skew-sources.md)区分官方MO/IM/Shibor事实、独立QuantLib oracle与项目自行冻结的近似和阈值。
+[Analytics / Skew 来源记录](../../query/references/analytics-skew-sources.md)已归 Query scope，区分官方MO/IM/Shibor事实、独立QuantLib oracle与项目自行冻结的近似和阈值；本目录继续保存真正共享的原件档案。
 
 - [日历/时段契约及官方来源](../contracts/market-session.md)、[版本化年历与更新](../../query/calendars/README.md)；年历文件自身保存来源、版本和覆盖范围，整理未改变交易规则。
 - [CFFEX 官方清单历史验证](../archive/acceptance/CFFEX_Coverage_Acceptance_CN.md)、[SHFE 官方清单和夜盘历史验证](../archive/acceptance/Market_Session_SHFE_Acceptance_CN.md)保留日期 URL/哈希与证据路径。运行时原响应保存在 `collector/data/universe/raw/`，清单 generation 与来源一同发布；不把公开参考价格作为 Raw 行情。

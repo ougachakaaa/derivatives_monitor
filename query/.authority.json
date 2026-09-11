@@ -1,13 +1,42 @@
 {
   "version": 1,
   "scope": {"id": "query", "root": "query", "parent": "repo", "entrypoint": "query/README.md", "status": "existing"},
-  "documents": [{"path": "query/README.md", "role": "entrypoint"}],
-  "claims": [],
+  "documents": [
+    {"path": "query/README.md", "role": "entrypoint"},
+    {"path": "query/AGENTS.md", "role": "agent-guidance"},
+    {"path": "query/DESIGN.md", "role": "design"},
+    {"path": "query/ARCHITECTURE.md", "role": "architecture"},
+    {"path": "query/CONTRACT.md", "role": "contract"},
+    {"path": "query/contracts/market-state.md", "role": "contract"},
+    {"path": "query/contracts/analytics-skew.md", "role": "contract"},
+    {"path": "query/contracts/analytics-skew-v1.json", "role": "contract"},
+    {"path": "query/contracts/references.md", "role": "contract"},
+    {"path": "query/references/analytics-skew-sources.md", "role": "reference"},
+    {"path": "query/ACCEPTANCE.md", "role": "acceptance"}
+  ],
+  "claims": [
+    {"id": "query.design-rationale", "definition": {"path": "query/DESIGN.md", "anchor": "query-design-rationale"}, "constrained_scopes": ["query"]},
+    {"id": "query.internal-architecture", "definition": {"path": "query/ARCHITECTURE.md", "anchor": "query-internal-architecture"}, "constrained_scopes": ["query"]},
+    {"id": "query.read-contract", "definition": {"path": "query/CONTRACT.md", "anchor": "query-read-contract"}, "constrained_scopes": ["query"]},
+    {"id": "query.calendar-contract", "definition": {"path": "query/CONTRACT.md", "anchor": "query-calendar-contract"}, "constrained_scopes": ["query"]},
+    {"id": "query.feature-provider-contract", "definition": {"path": "query/CONTRACT.md", "anchor": "query-feature-provider-contract"}, "constrained_scopes": ["query"]},
+    {"id": "query.market-state-contract", "definition": {"path": "query/contracts/market-state.md", "anchor": "query-market-state-contract"}, "constrained_scopes": ["query"]},
+    {"id": "query.skew-contract", "definition": {"path": "query/contracts/analytics-skew.md", "anchor": "query-skew-contract"}, "constrained_scopes": ["query"]},
+    {"id": "query.skew-policy", "definition": {"path": "query/contracts/analytics-skew-v1.json", "selector": "/"}, "constrained_scopes": ["query"]},
+    {"id": "query.reference-bundle-contract", "definition": {"path": "query/contracts/references.md", "anchor": "query-reference-bundle-contract"}, "constrained_scopes": ["query"]}
+  ],
   "claim_references": [
     {"claim": "repository.raw-boundary", "path": "query/README.md"},
+    {"claim": "repository.read-path-http", "path": "query/README.md"},
+    {"claim": "repository.market-session", "path": "query/README.md"},
     {"claim": "query.read-contract", "path": "query/README.md"},
     {"claim": "query.market-state-contract", "path": "query/README.md"},
     {"claim": "query.skew-contract", "path": "query/README.md"},
-    {"claim": "repository.feature-contract", "path": "query/README.md"}
+    {"claim": "repository.feature-contract", "path": "query/README.md"},
+    {"claim": "query.reference-bundle-contract", "path": "query/README.md"}
+  ],
+  "relations": [
+    {"kind": "evidence", "from": "query/ACCEPTANCE.md", "to_claim": "query.skew-contract"},
+    {"kind": "reference", "from": "query/references/analytics-skew-sources.md", "to_claim": "query.skew-contract"}
   ]
 }

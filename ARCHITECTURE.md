@@ -1,5 +1,4 @@
 <a id="repository-system-architecture"></a>
-<a id="query-internal-architecture"></a>
 <a id="monitoring-internal-architecture"></a>
 
 # 当前系统架构
@@ -29,10 +28,7 @@ flowchart LR
 | Raw 日 SQLite | 保存 Collector 实际物化的行情事实、运行身份与时间来源 | 由 Collector 拥有；所有下游只读，不为页面或算法建立第二套事实 |
 | `collector/scripts/universe.py` | 通过 Query 的纯 Calendar 模块选择来源日，生成和发布版本化合约清单参考 | 是工具依赖，不进入 C++ runtime；不写行情，清单不替代 CTP 行情事实 |
 | `query/market_calendar.py` | 提供版本化交易日历、产品时段和逻辑交易日解释 | 不改写源 TradingDay，不控制采集启停 |
-| `query/storage.py` / `app.py` | 只读访问 Raw，并提供诊断 JSON | 不写 Raw，不托管前端静态应用，不管理 Collector |
-| `query/market_state.py` | 将 Raw、显式 Universe 和 Calendar 组合为可追溯的 point/minute/latest 市场状态 | 是 Analytics 的行情读取边界；不定价，不猜完整链 |
-| `query/analytics.py` | 从 Market State frame 和显式参考输入计算 IV / Skew | 不直接访问 Raw SQL、网络或浏览器状态；结果属于可重建派生值 |
-| `query/skew_service.py` / `skew_references.py` | 选择业务时间切片、固定读取上下文并投影 Skew JSON | 通过 Market State 和审核参考包工作，不暴露内部存储结构 |
+| `query/` | 只读访问 Raw，将显式 Universe/Calendar 组合为 Market State，并计算和发布可重建 Analytics / Feature JSON | 不写 Raw、不依赖 Dashboard/Monitoring；内部关系见 [Query Architecture](query/ARCHITECTURE.md) |
 | `dashboard/` | 构建独立 React 汇报页面；Docker 由 Nginx、原生 systemd 由 Vite 提供页面及 API 代理 | 只消费 JSON；不读 SQLite，不维护另一套指标公式 |
 | `compose.yaml` / `scripts/deploy.sh` | 组成和管理仓库级三服务 Docker runtime | 属于系统 integration layer；服务内部构建和运行输入仍由各模块拥有 |
 | `harness/` 与模块测试 | 组织回归并记录验证证据 | 不定义产品行为，也不进入生产数据路径 |
@@ -59,7 +55,7 @@ flowchart LR
 | IV / Skew 响应 | Analytics / business service | API 与 Dashboard；当前不是第二份持久化事实库 |
 | 验收日志和现场证据 | Harness / 验收流程 | Acceptance 引用；不进入 runtime |
 
-数据集的精确 schema、锁、版本、时间、质量、选择和错误规则不在本表重复，分别见 [Raw Boundary](docs/contracts/raw-boundary.md)、[Collector](collector/CONTRACT.md)、[Universe tool](collector/scripts/CONTRACT.md)、[Read Path](docs/contracts/read-path.md)、[Market State](docs/contracts/market-state.md)、[Calendar / Universe](docs/contracts/market-session.md)、[Deployment](docs/contracts/deployment.md)及 [Analytics / Skew v1](docs/contracts/analytics-skew.md)。
+数据集的精确 schema、锁、版本、时间、质量、选择和错误规则不在本表重复，分别见 [Raw Boundary](docs/contracts/raw-boundary.md)、[Collector](collector/CONTRACT.md)、[Universe tool](collector/scripts/CONTRACT.md)、[Read Path](docs/contracts/read-path.md)、[Query](query/CONTRACT.md)、[Market State](query/contracts/market-state.md)、[Calendar / Universe](docs/contracts/market-session.md)、[Deployment](docs/contracts/deployment.md)及 [Analytics / Skew v1](query/contracts/analytics-skew.md)。
 
 ## Runtime 与模块边界
 
@@ -96,7 +92,7 @@ flowchart LR
 
 ### 必须落地的边界与保留的实现
 
-- Market State、Feature、Conclusion、Opportunity Event 的语义分别由 [Feature](docs/contracts/features.md)和 [Monitoring](docs/contracts/monitoring.md) Contracts 定义；目录归属不混淆语义归属。
+- Market State、Feature、Conclusion、Opportunity Event 的语义分别由 [Market State](query/contracts/market-state.md)、[Feature](docs/contracts/features.md)和 [Monitoring](docs/contracts/monitoring.md) Contracts 定义；目录归属不混淆语义归属。
 - Market State、Analytics 数值核心、参考包适配和 SkewService 暂留 `query/`。新增薄 Feature service 和 HTTP 投影复用它们；现有 API 与 Dashboard 保持兼容，不迁移首页。
 - 拟新增 `monitoring/` 是独立前台进程，内含纯规则核心、application store、HTTP consumer/scheduler 和 Notification adapter。评估和投递独立循环，同进程不同职责，不要求拆成独立项目或服务。
 - Monitoring 只经 Feature HTTP 消费指标，不读 Raw、不导入 Query 内部模块、不挂载行情目录。Query 不依赖 Monitoring 启动，也不为显示指标读取规则状态。
@@ -123,9 +119,9 @@ application store 是专属应用持久目录，不位于 Collector 数据目录
 
 ## Repository knowledge architecture：冻结目标
 
-本节拥有 documentation topology 和语义归属 mapping；治理规则唯一见[文档入口](docs/README.md#authority-rules)。目标布局保持冻结，表格逐项反映尚未迁移部分的当前来源。根 Design/Architecture、共享 Raw authority 及 Collector/Collector tools authority 已归位；其余业务定义仍由表中现行 Contracts 提供。实施状态见 [Acceptance](docs/acceptance.md#semantic-authority-s3)，执行顺序见 [ExecPlan](docs/semantic-embedding-execplan.md)。
+本节拥有 documentation topology 和语义归属 mapping；治理规则唯一见[文档入口](docs/README.md#authority-rules)。目标布局保持冻结，表格逐项反映尚未迁移部分的当前来源。根、Collector/Collector tools 及 Query authority 已归位；其余业务定义仍由表中现行 Contracts 提供。实施状态见 [Acceptance](docs/acceptance.md#semantic-authority-s4)，执行顺序见 [ExecPlan](docs/semantic-embedding-execplan.md)。
 
-当前导航为根 AGENTS/README/DESIGN/ARCHITECTURE → docs 入口与共享 Contracts；Collector 与 tools 已有局部入口/结构/契约，其他生产模块主要仍只有 README，Harness 有局部验证入口。尚未下放的 Query/Monitoring 局部设计与结构暂由根文件承接并以具名 migration exception 约束退出阶段；其他中央 Contracts 仍须按规则组分配，不能整份按文件名搬迁。实验区继续沿用逐层 SPEC/REFERENCE 组织。
+当前导航为根 AGENTS/README/DESIGN/ARCHITECTURE → docs 入口与共享 Contracts；Collector、tools 与 Query 已有局部入口/结构/契约，其他生产模块主要仍只有 README，Harness 有局部验证入口。尚未下放的 Monitoring 局部设计与结构暂由根文件承接并以具名 migration exception 约束退出阶段；其他中央 Contracts 仍须按规则组分配，不能整份按文件名搬迁。实验区继续沿用逐层 SPEC/REFERENCE 组织。
 
 冻结目标文件如下；未列出的对称文件不创建。根 DESIGN/ARCHITECTURE 已承接原 docs 地址，旧中央副本不保留；其内以 migration exception 暂存的局部内容仍按后续阶段下放。
 
@@ -177,19 +173,19 @@ application store 是专属应用持久目录，不位于 Collector 数据目录
 | 当前来源 / 语义范围 | 唯一目标及拆分边界 |
 |---|---|
 | [根 AGENTS](AGENTS.md)、[docs 入口](docs/README.md) | 根 AGENTS 工作纪律及导航；docs README 治理规则。根不列全仓领域必读清单 |
-| [根 Design](DESIGN.md) §1–8 | 跨模块原则已在根；Analytics 按请求计算等局部理由后续到 Query DESIGN |
-| 根 Design §9 | HTTP 共享、拆包触发和反向依赖理由留根；薄 provider 组织理由后续到 Query DESIGN |
+| [根 Design](DESIGN.md) §1–8、[Query Design](query/DESIGN.md) | 跨模块原则在根；Analytics 按请求计算等局部理由已归 Query |
+| 根 Design §9、Query Design | HTTP 共享、拆包触发和反向依赖理由留根；薄 provider 组织理由已归 Query |
 | 根 Design §10 | 机会记录/通知恢复内部取舍后续到 Monitoring DESIGN；与 Market Facts 的跨模块边界留根并引用 |
-| [本文](ARCHITECTURE.md) | 一级模块、跨模块流、当前/目标 runtime 已在根；Query 内部文件关系与 Monitoring 循环/存储结构后续下放各自 ARCHITECTURE |
+| [本文](ARCHITECTURE.md)、[Query Architecture](query/ARCHITECTURE.md) | 一级模块、跨模块流、当前/目标 runtime 在根；Query 内部文件关系已归本级，Monitoring 循环/存储结构后续下放 |
 | [Collector Contract](collector/CONTRACT.md)、[Raw Boundary](docs/contracts/raw-boundary.md) | Raw 共享读写、锁、诊断协议归 raw-boundary；callback、采样、session、配置、重连、提交和 Collector 自身停止归本地 Contract |
-| [Read Path](docs/contracts/read-path.md)：边界/健康/SQLite | 系统挂载与生命周期已引用 Deployment，共享 Raw/心跳协议已引用 raw-boundary；公共 HTTP 留 read-path，Query 内部读取要求后续归 query/CONTRACT.md |
+| [Read Path](docs/contracts/read-path.md)、[Query Contract](query/CONTRACT.md)：边界/健康/SQLite | 公共 HTTP 留 read-path；Query 内部读取要求已归本级；系统 lifecycle 与共享 Raw/心跳各引用其协议 |
 | Read Path：Skew | HTTP 参数、wire shape、状态映射保留根 read-path；分钟选择、series 计算引用 Query Skew，删除重复定义 |
 | Read Path：React | 布局、轮询、失败清值、显示精度、历史与当前视图交互归 dashboard/CONTRACT.md |
-| [Market Session](docs/contracts/market-session.md)、[Universe Tool Contract](collector/scripts/CONTRACT.md) | Calendar/Universe 跨模块版本、时间、交接协议留根；来源抓取/发布行为已归工具 Contract；Query 内部 Calendar/coverage 适配后续到 query/CONTRACT.md；页面时段表后续到 Dashboard |
-| [Market State](docs/contracts/market-state.md) | query/contracts/market-state.md；引用根 Raw/Calendar 协议，去掉重复采集事实 |
-| [Skew](docs/contracts/analytics-skew.md) | query/contracts/analytics-skew.md；纯页面规则到 Dashboard；审核包布局/导入/读取适配到 query/contracts/references.md；§10 历史记录与 §11 实现/测试证据到 query/ACCEPTANCE.md，保留 §11 的真实接口规范，不能整节删除 |
-| [Skew 策略](docs/contracts/analytics-skew-v1.json)、[来源说明](docs/references/analytics-skew-sources.md) | query/contracts/analytics-skew-v1.json、query/references/analytics-skew-sources.md；共享原件档案不动 |
-| [Feature](docs/contracts/features.md) | 通用 envelope、身份/采样键、时间、错误、版本、消费者与窗口归属边界留根；registry/provider 内部要求到 Query CONTRACT；Skew 映射留根单一定义并引用 Query 数值契约 |
+| [Market Session](docs/contracts/market-session.md)、[Universe Tool](collector/scripts/CONTRACT.md)、[Query Contract](query/CONTRACT.md) | Calendar/Universe 跨模块版本、时间、交接协议留根；来源抓取/发布归工具；Query Calendar/coverage 适配已归本级；页面时段表后续到 Dashboard |
+| [Market State](query/contracts/market-state.md) | 已归 Query；引用根 Raw/Calendar 协议，不重复采集事实 |
+| [Skew](query/contracts/analytics-skew.md)、[Reference adapter](query/contracts/references.md)、[Query Acceptance](query/ACCEPTANCE.md) | 数值与接口规范、参考适配和局部证据已分责归 Query；纯页面规则仍待 S5 归 Dashboard |
+| [Skew 策略](query/contracts/analytics-skew-v1.json)、[来源说明](query/references/analytics-skew-sources.md) | 已按字节/原文归 Query；共享原件档案不动 |
+| [Feature](docs/contracts/features.md)、[Query Contract](query/CONTRACT.md) | 通用 envelope、身份/采样键、时间、错误、版本、消费者与窗口归属边界留根；registry/provider 内部要求已归 Query；Skew 映射留根并引用 Query 数值契约 |
 | [Monitoring](docs/contracts/monitoring.md) | monitoring/CONTRACT.md 拥有规则、crossing、UNKNOWN、配置、事务、恢复、投递；跨模块访问和生命周期引用根，删除重复约束 |
 | [Deployment](docs/contracts/deployment.md) | 保留真实跨组件约束；Collector 自身停机引用 Collector；Monitoring 自有锁/重试引用 Monitoring |
 | [Collector README](collector/README.md)、[scripts README](collector/scripts/README.md) | Collector 配置/直接运行用法与工具命令已分开；已有规范归各自 Contract；三服务部署教程归根 Operations |

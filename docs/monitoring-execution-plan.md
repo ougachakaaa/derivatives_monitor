@@ -13,8 +13,8 @@
 | [MVP](mvp.md) / [Design](../DESIGN.md) / [Architecture](../ARCHITECTURE.md) | Monitoring 是平行扩展；主线 Skew 收尾不变；冻结目标结构与当前三组件部署分开 |
 | [Feature Contract](contracts/features.md) | 公共语义、单 Feature 查询、Skew 投影、采样身份、共享/窗口边界 |
 | [Monitoring Contract](contracts/monitoring.md) | Rule/Evaluation、crossing、事务、恢复和投递语义；实施不得另选状态机 |
-| [Market State](contracts/market-state.md) / [Market Session](contracts/market-session.md) | 时间、session、revision、质量及显式 Universe 不变量 |
-| [Skew Contract](contracts/analytics-skew.md)及[机器策略](contracts/analytics-skew-v1.json) | 金融模型、单位、参考准入、质量和 oracle 容差全部保持 |
+| [Market State](../query/contracts/market-state.md) / [Market Session](contracts/market-session.md) | 时间、session、revision、质量及显式 Universe 不变量 |
+| [Skew Contract](../query/contracts/analytics-skew.md)及[机器策略](../query/contracts/analytics-skew-v1.json) | 金融模型、单位、参考准入、质量和 oracle 容差全部保持 |
 | [Read Path](contracts/read-path.md) / [Deployment](contracts/deployment.md) | HTTP 只读、错误和进程/存储边界；不接管现有部署 |
 | [Market State 实现](../query/market_state.py) | 已有显式读取接口，Monitoring 无需重建第二条 Raw 读取路径 |
 | [Skew service](../query/skew_service.py) / [数值核心](../query/analytics.py) | 已有业务时间选择与完整公共结果；只增加 Feature 投影，不复制金融实现 |

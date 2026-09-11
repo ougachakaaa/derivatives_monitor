@@ -17,7 +17,7 @@
 
 ## 业务指标边界
 
-MVP 使用 **`mo-skew-25d-v1`** 作为唯一 Skew 指标定义。模型、远期、参考输入、时间选择、报价质量、数值求解、失败语义和验证容差的唯一完整来源是 [Analytics / Skew Contract](contracts/analytics-skew.md)及其[机器策略](contracts/analytics-skew-v1.json)；本文件只规定该指标必须支撑上述单月观察闭环，不复制其算法。
+MVP 使用 **`mo-skew-25d-v1`** 作为唯一 Skew 指标定义。模型、远期、参考输入、时间选择、报价质量、数值求解、失败语义和验证容差的唯一完整来源是 [Analytics / Skew Contract](../query/contracts/analytics-skew.md)及其[机器策略](../query/contracts/analytics-skew-v1.json)；本文件只规定该指标必须支撑上述单月观察闭环，不复制其算法。
 
 ## 六个收尾条件
 

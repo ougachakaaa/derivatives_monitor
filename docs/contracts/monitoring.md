@@ -110,4 +110,4 @@ Attempt 记录开始/结束时间、HTTP 状态（若有）、结果 `ACCEPTED /
 
 必须覆盖首次基线、四种比较的等号边界、单位/非有限值拒绝、持续满足/重入、UNKNOWN 前后两种 crossing、同分钟修订/旧响应、重启/规则修订/停用、原子提交前后崩溃、双实例及库失败。通知验证成功、非 2xx、超时、接收后崩溃、次数耗尽和重启续投；证明发送等待不阻塞判断，下游退出不影响隔离 Collector 继续提交。
 
-basis、5 分钟 return、ATM IV 和 Skew representative cases 使用同一纯引擎；前三者只用标明 TEST DOUBLE 的 Feature 输出验证接口，不把它们登记为生产指标。真实 Skew 的输入与官方参考验证仍沿用 [Analytics Contract](analytics-skew.md)。工程、现场和未执行证据分开登记 [Acceptance](../acceptance.md)，不得用通知闭环替代主线 MVP 验收。
+basis、5 分钟 return、ATM IV 和 Skew representative cases 使用同一纯引擎；前三者只用标明 TEST DOUBLE 的 Feature 输出验证接口，不把它们登记为生产指标。真实 Skew 的输入与官方参考验证仍沿用 [Analytics Contract](../../query/contracts/analytics-skew.md)。工程、现场和未执行证据分开登记 [Acceptance](../acceptance.md)，不得用通知闭环替代主线 MVP 验收。

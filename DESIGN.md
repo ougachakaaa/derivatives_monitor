@@ -1,5 +1,4 @@
 <a id="repository-design-principles"></a>
-<a id="query-design-rationale"></a>
 <a id="monitoring-design-rationale"></a>
 
 # 长期设计原则与取舍
@@ -34,7 +33,7 @@
 
 派生计算通过受契约约束的只读市场状态消费事实，并显式携带输入 revision、参考版本和算法身份。这样可以区分“同一历史输入的重建”与“当时已经产出的结果”，也避免分析代码依赖 Raw 表结构或隐藏的当前状态。
 
-单月 Skew MVP 的 Analytics 选择按请求计算，而不是先引入第二份权威派生库或常驻指标调度器；这是为了在真实性能和使用证据出现前控制一致性成本。未来缓存或物化若有必要，应保持可重建、可失效，且不能成为新的市场事实来源。平行 Monitoring 的调度和已提交应用事实遵循下文边界，不改变 Analytics 的可重建属性。
+Query 内部选择按请求计算、可重建派生值，理由见 [Query Design](query/DESIGN.md)；这不改变派生结果不能成为市场事实来源的跨模块边界。平行 Monitoring 的调度和已提交应用事实遵循下文边界，不改变 Analytics 的可重建属性。
 
 ## 6. 失败语义是业务输出的一部分
 
@@ -56,7 +55,7 @@
 
 ## 9. 以稳定语义共享 Analytics，按实际需要拆模块
 
-Market State 解释事实，Feature 描述市场，Monitoring 表达用户规则结论。共享的是可追溯的业务能力，不要求共享目录名。现有 Query 已有受约束的 Market State、数值核心和业务 service，先增加薄 Feature 接口能保持金融口径一致，并避免平行开发中的大规模迁移。
+Market State 解释事实，Feature 描述市场，Monitoring 表达用户规则结论。共享的是可追溯的业务能力，不要求共享目录名。Query 采用薄 Feature provider 的局部理由见 [Query Design](query/DESIGN.md)。
 
 首版独立 Monitoring 通过 Query HTTP 消费 Feature：无需挂载 Raw 或绑定 Query 的扁平 Python 导入，也保留 Query 与 Dashboard 独立运行的能力。代价是 Query 不可用时无法取得新的有效判断；明确 UNKNOWN 比维护第二条行情读取路径更小、更容易检查。无真实消费者或失败模式时，不预建计算图、动态插件和窗口框架。
 

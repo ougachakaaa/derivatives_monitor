@@ -15,4 +15,4 @@
 
 - 不清理 `collector/data/`、配置、flow、构建依赖、日志或未跟踪现场证据；真实凭据不入 Git。文档或离线回归不执行会影响真实服务的原生/容器管理命令。
 - 新人或 agent 从 `python3 harness/run.py docs` 开始，并按 [Harness 说明](harness/README.md)选择与改动相称的安全回归。测试数据必须标记 TEST DOUBLE；未执行、跳过或缺少证据均不能写成通过。
-- Analytics 改动必须先读[冻结的 Skew v1 Contract](docs/contracts/analytics-skew.md)及其机器策略；不得另选模型、参数或事后放宽验收容差。Raw producer/consumer 改动同时读取[共享边界](docs/contracts/raw-boundary.md)。
+- Analytics 改动必须先读[冻结的 Skew v1 Contract](query/contracts/analytics-skew.md)及其机器策略；不得另选模型、参数或事后放宽验收容差。Raw producer/consumer 改动同时读取[共享边界](docs/contracts/raw-boundary.md)。

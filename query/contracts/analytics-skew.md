@@ -1,10 +1,8 @@
 <a id="query-skew-contract"></a>
-<a id="query-reference-bundle-contract"></a>
-<a id="dashboard-skew-contract"></a>
 
 # MVP Analytics / Skew contract v1
 
-状态：**FROZEN / CORE IMPLEMENTED**，2026-09-08；契约 ID `mo-skew-25d-v1`。本文件冻结七项设计，机器常量见[策略文件](analytics-skew-v1.json)。这是当前单月 Skew MVP 的唯一 Analytics 定义；生产数值核心位于 `query/analytics.py`。参考导入、HTTP、页面及真实对账的当前实现/验证状态统一见 [Acceptance](../acceptance.md)，实现不意味着实盘验收完成。平行 [Feature 查询](features.md)复用本契约，不改变任何冻结数值或质量要求。
+状态：**FROZEN**，2026-09-08；契约 ID `mo-skew-25d-v1`。本文件冻结七项设计，机器常量见[策略文件](analytics-skew-v1.json)。这是当前单月 Skew MVP 的唯一 Analytics 定义；实现与验证状态见 [Query Acceptance](../ACCEPTANCE.md)，系统门槛见[根 Acceptance](../../docs/acceptance.md)。共享 [Feature 查询](../../docs/contracts/features.md)复用本契约，不改变任何冻结数值或质量要求。
 
 | 决定 | v1 选择 |
 |---|---|
@@ -97,11 +95,7 @@ MO 的法律标的是中证1000指数；v1 的估值输入是该到期月的**�
 
 允许 `0<T≤1`；**到期日当天全部停止新 IV/Skew 计算**，返回 `EXPIRY_DAY_UNSUPPORTED`，到期时刻及之后 `EXPIRED`。原因是股指期权交割基于指数最后两小时平均值，v1 不建立平均价期权模型；到期日前的 Black IV 也只是统一报价约定。历史查询按历史 t 判断，不能用今天的自然日期拒绝过去有效分钟。
 
-参考包位于独立只读 `references/analytics/<day>/<bundle_id>/bundle.json`（独立不可变输入包；尚无已验收生产包）。由外部审核/导入工具维护，Python Analytics 不写 Raw；生产与测试包完全分开，`SYNTHETIC` 只准用于明确 TEST DOUBLE 的验收。修订产生新 bundle_id/哈希，旧包不覆盖；原响应受限本地归档，Git 保存非敏感参考说明与版本清单。
-
-现有 Market State frame 只携带 Universe/Calendar version，不携带它们的文件哈希。`query/skew_references.py` 只读适配器负责从明确且不可变的 Universe/Calendar输入生成frame、核对参考包中的对应哈希，并提供读取上下文；不得伪造frame中不存在的hash字段。Calendar 从已核对哈希的原文件字节初始化，并固定传给 reader；Universe 使用保存的历史 manifest，不在同次请求中跟随可变 current。离线包布局与导入见 [Query 手册](../../query/README.md)，HTTP 业务投影见 [Read Path](read-path.md)。数值核心仍只读frame/参考输入，不读取Raw或参考文件。
-
-重放身份至少包含 `(contract_id, algorithm_version, actual_trading_day, month, minute, raw_revision, universe_version+hash, calendar_version+hash, reference_bundle_id+hash)`。同输入结果相同；后补参考包的 retrieved_at 可以晚于历史 t，但必须标 `reconstructed=true`，不得声称当时系统已经拥有该参考或已提交行情。
+参考包布局、不可变导入、选择文件、原字节哈希核对、固定 Universe/Calendar 读取上下文及重放身份见 [ReferenceBundle adapter Contract](references.md)。数值核心仍只读 frame/参考输入，不读取 Raw 或参考文件。
 
 ## 5. 分钟、质量与同步
 
@@ -137,7 +131,7 @@ MO 的法律标的是中证1000指数；v1 的估值输入是该到期月的**�
 - 纯二分，无 Newton 初值/随机或外部缓存。CDF 使用 `0.5*erfc(-x/sqrt(2))`；ITM 可用平价转换为对应 OTM 价格求解，作为数值恒等变换，不改市场输入。
 - 每轮取 bracket 中点，价格较低更新下界，否则上界；即使浮点价格恰等也继续收窄 bracket，同时满足 **bracket宽≤1e−8** 和 **回代误差≤max(1e−8,1e−10*max(F,K))点** 才成功，最多128次价格迭代。输出σ、回代价格/误差、迭代数、最终 bracket。
 - 解处 vega 必须≥1.0 指数点/单位σ（不是每1 vol point）；否则 `LOW_VEGA`。非有限中间值 `NUMERICAL_ERROR`，未同时达精度 `IV_NOT_CONVERGED`。
-- 计算使用 float64，存储/JSON保留完整值；只在 UI 将翼IV和Skew显示到2位小数，不能以显示值做插值/变化计算。
+- 计算使用 float64，逻辑输出与 JSON 保留完整值；任何显示精度都不能反向用于插值或变化计算。
 
 ## 7. 输出、错误及当日变化
 
@@ -147,7 +141,7 @@ MO 的法律标的是中证1000指数；v1 的估值输入是该到期月的**�
 
 确定处理顺序：输入结构/参考身份 → 日历/分钟封口/expiry → 基础报价 → forward → IV → 两翼/最终同步 → Skew。收集阶段内全部原因，按 instrument/reason 排序；前置阶段失败不执行后续阶段。保留原始质量字段和剔除计数。常见状态包括 `REFERENCE_INVALID, RATE_MISSING, UNIVERSE_INCOMPLETE, MINUTE_UNSEALED, UNSUPPORTED_SESSION, WAITING_FOR_MINUTE, EXPIRY_DAY_UNSUPPORTED, EXPIRED, FORWARD_PAIRS_MISSING, FORWARD_UNSYNCHRONIZED, FORWARD_INCONSISTENT, PRICE_OUT_OF_BOUNDS, TIME_VALUE_TOO_SMALL, IV_OUT_OF_RANGE, LOW_VEGA, IV_NOT_CONVERGED, NUMERICAL_ERROR, NON_MONOTONE_DELTA, WING_UNBRACKETED, WING_GAP_TOO_WIDE, INPUTS_UNSYNCHRONIZED`；不把失败变成成功数字。
 
-当日序列只枚举该交易日连续时段已封口分钟，竞价/午休留空；每个分钟独立计算，失败保留缺口，不 forward-fill。一次序列请求固定同一个日库 revision、同一 Universe/Calendar/参考包，所有逐分钟读取显式传该 revision。首个 frame 取得 revision 后其余固定，不直接读 Raw MAX(id)。前端“当日变化”为当前有效值减去同日首个有效分钟值，标出基准时刻；无基准则null，不暗中使用昨日收盘。月切换后基准与序列一起切换。
+当日序列只枚举该交易日连续时段已封口分钟，竞价/午休留空；每个分钟独立计算，失败保留缺口，不 forward-fill。一次序列请求固定同一个日库 revision、同一 Universe/Calendar/参考包，所有逐分钟读取显式传该 revision。首个 frame 取得 revision 后其余固定，不直接读 Raw MAX(id)。“当日变化”为当前有效值减去同日首个有效分钟值，标出基准时刻；无基准则null，不暗中使用昨日收盘。月切换后基准与序列一起切换。
 
 ## 8. 独立验证与收尾门槛
 
@@ -159,7 +153,7 @@ MO 的法律标的是中证1000指数；v1 的估值输入是该到期月的**�
 4. **必测场景**：平坦笑脸Skew=0、put翼高/低与符号/单位、非零/负利率ACT360、T的ACT365、C/P平价远期、三对不足/偏离、两翼不跨25Δ/跨度过宽/非单调、30s/5s/15s等号与超1μs、交叉/零量/错误tick/宽spread/小价格、时间价值边界、σ上下界/低vega/迭代失败、缺参考/错日期/单位、未知日历、竞价/首分钟/午休历史展示、到期日拒绝、固定revision重放及PARTIAL输入。生产实现必须补齐这些行为测试；数值向量不能替代它们。
 5. **真实独立对账**：至少10个不同估值时点，至少6个可计算（含put翼较高及非平坦情况），至少4个异常/不可用；真实市场未自然出现的异常可对真实frame复制件定点扰动，单列 SYNTHETIC_MUTATION，不宣称实盘异常。固定输入包、使用独立 QuantLib/独立选择脚本或人工表格复算；至少一个完整链逐项核对三对选择/翼端点/权重/时间跨度。真实现场样本必须由真实行情提供，不能以合成向量充数。
 
-契约冻结只证明公式和基准内部一致、决定可实现，不替代真实业务验收。G1–G6/P1/P2 的当前实现与证据缺口统一见 [Acceptance](../acceptance.md)；独立 oracle、合约选择及规则的测试映射见[Harness](../../harness/README.md)。
+契约冻结只证明公式和基准内部一致、决定可实现，不替代真实业务验收。当前 Query 实现与历史工程证据见[本级 Acceptance](../ACCEPTANCE.md)，G1–G6/P1/P2 见[根 Acceptance](../../docs/acceptance.md)；独立 oracle、合约选择及规则的测试映射见[Harness](../../harness/README.md)。
 
 ## 9. 变更规则与依据
 
@@ -167,23 +161,12 @@ MO 的法律标的是中证1000指数；v1 的估值输入是该到期月的**�
 
 [外部依据与项目选择](../references/analytics-skew-sources.md)明确分开官方合约事实、Black/平价数学和本项目阈值。官方没有为本项目规定“25Δ Put−Call”、三对中位数、Shibor flat proxy 或同步阈值；这些是本次授权冻结的工程/估值决定。
 
-## 10. 冻结时的验证记录
+## 10. 数值核心接口
 
-2026-09-08，基线 Git `e88787b` 加本次文档/harness改动：
-
-- `python3 harness/run.py analytics-contract` 通过；包含结构检查、10项harness测试、12组数值向量/两条合成链/插值例子的标准库核对。测试可检出符号反转、误用折现delta、选点身份变化、错误冻结状态、age/spread/tick边界、越界价格/σ及未收敛时返回数字的问题。
-- 独立环境 `QuantLib==1.40`、`mpmath==1.3.0` 实际运行 `harness/analytics_oracle.py`，80位价格与QuantLib吻合，固定样本可重新生成一致。依赖仅装入被忽略的 `artifacts/analytics-oracle-env/`，未增加生产依赖。
-- 两条tick舍入合成链结果分别约 `+1.1730254434`、`−1.1790944252` vol points；它们验证正反两种符号，非真实MO市场观测。平坦插值例为0，Put0.29/Call0.24例为+5 vol points。
-- 生产 Collector/Query/React源码、Raw schema和 `experiments/` 未改。MVP/架构/验收矩阵/来源索引/agent入口已指向同一冻结契约；当前文档不再将七项列为待决。
-
-这不是完整生产行为覆盖或实盘验收。后续仍须补齐§8的全部场景及真实10时点对账，不得用本次“契约验证通过”关闭G3。验证日志在本机 `artifacts/harness/` 和 `artifacts/analytics-contract-freeze/`，不随Git发布；跨机器复核使用入库生成器/策略/数值样本及上述命令。
-
-## 11. 数值核心实现状态
-
-2026-09-08，`query/analytics.py` 实现 `black_price`、`solve_iv` 和 `calculate_skew`。`calculate_skew(frame, reference_bundle, requested_at, historical=...)` 的依赖只有单个 Market State v1 MO option-chain minute frame、显式日参考包、请求时间与调用方按 Calendar 判定的历史标志；它不打开 Raw SQLite、不读取可变 `current`、不联网、不写 Derived SQLite，也不启动后台任务。
+`calculate_skew(frame, reference_bundle, requested_at, historical=...)` 的依赖只有单个 Market State v1 MO option-chain minute frame、显式日参考包、请求时间与调用方按 Calendar 判定的历史标志；它不打开 Raw SQLite、不读取可变 `current`、不联网、不写 Derived SQLite，也不启动后台任务。
 
 参考包的对象字段按§4表格落为：顶层 `schema_version/bundle_id/bundle_sha256/valid_trading_day/exchange/product/month/reviewed_at/review/source_kind/expiry_at`；`universe.version/sha256/instruments[]`，每个合约含 `id/side/strike/expiry`；`calendar.version/sha256/previous_cffex_trading_day`；`product_rules` 含产品事实、`source_url/source_version/source_sha256`；`rate` 含原始 `percent`、换算后 `decimal`、fixing/publish/retrieve/source 身份及计息元数据。必需结构缺失抛 `ValueError`，完整但不匹配返回 `UNAVAILABLE`。`SYNTHETIC` 只在 review 明确含 `TEST DOUBLE` 时接受。
 
 结果除§7字段外，将冻结的模型、delta、插值、报价阈值和 solver 常量放入 `algorithm`，并在 `reference` 给出 bundle、Universe、Calendar、产品规则与利率来源哈希。`provenance` 为每个 scope 成员保留 TradingDay、observation/run ID、received/snapshot/source time、bid/ask/mid、原 Market State quality、剔除原因、使用角色与 solver 详情；`excluded_count` 与 `eligible_count` 分开。错误不复用旧报价、旧 IV 或旧 Skew。
 
-`python3 harness/run.py analytics` 同时运行独立 contract/oracle 检查和生产核心回归。生产测试直接消费一条由真实 SQLite/`MarketStateReader.minute()` 形成的 TEST DOUBLE frame，并覆盖§8.4：平坦及两种 Skew 符号、12个独立价格/IV/delta向量、正负利率与两种日数、平价远期/三对不足/偏离、两翼失败、30秒/5秒/15秒等号及超1微秒、盘口质量、solver边界与失败、参考错误、未知日历、竞价/首分钟/午休历史、到期、固定revision重放和PARTIAL。官方参考导入、§8.5真实10时点对账、HTTP/页面及性能的当前状态统一见 [Acceptance](../acceptance.md)；工程回归不能替代 G3/P1/P2 的真实证据。
+实现和回归证据只见[本级 Acceptance](../ACCEPTANCE.md)，不能由本接口规范推断生产或实盘验收状态。

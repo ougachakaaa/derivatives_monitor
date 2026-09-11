@@ -69,7 +69,7 @@ PYTHONDONTWRITEBYTECODE=1 python3 tests/dev_runner_smoke.py
 
 ## Analytics / Skew 契约数值基线
 
-规范：[mo-skew-25d-v1](../docs/contracts/analytics-skew.md)，常量：[策略JSON](../docs/contracts/analytics-skew-v1.json)，固定期望：[SYNTHETIC数值样本](fixtures/analytics-skew-v1.json)。样本包括12组价格/IV/delta和高精度价格、两条按tick舍入的完整合成链（两种Skew符号）、插值/单位例子。`analytics-contract` 用独立的标准库实现检查这些例子和失败/误用回归，不读取生产模块。`analytics` 再让生产模块消费合成 Market State minute frame 与显式 ReferenceBundle，核对固定期望及失败状态；`analytics` 还运行真实临时 SQLite → Market State → Analytics → HTTP 的 TEST DOUBLE 回归，覆盖分钟选择、历史/当前、固定revision序列/迟到写入、失败缺口、哈希与错误；两者都不读取实盘。
+规范：[mo-skew-25d-v1](../query/contracts/analytics-skew.md)，常量：[策略JSON](../query/contracts/analytics-skew-v1.json)，固定期望：[SYNTHETIC数值样本](fixtures/analytics-skew-v1.json)。样本包括12组价格/IV/delta和高精度价格、两条按tick舍入的完整合成链（两种Skew符号）、插值/单位例子。`analytics-contract` 用独立的标准库实现检查这些例子和失败/误用回归，不读取生产模块。`analytics` 再让生产模块消费合成 Market State minute frame 与显式 ReferenceBundle，核对固定期望及失败状态；`analytics` 还运行真实临时 SQLite → Market State → Analytics → HTTP 的 TEST DOUBLE 回归，覆盖分钟选择、历史/当前、固定revision序列/迟到写入、失败缺口、哈希与错误；两者都不读取实盘。
 
 重新核对外部 oracle（单独验证环境，不改Query依赖）：
 
