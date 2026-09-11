@@ -1,8 +1,10 @@
-<a id="harness-evidence-contract"></a>
-
 # MVP 验收 Harness
 
-这个入口组织现有模块测试和跨进程/容器测试，为[验收矩阵](../docs/acceptance.md)提供可定位证据。它不启动实盘、不修改真实配置/data/flow、不清理 `experiments/`，也不会把工程测试成功标成 MVP 完成。
+这个入口说明如何运行现有模块测试和跨进程/容器测试。结果分类、TEST DOUBLE、证据身份、可复现性及现场边界见 [Harness Contract](CONTRACT.md)；修改本目录先读[局部 Agent 规则](AGENTS.md)。系统门槛与当次证据去向见[根 Acceptance](../docs/acceptance.md)，模块证据分别见 [Query](../query/ACCEPTANCE.md)、[Dashboard](../dashboard/ACCEPTANCE.md)和 [Monitoring](../monitoring/ACCEPTANCE.md)。
+
+<a id="profiles"></a>
+
+## Profiles
 
 在仓库根目录执行（只需 Python 标准库运行组织器）：
 
@@ -28,13 +30,11 @@ python3 harness/run.py docker
 | `packaging` | Docker Engine；分别以三个正式 Dockerfile 的 `context-audit` scratch stage 导出实际上下文，逐字节核对每个镜像的精确输入集合；无需拉取基础镜像，不证明 runtime 镜像可运行 |
 | `docker` | Docker Engine + Compose v2、Bash；通过仓库根 Compose 构建并隔离测试三容器，再执行 Collector 生命周期测试；可能下载基础镜像/依赖，默认自动清理本次专用容器/镜像 |
 
-`docs` 运行 authority 检查器的专门自测；其他 profile 还会先运行完整 harness 自测。`docker` 包含 packaging 检查；基础镜像仓库不可达时可单独运行 packaging，不能据此宣称完整容器验收通过。各 profile 独立，选择与修改相关的范围；需要完整工程证据时分别运行 offline、browser、docker。浏览器 profile 的 read-path 已含 native HTTP，不必为同一版本重复运行 native。真实行情和人工使用/对账/恢复/性能门槛用[现场模板](live-acceptance-template.md)记录，不包含在任何自动 profile 中。
+`docs` 运行 authority 检查器的专门自测；其他 profile 还会先运行完整 Harness 自测。`docker` 包含 packaging 检查；基础镜像仓库不可达时可定向运行 packaging。各 profile 独立，选择与修改相关的范围；需要完整工程证据时分别运行 offline、browser、docker。浏览器 profile 的 read-path 已含 native HTTP，不必为同一版本重复运行 native。如何解释未运行项和不同 profile 的证据强度见 [Contract](CONTRACT.md#结果分类与传播)。
 
 `docs` 只执行可确定的结构检查。文档治理由[repository authority 规则](../docs/README.md#authority-rules)定义；机器关系从根 [`.authority.json`](../.authority.json) 开始，逐项 migration exception 是迁移前地址的临时允许项，不是永久 topology。目标布局与切换关系见 [mapping](../ARCHITECTURE.md#authority-mapping)，最终旧路径禁令与例外退出顺序见 [ExecPlan](../docs/semantic-embedding-execplan.md)。检查器区分生产、工具、测试和实验依赖；历史 archive、外部材料和 experiment 局部正文不作为生产 authority lint 输入。相同规范段落的精确重复可自动拒绝，语义改写的重复、实现状态措辞、Design/Architecture 分工和业务等价仍需按 authority 人工审查。
 
-所有命令和日志写到被 Git 忽略的 `artifacts/harness/<UTC>-<profile>-<id>/`。`result.json` 保存 HEAD、dirty 状态、平台、命令/工作目录、退出码、时长、日志 SHA-256、工作树补丁及未跟踪源码哈希。只应提交脱敏验收摘要，不提交行情或配置。报告的 `mvp_complete` 始终 false；归档时同时保留对应源码版本/补丁，否则 dirty tree 报告不能复现。
-
-缺依赖返回 NOT_RUN（退出码 2），失败返回 FAIL（退出码 1），全部已执行通过才返回 PASS（0）。命令输出发现跳过测试、unittest/CTest 未发现测试时不能当作通过。先前必要步骤失败后余项明确 NOT_RUN；修复环境后重新运行对应 profile。超时/中断会终止本次命令进程组，日志保留；Docker 脚本自身负责清理隔离项目，失败时按其输出处理本次测试资源，不操作正式项目。
+所有命令和日志写到被 Git 忽略的 `artifacts/harness/<UTC>-<profile>-<id>/`。查看 `result.json` 获取当次状态和各 step 日志名；归档或引用报告时按 [Contract 的证据身份与可复现性边界](CONTRACT.md#证据身份与可复现性边界)处理。
 
 宿主原生环境准备见 [Collector](../collector/README.md)、[Query](../query/README.md)、[Dashboard](../dashboard/README.md)。若开发包解压在用户目录，先按手册配置 CMake 的 SQLite include/library；harness 复用同一 Release 缓存。将所选 Linux Node、sqlite3 所在目录加入本次 shell 的 PATH；不使用 Windows npm 混合 Linux 依赖，不自动安装或升级工具。
 
@@ -46,7 +46,7 @@ python3 harness/run.py docker
 - `tests/`：跨 C++/SQLite/HTTP/容器的集成场景，包括临时目录和随机端口上的实际 `./dev` TEST DOUBLE 链路。
 - `harness/tests/`：结果分类、缺依赖/超时、模拟环境隔离、打包白名单回归。
 
-TEST DOUBLE 不等于真实 CTP；100ms 合成场景不等于生产 15 秒调度，后者由专门 CTest 验证。历史成功次数不写死在 runner 中；正式验收仍要审查每项测试覆盖的契约。
+各目录的当前工程结果和未覆盖边界由对应 Acceptance 记录；合成场景的证据强度统一按 [TEST DOUBLE 边界](CONTRACT.md#test-double-与证据强度)解释。
 
 ## Developer runner 验证
 
@@ -56,7 +56,7 @@ TEST DOUBLE 不等于真实 CTP；100ms 合成场景不等于生产 15 秒调度
 python3 harness/run.py offline
 ```
 
-它要求 Collector Release build 所需工具、`query/.venv`、Linux Node/npm 与前端依赖，以及 `sqlite3` CLI；本地工具不在默认 `PATH` 时，按上文说明只为本次 shell 加入相应 `bin`。profile 会重新构建后运行显式 credentials/CLI 语义检查、runner 标准库隔离测试和实际 `./dev` TEST DOUBLE 链路，并继续执行原有 Query、Universe、deploy、verify、React 与前端构建；任一前置缺失都按全 profile 的 PASS/FAIL/NOT_RUN 规则处理。
+它要求 Collector Release build 所需工具、`query/.venv`、Linux Node/npm 与前端依赖，以及 `sqlite3` CLI；本地工具不在默认 `PATH` 时，按上文说明只为本次 shell 加入相应 `bin`。profile 会重新构建后运行显式 credentials/CLI 语义检查、runner 标准库隔离测试和实际 `./dev` TEST DOUBLE 链路，并继续执行原有 Query、Universe、deploy、verify、React 与前端构建；缺少前置时查看报告并按 [Contract](CONTRACT.md#结果分类与传播)处理。
 
 开发 runner 的快速定向检查可单独运行，但不能代替完整 profile 报告：
 
@@ -81,7 +81,7 @@ artifacts/analytics-oracle-env/bin/python harness/analytics_oracle.py
 
 生成器使用固定 QuantLib 1.40 与80位 mpmath 1.3.0，不导入生产或harness数值实现；默认只比较，不覆盖入库样本。需要审核新版本时用 `--output <新的文件路径>` 写新文件，生成器拒绝覆盖已有文件。生成器/策略的SHA-256随样本保存；不要因为实现失败就重新生成expected。
 
-`analytics-contract` 中的选择和二分函数仅供设计样本自洽核对，**不是生产实现或完整质量/时段测试**。生产实现不import这些函数或oracle；`analytics` profile 另行覆盖固定oracle和契约§8.4生产行为。至少10个真实时点的§8.5对账仍是现场门槛；通过任一自动profile都不会关闭G3。
+`analytics-contract` 中的选择和二分函数用于设计样本自洽核对；生产实现不 import 这些函数或 oracle。`analytics` profile 另行覆盖固定 oracle 和契约 §8.4 生产行为；实际覆盖与 G3 缺口见 [Query Acceptance](../query/ACCEPTANCE.md)。
 
 ## Developer runner 显式语义检查
 
@@ -93,4 +93,4 @@ python3 harness/check_dev_semantics.py --scope cli
 python3 harness/check_dev_semantics.py --scope all
 ```
 
-`credentials` 只用临时 TEST DOUBLE 配置调用 doctor，覆盖账号字段缺省、空值、正常已填、过长失败脱敏及无持久写入；`cli` 只检查公共 help 与退役入口返回 2，不启动服务。缺 Collector build、入口不可执行或超时返回 NOT_RUN（2），断言失败返回 FAIL（1），全部执行通过返回 0。`all` 已作为 `dev-semantics` 步骤纳入 `offline`；单独运行不能代替完整 profile。当前实现与证据限制见 [Acceptance](../docs/acceptance.md#本地开发入口交付状态)。
+`credentials` 只用临时 TEST DOUBLE 配置调用 doctor，覆盖账号字段缺省、空值、正常已填、过长失败脱敏及无持久写入；`cli` 只检查公共 help 与退役入口，不启动服务。`all` 已作为 `dev-semantics` 步骤纳入 `offline`。当前实现与证据限制见 [Acceptance](../docs/acceptance.md#本地开发入口交付状态)，定向脚本的结果解释服从 [Contract](CONTRACT.md#结果分类与传播)。

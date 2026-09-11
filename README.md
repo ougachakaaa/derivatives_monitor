@@ -21,7 +21,8 @@
 - 实际部署、维护与恢复：[Operations](docs/operations.md)
 - Build / run / usage / examples / troubleshooting：[Collector](collector/README.md)、[Query](query/README.md)、[Dashboard](dashboard/README.md)
 - 已冻结、尚未实现的 Monitoring authority：[Monitoring](monitoring/README.md)
-- 安全回归与证据语义：[Harness](harness/README.md)
+- 安全回归：[Harness README](harness/README.md)；结果与证据语义：[Harness Contract](harness/CONTRACT.md)
+- 探索性工作入口：[CTP experiment](experiments/ctp/README.md)、[Data Coverage experiment](experiments/data_coverage/README.md)
 - 外部来源与历史记录：[References](docs/references/README.md)、[Archive](docs/archive/README.md)
 
-`experiments/` 原位保留，并由其局部文档说明用途；它不是正式 Architecture 或 Contract 的替代来源。
+`experiments/` 原位保留并服从各自局部文档；它不是正式 Architecture 或 Contract 的替代来源。

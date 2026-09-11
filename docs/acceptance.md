@@ -40,7 +40,7 @@ Monitoring 的实现、工程证据与 M2–M5 缺口只见 [Monitoring Acceptan
 | `packaging` | 三个 Dockerfile-specific allowlist 的实际 scratch context、各镜像精确输入集合及必要模块/日历/SDK 字节；G6 打包边界 | runtime 镜像启动、实际挂载和生命周期 |
 | `docker` | 仓库级部署边界、根 Compose 的三服务构建与隔离 smoke、RW/RO 挂载、恢复与持久化；G5/G6 | 真实 CTP、Windows 浏览器或三日运行 |
 
-用法和依赖见[Harness](../harness/README.md)。每次运行产生 PASS/FAIL/NOT_RUN 和命令日志，任一未执行不计全通过。人工门槛永远不由 `offline` 成功自动关闭。
+用法和依赖见 [Harness README](../harness/README.md)，PASS/FAIL/NOT_RUN、证据身份与自动结果边界见 [Harness Contract](../harness/CONTRACT.md)。人工门槛永远不由 `offline` 成功自动关闭。
 
 ## 现场证据要求
 
@@ -133,3 +133,15 @@ Read Path、Market Session 与 Query Skew 中的页面重复定义已改为链�
 本阶段没有实现 Monitoring 代码、可执行入口、配置样例或 application SQLite，没有创建未来子模块或虚构启动命令；生产代码、Skew 策略、golden/oracle、原件、SDK 和 experiments 均未修改。局部实现状态和历史证据见 [Monitoring Acceptance](../monitoring/ACCEPTANCE.md)；结构检查不提升其业务交付状态，也不改变根 G1–G6/P1/P2。
 
 `python3 harness/run.py docs` 为 PASS，报告 `artifacts/harness/20260911T054957Z-docs-90006cb0/result.json`；完整 `harness/tests` 33 项通过，`git diff --check` 通过。报告后的修改只登记本次证据；提交前再次执行结构与链接检查。
+
+<a id="semantic-authority-s7"></a>
+
+## Repository semantic embedding：Harness verification authority / S7
+
+2026-09-11，从干净的 `main@94e8325` 恢复并核对 M0/S1–S6 的连续提交、登记和局部 Acceptance。本阶段只执行 S7：建立 [Harness AGENTS](../harness/AGENTS.md) 与 [Harness Contract](../harness/CONTRACT.md)，将 PASS/FAIL/NOT_RUN、dependency/skip、TEST DOUBLE、证据身份、result/reproducibility 及现场边界从 README 迁入唯一 Contract；[Harness README](../harness/README.md)保留实际 profiles、依赖、命令和测试导航。
+
+`harness.evidence-contract` 已切换到本地 Contract，唯一的 S7 migration exception 已退出；S2–S7 不再有剩余迁移例外。根 Acceptance 仍只拥有 G1–G6/P1/P2、developer runner 与跨模块 Harness 映射，并导航 [Query](../query/ACCEPTANCE.md)、[Dashboard](../dashboard/ACCEPTANCE.md)和 [Monitoring](../monitoring/ACCEPTANCE.md)局部证据，没有复制其当前状态。根级入口补齐 [CTP experiment](../experiments/ctp/README.md)与 [Data Coverage experiment](../experiments/data_coverage/README.md)导航，实验内部文件和规则未修改。
+
+本阶段只修改文档、authority registration 和文档必需路径检查；未修改 Harness runner 行为、生产代码、Skew 策略、oracle、fixtures/golden、SDK/originals、Docker 输入或 experiments，也未执行 S8。自动结构检查不提升 G1–G6/P1/P2 或任何模块业务状态。
+
+迁移前 `python3 harness/run.py docs` 为 PASS（`artifacts/harness/20260911T055251Z-docs-fb5f4375/result.json`）。迁移后完整 `harness/tests` 33 项全部通过；最终 docs profile 为 PASS（`artifacts/harness/20260911T055748Z-docs-1ebc8e2e/result.json`），docs 与 authority 自测两个 step 均实际执行。`git diff --check` 通过，且相对 HEAD 的受保护路径检查确认 experiments、oracle、fixtures/golden、Skew 机器策略、SDK/originals 均无 diff。报告后的修改只登记本段证据；提交前再次执行直接结构、链接与 diff 检查。

@@ -2,7 +2,7 @@
 
 日期：2026-09-10。冻结基线：`main@351003e`，`feature/realtime-monitoring-alerts` worktree 同 HEAD，freeze 开始时两个工作树均干净。Semantic freeze / M0（原计划 S0）已由 `e67a9b0` 交付；后续 session 仍必须以用户明确指定的单一阶段为边界。此 M0 与 Monitoring 业务计划的 M0 不是同一阶段。
 
-本文只拥有执行顺序、验证、恢复、停止与计划生命周期，不拥有长期规则。治理唯一见 [docs README](README.md#authority-rules)，目标布局/归属唯一见 [Architecture mapping](../ARCHITECTURE.md#authority-mapping)，机器导航关系见 [Architecture](../ARCHITECTURE.md#authority-registration)。业务仍以各现行 Contract 为准；阶段实现与验证状态唯一登记 [Acceptance](acceptance.md#semantic-authority-s6)，不从本表推断完成程度。
+本文只拥有执行顺序、验证、恢复、停止与计划生命周期，不拥有长期规则。治理唯一见 [docs README](README.md#authority-rules)，目标布局/归属唯一见 [Architecture mapping](../ARCHITECTURE.md#authority-mapping)，机器导航关系见 [Architecture](../ARCHITECTURE.md#authority-registration)。业务仍以各现行 Contract 为准；阶段实现与验证状态唯一登记 [Acceptance](acceptance.md#semantic-authority-s7)，不从本表推断完成程度。
 
 <a id="resume"></a>
 
@@ -84,6 +84,12 @@ S5 以 `main@414e043` 的干净工作树为实际基线。Dashboard 的 guidance
 S6 以 `main@8a1550a` 的干净工作树为实际基线。Monitoring 的 guidance、README、Design、Architecture、Contract、Acceptance 与登记已建立；Rule/Evaluation、crossing、UNKNOWN、配置、application state、Opportunity Event、事务、恢复和 delivery/retry 语义归入 Monitoring。共享 Feature protocol、Raw/Market Facts ownership、Monitoring↔Query access、system lifecycle 与永久不自动交易边界继续位于 repository scope并由 Monitoring 引用。
 
 四个 S6 migration exceptions 已退出，旧中央 Monitoring Contract 路径进入退役检查；根 Design/Architecture/Deployment 仅保留跨模块 rationale、目标流、所有权和部署隔离。Monitoring 业务 execution plan 继续独立存续并切换 authority/recovery 导航；本阶段不实现代码、不提供虚构命令、不创建子模块，也不执行其 M2–M5。
+
+### S7 reconciliation 清单
+
+S7 以 `main@94e8325` 的干净工作树为实际基线。Harness 的 PASS/FAIL/NOT_RUN、依赖与 skip 传播、TEST DOUBLE、证据身份、result/reproducibility 和现场边界从 README 原子迁至 `harness/CONTRACT.md`；局部读取路径、修改纪律及安全验证归 `harness/AGENTS.md`，README 只保留 profiles、依赖、命令与测试导航。
+
+`harness.evidence-contract` 已切换到本地 Contract，S7 migration exception 退出；根 Acceptance 只保留 G1–G6/P1/P2、系统/跨模块证据和局部 Acceptance 导航。根入口补齐两个既有 experiment 入口，实验内部文件、命名和规则保持不变。本阶段不修改 runner 行为、oracle、fixtures、golden、SDK/originals、Docker 输入或生产代码，也不执行 S8。
 
 ## 3. Harness 工作规格
 

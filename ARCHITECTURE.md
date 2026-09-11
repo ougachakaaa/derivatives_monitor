@@ -114,9 +114,9 @@ application store 是专属应用持久目录，不位于 Collector 数据目录
 
 ## Repository knowledge architecture：冻结目标
 
-本节拥有 documentation topology 和语义归属 mapping；治理规则唯一见[文档入口](docs/README.md#authority-rules)。目标布局保持冻结，表格逐项反映当前归属及尚未执行的目标。根、Collector/Collector tools、Query、Dashboard 及 Monitoring 的业务 authority 已归位；Harness 文档职责仍按后续阶段处理。实施状态见 [Acceptance](docs/acceptance.md#semantic-authority-s6)，执行顺序见 [ExecPlan](docs/semantic-embedding-execplan.md)。
+本节拥有 documentation topology 和语义归属 mapping；治理规则唯一见[文档入口](docs/README.md#authority-rules)。目标布局保持冻结，表格逐项反映当前归属及尚未执行的目标。根、Collector/Collector tools、Query、Dashboard、Monitoring 及 Harness authority 已归位。实施状态见 [Acceptance](docs/acceptance.md#semantic-authority-s7)，最终治理顺序见 [ExecPlan](docs/semantic-embedding-execplan.md)。
 
-当前导航为根 AGENTS/README/DESIGN/ARCHITECTURE → docs 入口与共享 Contracts；Collector、tools、Query、Dashboard 与 Monitoring 已有局部入口和对应 authority，Harness 当前以其 README 为验证与证据入口。Harness 的 guidance/Contract 分责留待 S7，不能因目标树已冻结而提前创建。实验区继续沿用逐层 SPEC/REFERENCE 组织。
+当前导航为根 AGENTS/README/DESIGN/ARCHITECTURE → docs 入口与共享 Contracts；Collector、tools、Query、Dashboard、Monitoring 与 Harness 已有局部入口和对应 authority。Harness README 负责实际用法，Contract 负责验证/证据语义，AGENTS 负责局部工作纪律。实验区仍沿用逐层 SPEC/REFERENCE 组织，并只从上层链接其现有入口。
 
 冻结目标文件如下；未列出的对称文件不创建。已完成迁移的旧中央副本不保留，尚未执行的目标不预先视为当前 authority。
 
@@ -188,7 +188,7 @@ Monitoring 已建立非空文档 scope，README 当前只导航设计和状态�
 | [Calendar README](query/calendars/README.md) | 保留参考数据维护步骤，不承接 Query 解释算法 |
 | [Acceptance](docs/acceptance.md)、[Query Acceptance](query/ACCEPTANCE.md)、[Dashboard Acceptance](dashboard/ACCEPTANCE.md)、[Monitoring Acceptance](monitoring/ACCEPTANCE.md) | G1–G6/P1/P2、跨进程/部署/runner 证据留根；Query、Dashboard 与 Monitoring 局部记录已迁入各自 ACCEPTANCE，根只链接，不复制进度 |
 | [Operations](docs/operations.md) | 系统组合、部署、备份恢复保留根；模块操作归所属 README，根导航而不重复步骤 |
-| [Harness README](harness/README.md) | 用法/依赖保留；PASS/FAIL/NOT_RUN、证据身份和结果边界归 harness/CONTRACT.md，工作指导归 harness/AGENTS.md |
+| [Harness README](harness/README.md)、[Harness Contract](harness/CONTRACT.md)、[Harness AGENTS](harness/AGENTS.md) | README 保留用法/依赖；PASS/FAIL/NOT_RUN、证据身份和结果边界归 Contract，工作指导归 AGENTS |
 | [Monitoring execution plan](docs/monitoring-execution-plan.md) | 仍为独立一次性交接；只更新链接与恢复说明，不成为规则定义，不因文档迁移执行业务里程碑 |
 | [References](docs/references/README.md)、[Archive](docs/archive/README.md) | 共享原件、历史正文留原位；调整活动链接；局部 Skew 来源按上项迁移 |
 | Experiments | 沿用既有局部 authority；根只导航，内部重复问题另行处理 |
@@ -201,4 +201,4 @@ Monitoring 已建立非空文档 scope，README 当前只导航设计和状态�
 
 claim 按可独立修改的接口或规则组划分，不为每句话建 ID。Markdown 与机器策略各自登记职责：Skew 已有机器字段值以原 JSON 为机器 authority，Markdown 解释含义，重复数值展示只作为受一致性检查的投影。登记不能制造第二套规则或把 evidence/ExecPlan 注册为规范。
 
-登记从根 [`.authority.json`](.authority.json) 开始，局部 scope 由各自同名文件登记；冻结待实现且尚无目录的 scope 只在父登记中声明，不预建空目录。离线检查实现位于 `harness/authority.py`，迁移例外与关闭条件仍只由 [ExecPlan](docs/semantic-embedding-execplan.md)安排；当前完成状态见 [Acceptance](docs/acceptance.md#semantic-authority-s6)。
+登记从根 [`.authority.json`](.authority.json) 开始，局部 scope 由各自同名文件登记；冻结待实现且尚无目录的 scope 只在父登记中声明，不预建空目录。离线检查实现位于 `harness/authority.py`；S2–S7 的具名迁移例外均已退出，最终强制治理仍按 [ExecPlan](docs/semantic-embedding-execplan.md)执行。当前完成状态见 [Acceptance](docs/acceptance.md#semantic-authority-s7)。
