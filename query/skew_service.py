@@ -20,7 +20,7 @@ QUALITY_REASONS = {
 def latest_minute(calendar, at):
     """Frozen Skew selection; calendar minutes, never search for older quotes."""
     state = calendar.query('CFFEX', 'MO', at)
-    if state['market_state'] == 'UNKNOWN':
+    if state['session_state'] == 'UNKNOWN':
         return None, None, True, 'CALENDAR_UNKNOWN', state
     if state['is_continuous']:
         period = state['current_session']

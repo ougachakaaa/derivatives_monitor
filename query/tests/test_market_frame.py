@@ -249,11 +249,11 @@ class FrameTest(unittest.TestCase):
     def test_latest_open_break_reopen_and_close(self):
         self.insert('11:29:45')
         opened = self.reader.latest(self.scope, at('11:29:50'))
-        self.assertEqual(opened['market_state'], 'OPEN')
+        self.assertEqual(opened['session_state'], 'OPEN')
         self.assertFalse(opened['historical'])
         self.assertEqual(opened['frame']['rows'][0]['quality']['quote_age_us'], 5000000)
         lunch = self.reader.latest(self.scope, at('12:00:00'))
-        self.assertEqual(lunch['market_state'], 'BREAK')
+        self.assertEqual(lunch['session_state'], 'BREAK')
         self.assertTrue(lunch['historical'])
         self.assertEqual(lunch['frame']['effective_as_of'], at('11:30:00').isoformat())
         self.assertEqual(lunch['frame']['age_reference'], at('12:00:00').isoformat())
@@ -268,7 +268,7 @@ class FrameTest(unittest.TestCase):
         self.insert('14:59:45')
         self.insert('15:00:00')  # out of session, never used
         closed = self.reader.latest(self.scope, at('16:00:00'))
-        self.assertEqual(closed['market_state'], 'CLOSED')
+        self.assertEqual(closed['session_state'], 'CLOSED')
         self.assertTrue(closed['historical'])
         self.assertEqual(closed['calendar_trading_day'], '20260909')
         self.assertEqual(closed['frame']['trading_day'], '20260908')
@@ -279,10 +279,10 @@ class FrameTest(unittest.TestCase):
     def test_latest_unknown_and_scope_day_mismatch(self):
         unknown_reader = MarketFrameReader(Store(self.directory / 'absent'), self.directory / 'no-calendar')
         unknown = unknown_reader.latest(self.scope, at('10:00:00'))
-        self.assertEqual(unknown['market_state'], 'UNKNOWN')
+        self.assertEqual(unknown['session_state'], 'UNKNOWN')
         self.assertIsNone(unknown['frame'])
         outside = self.reader.latest(self.scope, datetime.fromisoformat('2027-01-04T10:00:00+08:00'))
-        self.assertEqual(outside['market_state'], 'UNKNOWN')
+        self.assertEqual(outside['session_state'], 'UNKNOWN')
         with self.assertRaises(ValueError):
             self.reader.latest(Scope.instrument('MO2609-C-5000', '20260909'), at('16:00:00'))
 
@@ -290,7 +290,7 @@ class FrameTest(unittest.TestCase):
         self.scope = Scope.instrument('au2610', '20260908')
         self.insert(datetime.fromisoformat('2026-09-07T23:59:50+08:00'), code='au2610', ExchangeID='SHFE')
         night = self.reader.latest(self.scope, at('00:00:00'))
-        self.assertEqual(night['market_state'], 'OPEN')
+        self.assertEqual(night['session_state'], 'OPEN')
         self.assertEqual(night['frame']['trading_day'], '20260908')
         self.assertEqual(night['frame']['rows'][0]['quality']['quote_age_us'], 10000000)
         self.assertTrue(self.reader.latest(self.scope, at('03:00:00'))['historical'])
@@ -307,7 +307,7 @@ class FrameTest(unittest.TestCase):
         self.path.rename(self.directory / '20260904.sqlite')
         weekend = self.reader.latest(Scope.instrument('MO2609-C-5000', '20260904'),
                                      datetime.fromisoformat('2026-09-05T12:00:00+08:00'))
-        self.assertEqual(weekend['market_state'], 'CLOSED')
+        self.assertEqual(weekend['session_state'], 'CLOSED')
         self.assertEqual(weekend['calendar_trading_day'], '20260907')
         self.assertEqual(weekend['frame']['trading_day'], '20260904')
         self.assertEqual(weekend['frame']['rows'][0]['observation']['received_us'], micros(received))

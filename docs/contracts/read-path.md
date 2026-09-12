@@ -43,7 +43,7 @@ WAL、sidecar、immutable、共享锁、复制和 backup 的唯一约束见 [Raw
 
 ## 市场时段与覆盖
 
-`GET /api/sessions?exchange=SHFE&product=AU&at=<带时区ISO时间>` 独立读取审核后的交易日历，按 exchange/product 回答交易日、时段与连续交易状态，不读取/改写行情，也不控制采集进程。exchange/product 可省略以返回全部/某交易所，product 单独给出非法，默认当前时刻；非法参数 400，日历不可用在 200 响应中明确 UNKNOWN。`/api/coverage` 的分组、目标日核对及订阅/接收/缺口/stale/进程健康区分见 [Query Contract](../../query/CONTRACT.md#calendar-与-coverage-适配)，本契约只定义其 HTTP 入口。Query 模块及参考年历随 Docker 镜像发布，Collector 没有新增依赖。
+`GET /api/sessions?exchange=SHFE&product=AU&at=<带时区ISO时间>` 独立读取审核后的交易日历，按 exchange/product 回答交易日、时段与连续交易状态；每个 `markets[]` 成员以 `session_state=OPEN/BREAK/CLOSED/UNKNOWN` 表达该状态。接口不读取/改写行情，也不控制采集进程。exchange/product 可省略以返回全部/某交易所，product 单独给出非法，默认当前时刻；非法参数 400，日历不可用在 200 响应中明确 UNKNOWN。`/api/coverage` 的分组、目标日核对及订阅/接收/缺口/stale/进程健康区分见 [Query Contract](../../query/CONTRACT.md#calendar-与-coverage-适配)，本契约只定义其 HTTP 入口。Query 模块及参考年历随 Docker 镜像发布，Collector 没有新增依赖。
 
 ## MVP MO Skew JSON 业务查询
 

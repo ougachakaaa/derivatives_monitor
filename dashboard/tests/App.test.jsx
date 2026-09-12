@@ -13,7 +13,7 @@ function fixture(path) {
   if (path.startsWith('/api/skew/latest')) return current;
   if (path.startsWith('/api/skew/series')) return series;
   if (path.startsWith('/api/skew/minute')) return { ...current, historical: true, current_usable: false, minute: '2026-09-16T09:30:00+08:00', valuation_at: '2026-09-16T09:31:00+08:00' };
-  if (path === '/api/sessions') return { markets: [{ exchange: 'CFFEX', product: 'MO', trading_day: '20260916', market_state: 'OPEN', session: 'DAY', phase: 'CONTINUOUS' }] };
+  if (path === '/api/sessions') return { markets: [{ exchange: 'CFFEX', product: 'MO', trading_day: '20260916', session_state: 'OPEN', session: 'DAY', phase: 'CONTINUOUS' }] };
   if (path === '/api/coverage') return { complete: true, collector_current: true, groups: [{ exchange: 'CFFEX', product: 'MO', month: '2610', discovered: 10, listed: 10, target: 10, subscribed: 10, failed: 0, received: 10, no_push: 0, verified: true }], instruments: [], update: {} };
   if (path === '/api/health') return health;
   if (path === '/api/days') return { days: [{ day: '20260916' }, { day: '20260915' }] };

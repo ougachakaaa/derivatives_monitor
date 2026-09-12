@@ -18,9 +18,11 @@ class SessionsApiTest(unittest.TestCase):
         r=self.client.get('/api/sessions',params={'at':'2026-09-07T21:30:00+08:00'})
         self.assertEqual(r.status_code,200)
         self.assertEqual(r.headers['cache-control'],'no-store')
-        rows=r.json()['markets'];self.assertEqual(len(rows),13)
+        payload=r.json();self.assertEqual(payload['schema_version'],1)
+        rows=payload['markets'];self.assertEqual(len(rows),13)
+        self.assertTrue(all('session_state' in row for row in rows))
         self.assertEqual(next(row for row in rows if row['product']=='AU')['trading_day'],'20260908')
-        self.assertEqual(next(row for row in rows if row['product']=='IF')['market_state'],'CLOSED')
+        self.assertEqual(next(row for row in rows if row['product']=='IF')['session_state'],'CLOSED')
         for params, count in [({'exchange':'SHFE'},2),({'exchange':'shfe','product':'ag'},1),({'exchange':'CFFEX'},11)]:
             params['at']='2026-09-07T21:30:00+08:00'
             self.assertEqual(len(self.client.get('/api/sessions',params=params).json()['markets']),count)
@@ -33,7 +35,7 @@ class SessionsApiTest(unittest.TestCase):
         self.assertEqual(self.client.get('/api/sessions?exchange=SHFE&exchange=CFFEX').status_code,400)
         r=self.client.get('/api/sessions',params={'at':'2027-01-04T10:00:00+08:00'})
         self.assertEqual(r.status_code,200)
-        self.assertTrue(all(row['market_state']=='UNKNOWN' for row in r.json()['markets']))
+        self.assertTrue(all(row['session_state']=='UNKNOWN' for row in r.json()['markets']))
         with TestClient(create_app(self.directory, self.directory/'missing')) as client:
             r=client.get('/api/sessions',params={'at':'2026-09-07T10:00:00+08:00'})
-            self.assertTrue(all(row['market_state']=='UNKNOWN' for row in r.json()['markets']))
+            self.assertTrue(all(row['session_state']=='UNKNOWN' for row in r.json()['markets']))

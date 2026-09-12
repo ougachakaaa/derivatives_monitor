@@ -65,7 +65,7 @@ def selected_products(exchange=None, product=None):
 
 def unknown(exchange, product, at, reason):
     return dict(exchange=exchange, product=product, as_of=at.isoformat(), timezone='Asia/Shanghai',
-                trading_day=None, market_state='UNKNOWN', session=None, phase=None,
+                trading_day=None, session_state='UNKNOWN', session=None, phase=None,
                 is_continuous=False, quote_expected=None, current_session=None,
                 latest_session=None, next_session=None, calendar_version=None, reason=reason)
 
@@ -163,7 +163,7 @@ class Calendar:
         def serialize(period):
             return {k: v.isoformat() if isinstance(v, datetime) else v for k, v in period.items()} if period else None
         result = unknown(exchange, product, at, '')
-        result.update(trading_day=trading_day, market_state=state, session=kind, phase=phase,
+        result.update(trading_day=trading_day, session_state=state, session=kind, phase=phase,
                       is_continuous=phase == 'CONTINUOUS', quote_expected=phase == 'CONTINUOUS',
                       current_session=serialize(active), latest_session=serialize(latest),
                       next_session=serialize(upcoming), calendar_version=self.data['version'],
@@ -202,7 +202,7 @@ def main():
             return 0
         result = sessions(args.at, args.exchange, args.product, args.calendar_dir)
         print(json.dumps(result, ensure_ascii=False, indent=2))
-        return 2 if any(r['market_state'] == 'UNKNOWN' for r in result['markets']) else 0
+        return 2 if any(r['session_state'] == 'UNKNOWN' for r in result['markets']) else 0
     except (ValueError, OSError) as error:
         parser.exit(1, str(error) + '\n')
 

@@ -12,7 +12,7 @@ Query 的 Calendar/coverage 适配见 [Query Contract](../../query/CONTRACT.md#c
 - 版本化参考文件显式列出每交易所的交易日及 SHFE 每个交易日对应的 night_start 自然日期（无夜盘为 null）；文件字段与来源清单见[参考年历说明](../../query/calendars/README.md)。年历从官方年公告人工核对后生成并审查，运行时不抓取网页，不以周一到周五兜底。临时休市通过修订对应交易日/night_start 表达，保留版本与来源。
 - 首版覆盖 2026。缺失、损坏、范围外或无法确认跨年下一交易日时返回 UNKNOWN 和原因；不把未知当 CLOSED/OPEN。年历的审核、校验与发布步骤见[参考年历说明](../../query/calendars/README.md)，加载与生效行为见 [Query Contract](../../query/CONTRACT.md#calendar-与-coverage-适配)；更新失败不影响 Collector。
 - Asia/Shanghai 为解释时区；输入必须带时区，统一转换。会话区间左闭右开；night_start 的次日02:30仍归同一 trading_day。日盘段间为 BREAK；夜盘结束到日盘开始、周末/节假日及盘后为 CLOSED。
-- 输出 exchange/product、as_of、trading_day、market_state（OPEN/BREAK/CLOSED/UNKNOWN）、session（DAY/NIGHT/null）、phase（CONTINUOUS/AUCTION/null）、is_continuous、当前区间、最近已开始的有效连续时段与下一连续时段。OPEN 包含集合竞价但 is_continuous=false；quote_expected 只代表连续交易时段应有市场活动，不代表每合约必有推送，不生成报警。
+- 输出 exchange/product、as_of、trading_day、session_state（OPEN/BREAK/CLOSED/UNKNOWN）、session（DAY/NIGHT/null）、phase（CONTINUOUS/AUCTION/null）、is_continuous、当前区间、最近已开始的有效连续时段与下一连续时段。OPEN 包含集合竞价但 is_continuous=false；quote_expected 只代表连续交易时段应有市场活动，不代表每合约必有推送，不生成报警。
 - OPEN/BREAK 的 trading_day 为当前逻辑交易日；CLOSED 使用下一已知有效交易时段所属交易日，同时提供最近时段自己的交易日。没有可确认归属时为 null/UNKNOWN。此推导只解释日历，绝不改写 CTP 事实 TradingDay。
 - 公共 HTTP 入口、参数与错误映射见 [Read Path](read-path.md#市场时段与覆盖)；CLI 提供同等查询和 `--validate`。
 

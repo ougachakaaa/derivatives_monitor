@@ -213,7 +213,7 @@ class MarketFrameReader:
         at = aware(at)
         calendar = self._calendar(at)
         state = calendar.query(scope.exchange, scope.product, at)
-        if state['market_state'] != 'OPEN':
+        if state['session_state'] != 'OPEN':
             raise ValueError('as_of must be inside a known market period')
         period = next(p for p in calendar.periods(scope.exchange, scope.product)
                       if p['start'] <= at < p['end'])
@@ -229,7 +229,7 @@ class MarketFrameReader:
             raise ValueError('evaluated_at precedes minute')
         calendar = self._calendar(minute)
         state = calendar.query(scope.exchange, scope.product, minute)
-        if state['market_state'] != 'OPEN':
+        if state['session_state'] != 'OPEN':
             raise ValueError('minute must be inside a known market period')
         period = next((p for p in calendar.periods(scope.exchange, scope.product)
                        if p['start'] <= minute and end <= p['end']), None)
@@ -288,17 +288,17 @@ class MarketFrameReader:
         try:
             calendar = self._calendar(at)
         except CalendarError as error:
-            return dict(schema_version=1, requested_at=at.isoformat(), market_state='UNKNOWN',
+            return dict(schema_version=1, requested_at=at.isoformat(), session_state='UNKNOWN',
                         calendar_trading_day=None, calendar_version=None, historical=None,
                         reason=str(error), frame=None)
         state = calendar.query(scope.exchange, scope.product, at)
-        result = dict(schema_version=1, requested_at=at.isoformat(), market_state=state['market_state'],
+        result = dict(schema_version=1, requested_at=at.isoformat(), session_state=state['session_state'],
                       calendar_trading_day=state['trading_day'], calendar_version=state['calendar_version'],
                       historical=None, reason=state['reason'], frame=None)
-        if state['market_state'] == 'UNKNOWN':
+        if state['session_state'] == 'UNKNOWN':
             return result
         periods = calendar.periods(scope.exchange, scope.product)
-        historical = state['market_state'] != 'OPEN'
+        historical = state['session_state'] != 'OPEN'
         if historical:
             period = next((p for p in reversed(periods) if p['end'] <= at), None)
             if period is None:
