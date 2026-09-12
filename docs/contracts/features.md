@@ -2,7 +2,7 @@
 
 # Feature 查询契约 v1
 
-状态：**FROZEN**，2026-09-09。本文定义共享 Feature 的语义、查询接口及失败边界；实现与验证状态唯一见 [Acceptance](../acceptance.md)。产品范围见 [MVP](../mvp.md)，物理归属与依赖见 [Architecture](../../ARCHITECTURE.md)。
+状态：**FROZEN**，2026-09-09。本文定义共享 Feature 的语义、查询接口及失败边界；实现与验证状态唯一见 [Query Acceptance](../../query/ACCEPTANCE.md#query-feature-evidence)。产品范围见 [MVP](../mvp.md)，物理归属与依赖见 [Architecture](../../ARCHITECTURE.md)。
 
 ## 1. 语义与消费者边界
 
@@ -80,4 +80,4 @@ rolling market window 属于 Feature provider 的输入选择/计算状态，不
 
 验证新接口与已有 Skew latest 在相同输入下数值、时间、状态、质量和证据一致；覆盖缺参考、历史/休市、未封口、PARTIAL、陈旧、404/503、参数拒绝和生产拒绝 TEST DOUBLE。既有 Analytics 回归和 oracle 容差不得放宽。
 
-新增指标可以增加 provider；改变已有指标业务含义必须遵守其版本规则。通用接口发生不兼容变更需新 schema_version，不能以迁移模块名静默改变业务含义。接口工程通过不代表实盘参考或数据已验收，当前证据见 [Acceptance](../acceptance.md)。
+新增指标可以增加 provider；改变已有指标业务含义必须遵守其版本规则。通用接口发生不兼容变更需新 schema_version，不能以迁移模块名静默改变业务含义。接口工程通过不代表实盘参考或数据已验收，当前证据见 [Query Acceptance](../../query/ACCEPTANCE.md#query-feature-evidence)。

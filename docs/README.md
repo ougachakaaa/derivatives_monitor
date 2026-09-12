@@ -55,7 +55,7 @@ Parent scope 只负责自身 scope 的语义、跨直接子级的 invariant，�
 - [Calendar / Universe](contracts/market-session.md)
 - [Deployment](contracts/deployment.md)
 - [Query Analytics / Skew v1](../query/contracts/analytics-skew.md)及其[机器策略](../query/contracts/analytics-skew-v1.json)
-- [Feature 查询 v1](contracts/features.md)（已冻结；实现与验证状态见 [Acceptance](acceptance.md)）
+- [Feature 查询 v1](contracts/features.md)（已冻结；实现与验证状态见 [Query Acceptance](../query/ACCEPTANCE.md#query-feature-evidence)）
 - [Dashboard presentation](../dashboard/CONTRACT.md)及其[局部证据](../dashboard/ACCEPTANCE.md)
 - [Monitoring / Opportunity / Notification v1](../monitoring/CONTRACT.md)（已冻结，待实现；状态见[局部证据](../monitoring/ACCEPTANCE.md)）
 

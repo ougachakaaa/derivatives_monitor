@@ -15,7 +15,7 @@
 
 - Agent 工作规则：[AGENTS.md](AGENTS.md)
 - 产品、设计与结构：[MVP](docs/mvp.md)、[Design](DESIGN.md)、[Architecture](ARCHITECTURE.md)
-- Knowledge authority：[治理规则](docs/README.md#authority-rules)、[目标布局与 mapping](ARCHITECTURE.md#knowledge-topology)
+- Knowledge authority：[治理规则](docs/README.md#authority-rules)、[现行拓扑与 authority mapping](ARCHITECTURE.md#knowledge-topology)
 - 精确行为：[当前契约入口](docs/README.md)
 - 当前状态与证据缺口：[Acceptance](docs/acceptance.md)
 - 实际部署、维护与恢复：[Operations](docs/operations.md)

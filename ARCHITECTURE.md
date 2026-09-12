@@ -125,6 +125,7 @@ application store 是专属应用持久目录，不位于 Collector 数据目录
 ├─ AGENTS.md / README.md / DESIGN.md / ARCHITECTURE.md / .authority.json
 ├─ docs/
 │  ├─ README.md / mvp.md / acceptance.md / operations.md
+│  ├─ monitoring-execution-plan.md（实施交接，不定义 authority）
 │  ├─ contracts/
 │  │  ├─ raw-boundary.md / read-path.md / market-session.md
 │  │  └─ features.md / deployment.md
@@ -201,4 +202,4 @@ Monitoring 已建立非空文档 scope，README 当前只导航设计和状态�
 
 claim 按可独立修改的接口或规则组划分，不为每句话建 ID。Markdown 与机器策略各自登记职责：Skew 已有机器字段值以原 JSON 为机器 authority，Markdown 解释含义，重复数值展示只作为受一致性检查的投影。登记不能制造第二套规则或把 evidence/ExecPlan 注册为规范。
 
-登记从根 [`.authority.json`](.authority.json) 开始，局部 scope 由各自同名文件登记。最终 topology 只接受真实 existing scope，不接受 pending scope、entrypoint migration、claim migration exception 或未登记的 authority-shaped 文档；所有 claim 必须直接定义在受约束 scopes 的 smallest common scope。离线检查实现位于 `harness/authority.py`，当前完成状态见 [Acceptance](docs/acceptance.md#semantic-authority-s8)。
+登记从根 [`.authority.json`](.authority.json) 开始，局部 scope 由各自同名文件登记。最终 topology 只接受真实 existing scope，不接受 pending scope、entrypoint migration、claim migration exception 或未登记的 authority-shaped 文档；所有 claim 必须直接定义在受约束 scopes 的 smallest common scope。离线检查实现位于 `harness/authority.py`，当前完成状态见 [Acceptance](docs/acceptance.md#documentation-authority-topology)。
