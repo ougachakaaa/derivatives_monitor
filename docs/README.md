@@ -2,7 +2,7 @@
 
 - 系统：[Architecture](../ARCHITECTURE.md) · [Design](../DESIGN.md) · [产品边界](mvp.md) · [当前状态](acceptance.md)
 - 运行：[Operations](operations.md) · [安全回归](../tests/README.md) · [证据语义](verification.md)
-- 共享 Contracts：[Raw](contracts/raw-boundary.md) · [HTTP](contracts/read-path.md) · [Calendar / Universe](contracts/market-session.md) · [Indicator](contracts/indicators.md) · [Deployment](contracts/deployment.md) · [Developer runner](contracts/developer-runner.md)
+- 共享 Contracts：[Raw](contracts/raw-boundary.md) · [HTTP](contracts/read-path.md) · [Calendar / Universe](contracts/market-session.md) · [Market Indicator](contracts/indicators.md) · [Deployment](contracts/deployment.md) · [Developer runner](contracts/developer-runner.md)
 
 | 模块 | 使用入口 | 修改时读取 |
 |---|---|---|

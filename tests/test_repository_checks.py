@@ -6,7 +6,7 @@ import unittest
 from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from check_docs import link_and_anchor_errors, maintained_markdown
+from check_docs import link_and_anchor_errors, maintained_markdown, terminology_errors
 from check_repository import (module_dependency_errors, packaging_policy_errors,
                               production_dependency_errors)
 from check_docker_context import declared_files, validate_declared
@@ -42,6 +42,15 @@ class DocumentationChecksTest(unittest.TestCase):
             self.write(path, '[TEST DOUBLE](missing.md)\n')
         self.write('query/CONTRACT.md', '# TEST DOUBLE\n')
         self.assertEqual(set(maintained_markdown(self.root)), {'query/CONTRACT.md'})
+
+    def test_reconciled_market_terminology_is_enforced(self):
+        reserved = 'Market' + ' State'
+        self.write('DESIGN.md', f'# TEST DOUBLE\n{reserved} is a reserved decision layer.\n')
+        deprecated = 'market_' + 'state'
+        self.write('query/service.py', f'payload = {{"{deprecated}": "OPEN"}}\n')
+        self.assertTrue(terminology_errors(self.root))
+        self.write('query/service.py', 'payload = {"session_state": "OPEN"}\n')
+        self.assertEqual(terminology_errors(self.root), [])
 
 
 class RepositoryChecksTest(unittest.TestCase):

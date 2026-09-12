@@ -26,6 +26,17 @@ EXCLUDED_DIRS = {'.git', '.venv', 'venv', 'node_modules', '__pycache__',
                  'build', 'dist', 'artifacts', 'data', 'flow', 'logs',
                  'third_party', 'experiments', '.cache'}
 MAINTAINED_FOLDERS = {'collector', 'query', 'dashboard', 'docs', 'tests'}
+TEXT_SUFFIXES = {'.md', '.py', '.js', '.jsx', '.cpp', '.hpp', '.h', '.sh', '.cmake', '.txt', '.yaml', '.yml'}
+TEXT_NAMES = {'Dockerfile', 'Dockerfile.dockerignore', 'compose.yaml', 'dev'}
+LEGACY_PATHS = (
+    'docs/contracts/' + 'fea' + 'tures.md',
+    'query/' + 'market_' + 'state.py',
+    'query/' + 'fea' + 'ture_service.py',
+    'query/contracts/' + 'market-' + 'state.md',
+    'query/tests/test_' + 'market_' + 'state.py',
+    'query/tests/test_' + 'fea' + 'ture_service.py',
+    'query/tests/test_' + 'fea' + 'tures_api.py',
+)
 
 
 def _explicit_anchors(text: str):
@@ -104,10 +115,38 @@ def maintained_markdown(root):
     return [p.relative_to(root).as_posix() for p in paths]
 
 
+def terminology_errors(root: Path):
+    """Reject superseded market-analysis names from maintained source and docs."""
+    errors = [f'Deprecated market-analysis path still exists: {relative}'
+              for relative in LEGACY_PATHS if (root / relative).exists()]
+    paths = [p for p in root.iterdir() if p.is_file()]
+    paths.extend(source_files(root, sorted(MAINTAINED_FOLDERS | {'scripts'})))
+    legacy_tokens = (
+        'market_' + 'state',
+        'Market' + 'State',
+        'fea' + 'ture_id',
+        'fea' + 'ture_service',
+        'fea' + 'ture-sample',
+    )
+    legacy_domain_word = re.compile(r'\b' + 'fea' + r'tures?\b', re.I)
+    reserved_term = 'Market' + ' State'
+    for path in sorted(set(paths)):
+        if path.suffix not in TEXT_SUFFIXES and path.name not in TEXT_NAMES:
+            continue
+        relative = path.relative_to(root).as_posix()
+        for number, line in enumerate(path.read_text(errors='replace').splitlines(), 1):
+            if any(token in line for token in legacy_tokens) or legacy_domain_word.search(line):
+                errors.append(f'{relative}:{number}: deprecated market-analysis terminology')
+            if reserved_term in line and relative != 'DESIGN.md':
+                errors.append(f'{relative}:{number}: reserved decision-layer term used outside Design authority')
+    return errors
+
+
 def check(root=ROOT):
     errors = [f'Missing authority: {relative}' for relative in REQUIRED_PATHS
               if not (root / relative).is_file()]
     errors.extend(link_and_anchor_errors(root, maintained_markdown(root)))
+    errors.extend(terminology_errors(root))
     return errors
 
 

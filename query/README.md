@@ -2,7 +2,7 @@
 
 Query 是 Python 3.12 / FastAPI 服务：读取 Collector 的 Raw 数据，提供诊断、Market Session、Market Frame、MO Skew 与 Market Indicator JSON。这里提供安装、启动、调用和排障方法；内部设计与结构见本级 [Design](DESIGN.md)和 [Architecture](ARCHITECTURE.md)，共享 Raw 与 HTTP 分别见 [Raw Boundary](../docs/contracts/raw-boundary.md)和 [Read Path](../docs/contracts/read-path.md)。
 
-本级契约与状态：[组件 Contract](CONTRACT.md) · [Market Frame](contracts/market-frame.md) · [Analytics / Skew](contracts/analytics-skew.md) · [Reference adapter](contracts/references.md) · [Query Acceptance](ACCEPTANCE.md)。共享协议：[Market Session](../docs/contracts/market-session.md) · [Indicator](../docs/contracts/indicators.md)。系统状态与验证入口见[根 Acceptance](../docs/acceptance.md)和 [Repository Verification](../tests/README.md)。
+本级契约与状态：[组件 Contract](CONTRACT.md) · [Market Frame](contracts/market-frame.md) · [Analytics / Skew](contracts/analytics-skew.md) · [Reference adapter](contracts/references.md) · [Query Acceptance](ACCEPTANCE.md)。共享协议：[Market Session](../docs/contracts/market-session.md) · [Market Indicator](../docs/contracts/indicators.md)。系统状态与验证入口见[根 Acceptance](../docs/acceptance.md)和 [Repository Verification](../tests/README.md)。
 
 统一前台开发入口位于仓库根：`./dev doctor query` 检查本组件，`./dev up query` 运行本组件，`./dev up` 运行完整开发会话。参数示例和与持久部署的区别见 [Operations](../docs/operations.md#前台开发会话)；下面保留 Query 自身的安装、直接运行和调用用法。
 
@@ -49,7 +49,7 @@ Query 不需要 CTP 凭据。生产挂载、只读权限、端口和服务生命
 | `GET /api/skew/latest?month=YYMM` | 最近可展示的 MO Skew |
 | `GET /api/skew/series?day=YYYYMMDD&month=YYMM` | 当日分钟序列和变化 |
 | `GET /api/skew/minute?day=YYYYMMDD&minute=ISO&month=YYMM` | 指定分钟回看 |
-| `POST /api/indicators/evaluate` | 单 Indicator 只读查询 |
+| `POST /api/indicators/evaluate` | 单 Market Indicator 只读查询 |
 | `GET /docs` | OpenAPI 交互文档 |
 
 上表用于快速调用，不定义参数校验、状态、错误或业务语义。诊断及 HTTP 失败语义见 [Read Path Contract](../docs/contracts/read-path.md)；Market Session 和 Skew 结果分别见对应领域 Contract。
@@ -106,9 +106,9 @@ curl --get http://127.0.0.1:8000/api/skew/minute --data-urlencode 'month=2610' -
 
 示例日期和月份只展示调用格式，不代表存在生产参考包或真实市场验收。查询参数和 JSON 投影见 [Read Path Contract](../docs/contracts/read-path.md)；算法、质量、重放和不可计算原因见 [Analytics / Skew Contract](contracts/analytics-skew.md)，参考包适配见 [Reference adapter](contracts/references.md)。
 
-## Indicator API
+## Market Indicator API
 
-已实现的 Indicator 查询复用同一 Skew service。示例只展示请求格式：
+已实现的 Market Indicator 查询复用同一 Skew service。示例只展示请求格式：
 
 ```bash
 curl -X POST http://127.0.0.1:8000/api/indicators/evaluate \
@@ -116,7 +116,7 @@ curl -X POST http://127.0.0.1:8000/api/indicators/evaluate \
   -d '{"schema_version":1,"indicator_id":"mo-skew-25d-v1","scope":{"exchange":"CFFEX","product":"MO","month":"2610"},"parameters":{},"requested_at":"2026-09-16T09:31:00+08:00"}'
 ```
 
-共享 request/envelope、sample key 与错误语义见 [Indicator Contract](../docs/contracts/indicators.md)；注册表和 provider 约束见[本级 Contract](CONTRACT.md#indicator-provider)。
+共享 request/envelope、sample key 与错误语义见 [Market Indicator Contract](../docs/contracts/indicators.md)；注册表和 provider 约束见[本级 Contract](CONTRACT.md#query-indicator-provider-contract)。
 
 ## 审核参考包的离线导入
 
