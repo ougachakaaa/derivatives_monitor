@@ -32,11 +32,11 @@
 
 派生计算通过受契约约束的只读市场状态消费事实，并显式携带输入 revision、参考版本和算法身份。这样可以区分“同一历史输入的重建”与“当时已经产出的结果”，也避免分析代码依赖 Raw 表结构或隐藏的当前状态。
 
-Query 内部选择按请求计算、可重建派生值，理由见 [Query Design](query/DESIGN.md)；这不改变派生结果不能成为市场事实来源的跨模块边界。平行 Monitoring 的调度和已提交应用事实遵循下文边界，不改变 Analytics 的可重建属性。
+Query 内部选择按请求计算、可重建派生值，理由见 [Query Design](query/DESIGN.md)；这不改变派生结果不能成为市场事实来源的跨模块边界。
 
 ## 6. 失败语义是业务输出的一部分
 
-监控系统最危险的结果不是空值，而是看似正常但来源、时间或质量不成立的数字。因此系统宁可显式不可用，也不静默使用旧行情、默认参考值、替代价格或宽松容差。诊断健康、市场活跃、输入完整与指标可计算是不同层次，不能合并成一个绿色状态。
+市场分析系统最危险的结果不是空值，而是看似正常但来源、时间或质量不成立的数字。因此系统宁可显式不可用，也不静默使用旧行情、默认参考值、替代价格或宽松容差。诊断健康、市场活跃、输入完整与指标可计算是不同层次，不能合并成一个绿色状态。
 
 错误分类、状态码和可计算条件属于 Contract；页面和运维视图只投影这些语义，不各自发明判断。
 
@@ -50,16 +50,10 @@ Query 内部选择按请求计算、可重建派生值，理由见 [Query Design
 
 ## 8. 用证据驱动复杂度和演进
 
-缓存、额外存储、调度、告警或更宽部署面只应由明确的产品需求和真实性能/运维证据驱动。工程回归证明的是已覆盖行为，TEST DOUBLE、跳过项和历史报告不能替代实盘观察。探索性实验可以提供证据，但在明确纳入 Architecture 和 Contracts 前，不是正式运行时设计。
+缓存、额外存储、调度或更宽部署面只应由明确的产品需求和真实性能/运维证据驱动。工程回归证明的是已覆盖行为，TEST DOUBLE、跳过项和历史报告不能替代实盘观察。探索性实验可以提供证据，但在明确纳入 Architecture 和 Contracts 前，不是正式运行时设计。
 
 ## 9. 以稳定语义共享 Analytics，按实际需要拆模块
 
-Market State 解释事实，Feature 描述市场，Monitoring 表达用户规则结论。共享的是可追溯的业务能力，不要求共享目录名。Query 采用薄 Feature provider 的局部理由见 [Query Design](query/DESIGN.md)。
+当前 Market State 解释已保存事实，Feature 以稳定、可追溯的语义发布派生结果。Query 采用薄 Feature provider 复用已有 Analytics，局部理由见 [Query Design](query/DESIGN.md)；无真实消费者或失败模式时，不预建计算图、动态插件和窗口框架。
 
-首版独立 Monitoring 通过 Query HTTP 消费 Feature：无需挂载 Raw 或绑定 Query 的扁平 Python 导入，也保留 Query 与 Dashboard 独立运行的能力。代价是 Query 不可用时无法取得新的有效判断；明确 UNKNOWN 比维护第二条行情读取路径更小、更容易检查。无真实消费者或失败模式时，不预建计算图、动态插件和窗口框架。
-
-只有出现独立 Python 消费者、独立发布需求，或性能证据表明 HTTP 边界不合适时，才值得提取共享 Analytics 包；新增一个指标本身不足以触发拆包。提取保持 Feature ID、数值、时间、质量和追溯语义，并用相同输入对等验证，不借搬迁变更业务。当前及目标物理边界见 [Architecture](ARCHITECTURE.md)，公共语义见 [Feature Contract](docs/contracts/features.md)。
-
-## 10. Market Facts 与应用事实保持独立
-
-Raw、参考输入和可重建 Feature 继续由各自 owner 负责；下游观察后提交的 Opportunity Event 是应用事实，既不成为新的 Market Facts，也不能反向覆盖或修订上游事实。跨模块所有权见 [Architecture](ARCHITECTURE.md)，Monitoring 为何分开保存事件与投递结果见[其本级 Design](monitoring/DESIGN.md)，精确状态机和恢复规则只见 [Monitoring Contract](monitoring/CONTRACT.md)。
+只有出现独立 Python 消费者、独立发布需求，或性能证据表明当前物理边界不合适时，才值得提取共享 Analytics 包；新增一个指标本身不足以触发拆包。提取保持 Feature ID、数值、时间、质量和追溯语义，并用相同输入对等验证，不借搬迁变更业务。当前物理边界见 [Architecture](ARCHITECTURE.md)，公共语义见 [Feature Contract](docs/contracts/features.md)。

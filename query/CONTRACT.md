@@ -22,7 +22,7 @@ Query 按共享 Raw Boundary 打开日库，查询使用参数绑定，不接受
 
 ## Feature provider
 
-Query 使用显式的 `feature_id → provider` 注册表。生产注册表只纳入已有指标契约的实现，TEST DOUBLE 仅通过测试注入，不提供生产绕过开关；不加载动态插件、DSL、通用计算图或后台指标任务。provider 不依赖 Monitoring，通用引擎也不理解 provider 的金融字段。
+Query 使用显式的 `feature_id → provider` 注册表。生产注册表只纳入已有指标契约的实现，TEST DOUBLE 仅通过测试注入，不提供生产绕过开关；不加载动态插件、DSL、通用计算图或后台指标任务。通用引擎不理解 provider 的金融字段。
 
 `mo-skew-25d-v1` provider 复用 `SkewService.query('latest', month=显式月份, at=requested_at)` 的结果，不另建金融实现。它到通用 envelope 的映射如下：
 

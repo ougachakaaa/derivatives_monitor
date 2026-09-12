@@ -8,7 +8,7 @@
 
 - Collector 是 Raw 数据目录和日库的唯一 writer；Query、Dashboard、Analytics 及后续消费者不得写 Raw、修改 schema 或建立第二份行情事实。下游只能解释实际已提交的采样，不得把未保存的 callback、缺失行情或推测值包装成 Raw。
 - Raw schema v1 按源行情中合法的 `TradingDay` 发布为一日一个 `YYYYMMDD.sqlite`，保存 `received_us`、`snapshot_us`、`run_id`、`sequence`、`id` 和 CTP 原字段；元数据明确 schema 版本和交易日，写入约束阻止混日。同日重启可以追加，每次运行以独立 run ID 标识，事务与唯一键阻止同次物化重复写入。具体接收、字段归一化、分区、采样窗口及跨日内存状态仍由 [Collector Contract](../../collector/CONTRACT.md#数据与采样不变量)定义。
-- 数据目录、flow、配置和 application state 是不同 owner 的资源。系统挂载与保留规则见 [Deployment Contract](deployment.md#数据与隔离)；移除服务、镜像、构建或项目文件不能作为删除 Raw 的手段。
+- 数据目录、flow 和配置有独立的挂载与保留规则，见 [Deployment Contract](deployment.md#数据与隔离)；移除服务、镜像、构建或项目文件不能作为删除 Raw 的手段。
 
 ## Writer 协调与持久性
 

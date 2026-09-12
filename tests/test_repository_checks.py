@@ -74,13 +74,13 @@ class RepositoryChecksTest(unittest.TestCase):
     def test_legal_calendar_tool_and_local_imports(self):
         self.write('collector/scripts/universe.py', 'from market_calendar import Calendar\n')
         self.write('query/service.py', 'from query import analytics\nfrom market_calendar import Calendar\n')
-        self.write('query/tests/test_fake.py', 'import monitoring\n')
+        self.write('query/tests/test_fake.py', 'import dashboard\n')
         self.assertEqual(module_dependency_errors(self.root), [])
 
     def test_illegal_runtime_imports_and_collector_include(self):
         for path, source in {
-            'query/service.py': 'import monitoring\n',
-            'monitoring/main.py': 'from query import analytics\n',
+            'query/service.py': 'import dashboard\n',
+            'dashboard/service.py': 'from query import analytics\n',
             'collector/runtime.py': 'from market_calendar import Calendar\n',
             'collector/scripts/universe.py': 'from query import analytics\n',
             'collector/src/main.cpp': '#include "../../query/private.h"\n',

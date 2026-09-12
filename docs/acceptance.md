@@ -13,6 +13,6 @@
 | P1 查询性能 | 未验 | 真实一天完整目标链，至少一百次核心查询，P95 ≤ 2 秒并记录错误 |
 | P2 显示延迟 | 未验 | 配对同一 observation 的源、接收、物化和显示时间，实测 ≤ 30 秒目标 |
 
-模块状态：[Query](../query/ACCEPTANCE.md) · [Dashboard](../dashboard/ACCEPTANCE.md) · [Monitoring](../monitoring/ACCEPTANCE.md)。Query Feature 接口已实现，Monitoring runtime 尚未实现；平行扩展不替代上述门槛。
+模块状态：[Query](../query/ACCEPTANCE.md) · [Dashboard](../dashboard/ACCEPTANCE.md)。
 
 运行与恢复见 [Operations](operations.md)，验证命令见 [Repository Verification](../tests/README.md)，结果边界见[证据语义](verification.md)。真实验证使用[现场记录模板](live-acceptance-template.md)，原始证据单独保存，不在本文累计测试流水。

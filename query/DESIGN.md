@@ -10,4 +10,4 @@
 
 ## 复用既有 Analytics 的薄 Feature provider
 
-Query 已有受约束的 Market State、数值核心和 Skew business service，因此 Feature provider 只做稳定公共结果的薄投影，避免维护第二套金融口径。它不引入动态插件、通用计算图、后台指标调度或 Monitoring 依赖；新指标本身也不触发拆包。共享 HTTP/Feature 语义与提取独立 Analytics 包的触发条件仍由[根 Design](../DESIGN.md#9-以稳定语义共享-analytics按实际需要拆模块)负责。
+Query 已有受约束的 Market State、数值核心和 Skew business service，因此 Feature provider 只做稳定公共结果的薄投影，避免维护第二套金融口径。它不引入动态插件、通用计算图或后台指标调度；新指标本身也不触发拆包。共享 HTTP/Feature 语义与提取独立 Analytics 包的触发条件仍由[根 Design](../DESIGN.md#9-以稳定语义共享-analytics按实际需要拆模块)负责。

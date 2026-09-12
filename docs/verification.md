@@ -18,7 +18,7 @@ step 未达到 `PASS` 后，依赖其结果的后续 step 不再启动并明确�
 
 ## TEST DOUBLE 与证据强度
 
-合成行情、fixture、替身 SDK/服务、临时配置和模拟仓库必须在数据或场景中明确标记 `TEST DOUBLE` 或 `SYNTHETIC`。这类结果只能证明其明确覆盖的工程机制，不等同于真实 CTP、官方参考包、完整 MO 月链、生产调度周期、人工可用性、性能、恢复或通知接收。
+合成行情、fixture、替身 SDK/服务、临时配置和模拟仓库必须在数据或场景中明确标记 `TEST DOUBLE` 或 `SYNTHETIC`。这类结果只能证明其明确覆盖的工程机制，不等同于真实 CTP、官方参考包、完整 MO 月链、生产调度周期、人工可用性、性能或恢复。
 
 `docs` 结果属于 `STRUCTURAL`，只证明当次确定性结构检查；其他自动 profile 记为 `OFFLINE_OR_SYNTHETIC`。自动报告的 `mvp_complete` 固定为 `false`。任何自动 `PASS` 都不能关闭现场门槛，也不能把模块局部证据提升成系统完成；实际覆盖与缺口由对应 scope Acceptance 记录，系统 G1–G6/P1/P2 只由[根 Acceptance](acceptance.md)汇总。
 

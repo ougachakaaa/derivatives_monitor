@@ -19,7 +19,6 @@
 - 当前状态与证据缺口：[Acceptance](docs/acceptance.md)
 - 实际部署、维护与恢复：[Operations](docs/operations.md)
 - Build / run / usage / examples / troubleshooting：[Collector](collector/README.md)、[Query](query/README.md)、[Dashboard](dashboard/README.md)
-- 已冻结、尚未实现的 Monitoring：[Monitoring](monitoring/README.md)
 - 安全回归：[Repository Verification](tests/README.md)；结果与证据语义：[Verification](docs/verification.md)
 - 探索性工作入口：[CTP experiment](experiments/ctp/README.md)、[Data Coverage experiment](experiments/data_coverage/README.md)
 

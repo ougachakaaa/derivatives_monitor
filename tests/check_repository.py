@@ -6,7 +6,7 @@ from pathlib import Path
 import re
 
 ROOT = Path(__file__).resolve().parents[1]
-MODULES = {'collector', 'query', 'dashboard', 'monitoring'}
+MODULES = {'collector', 'query', 'dashboard'}
 EXCLUDED_DIRS = {'.git', '.venv', 'venv', 'node_modules', '__pycache__',
                  'build', 'dist', 'artifacts', 'data', 'flow', 'logs',
                  'third_party', 'experiments', '.cache'}
@@ -92,7 +92,7 @@ def module_dependency_errors(root=ROOT):
             for line in path.read_text(errors='replace').splitlines():
                 if line.lstrip().startswith(('# ', '//', '/*', '*')):
                     continue
-                if re.search(r'(?<![\w-])(?:query|dashboard|monitoring|experiments)[/\\]', line):
+                if re.search(r'(?<![\w-])(?:query|dashboard|experiments)[/\\]', line):
                     errors.append(f'{relative}: Collector runtime depends on another component (ARCHITECTURE.md)')
     return errors
 
