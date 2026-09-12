@@ -18,4 +18,4 @@ main.cpp → config.hpp → runtime.cpp
 - `storage.*` 是 Raw writer 的实现边界；它与只读消费者共同遵守的目录所有权、锁、WAL 与发布协议由[共享 Raw Boundary](../docs/contracts/raw-boundary.md)定义。
 - `health.hpp` 发布共享诊断投影；字段和消费者解释仍由 Raw Boundary 拥有。
 
-C++ runtime 不导入或启动 Query/Dashboard。系统级 manager、Compose、前台 runner 与三服务生命周期由[根 Deployment Contract](../docs/contracts/deployment.md)约束。
+C++ runtime 不导入或启动 Query/Dashboard。系统级 manager、Compose 与三服务生命周期由[根 Deployment Contract](../docs/contracts/deployment.md)约束；前台 runner 的命令面、输入解析与所有权由 [Developer Runner Contract](../docs/contracts/developer-runner.md)约束。
