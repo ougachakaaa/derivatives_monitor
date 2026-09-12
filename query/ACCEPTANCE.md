@@ -12,13 +12,13 @@
 
 ## Skew JSON 与参考适配工程证据（2026-09-08）
 
-真实临时 SQLite/FastAPI、明确 TEST DOUBLE 行情和参考覆盖 latest/minute/series、封口与 session、历史/当前、质量/缺口、固定 revision 与 bundle 回放、原文件哈希、导入不覆盖、生产拒绝 SYNTHETIC 及 HTTP 400/404/503。历史报告 `artifacts/harness/20260908T113644Z-analytics-3e874a2f/result.json` 为 PASS；同版本 Query 76 项通过，packaging 报告仅证明构建输入边界。
+真实临时 SQLite/FastAPI、明确 TEST DOUBLE 行情和参考覆盖 latest/minute/series、封口与 session、历史/当前、质量/缺口、固定 revision 与 bundle 回放、原文件哈希、导入不覆盖、生产拒绝 SYNTHETIC 及 HTTP 400/404/503。当次 `analytics` 回归为 PASS；同版本 Query 76 项通过，packaging 只证明构建输入边界。
 
 <a id="query-feature-evidence"></a>
 
 ## Feature service / HTTP 工程证据（2026-09-10）
 
-提交 `8c6c900` 与 `351003e` 已实现通用 v1 envelope、显式注册表、`mo-skew-25d-v1` provider 与只读 `POST /api/features/evaluate`。service/provider 6 项及 HTTP 7 项 TEST DOUBLE 回归验证与既有 Skew 数值、时间、状态、质量、scope、sample key 和 evidence 对等，并覆盖严格参数、生产拒绝 SYNTHETIC、Raw 404/503 与未预期异常传播。完整 Query 89 项及 `python3 harness/run.py analytics` 为 PASS（`artifacts/harness/20260910T151944Z-analytics-beea795b/result.json`），docs 报告为 `artifacts/harness/20260910T152100Z-docs-b207185b/result.json`。当时 packaging 报告 `artifacts/harness/20260910T151708Z-packaging-e477e8ee/result.json` 因 Docker 不可用为 FAIL/NOT_RUN，不能写成通过。
+提交 `8c6c900` 与 `351003e` 已实现通用 v1 envelope、显式注册表、`mo-skew-25d-v1` provider 与只读 `POST /api/features/evaluate`。service/provider 6 项及 HTTP 7 项 TEST DOUBLE 回归验证与既有 Skew 数值、时间、状态、质量、scope、sample key 和 evidence 对等，并覆盖严格参数、生产拒绝 SYNTHETIC、Raw 404/503 与未预期异常传播。完整 Query 89 项及 `python3 harness/run.py analytics` 为 PASS，`python3 harness/run.py docs` 为 PASS。当时 `packaging` 因 Docker 不可用为 FAIL/NOT_RUN，不能写成通过。
 
 ## 参考目录路径修复（2026-09-10）
 

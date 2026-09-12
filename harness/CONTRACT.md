@@ -28,7 +28,7 @@ step 未达到 `PASS` 后，依赖其结果的后续 step 不再启动并明确�
 
 同目录的 `worktree.patch` 与 SHA-256 保存除 `experiments/` 外的 tracked working-tree diff，`result.json` 另记录未跟踪且未被 Git ignore 的文件哈希。Harness 不复制配置、运行数据或凭据。报告只证明该身份所指版本、dirty state、环境和实际 step；历史报告不自动证明当前 HEAD 或另一环境。
 
-`result.json` 不是完整环境快照。归档 dirty-tree 结果时必须同时保留可取得的对应源码 revision、patch 和未跟踪输入；缺少这些输入就不能宣称可复现。只提交脱敏摘要，不提交 Harness artifacts、行情或配置；摘要必须定位原始报告并保留数据来源、版本、环境及未覆盖边界。
+`result.json` 不是完整环境快照。归档 dirty-tree 结果时必须同时保留可取得的对应源码 revision、patch 和未跟踪输入；缺少这些输入就不能宣称可复现。只提交脱敏摘要，不提交 Harness artifacts、行情或配置；摘要保留数据来源、版本（Git revision 与工作树状态）、profile/命令、结论及未覆盖边界。`artifacts/` 不随仓库分发，持久文档只记录上述身份而不引用其文件系统路径；需要原始报告时在保存该报告的机器上按身份定位。
 
 ## 现场证据边界
 
