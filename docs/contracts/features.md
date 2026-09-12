@@ -63,8 +63,6 @@ rolling market window 属于 Feature provider 的输入选择/计算状态，不
 
 新 provider 需有明确指标定义及证据；注册要求见 [Query Contract](../../query/CONTRACT.md#feature-provider)。规则判断和通知不增加品种/指标分支。拆包条件属于 [Design](../../DESIGN.md)，实现位置属于 [Architecture](../../ARCHITECTURE.md)。拆分前后相同输入必须保持数值、时间、质量和追溯语义一致。
 
-## 5. 验证与变更
+## 5. 兼容与变更
 
-验证新接口与已有 Skew latest 在相同输入下数值、时间、状态、质量和证据一致；覆盖缺参考、历史/休市、未封口、PARTIAL、陈旧、404/503、参数拒绝和生产拒绝 TEST DOUBLE。既有 Analytics 回归和 oracle 容差不得放宽。
-
-新增指标可以增加 provider；改变已有指标业务含义必须遵守其版本规则。通用接口发生不兼容变更需新 schema_version，不能以迁移模块名静默改变业务含义。接口工程通过不代表实盘参考或数据已验收，当前证据见 [Query Acceptance](../../query/ACCEPTANCE.md#query-feature-evidence)。
+新增指标可以增加 provider；改变已有指标业务含义必须遵守其版本规则。通用接口发生不兼容变更需新 schema_version，不能以迁移模块名静默改变业务含义。provider 的等价性、回归覆盖与容差要求见 [Query Contract](../../query/CONTRACT.md#feature-provider)；接口工程通过不代表实盘参考或数据已验收，当前证据见 [Query Acceptance](../../query/ACCEPTANCE.md#query-feature-evidence)。

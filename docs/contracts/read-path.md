@@ -66,6 +66,6 @@ WAL、sidecar、immutable、共享锁、复制和 backup 的唯一约束见 [Raw
 
 当日响应直接投影 [Skew Contract 的序列结果](../../query/contracts/analytics-skew.md#7-输出错误及当日变化)：`points`、`baseline`、`change_vp` 与 `change_minute` 保持原顺序、值、null 和逐点状态，不在 HTTP 层重新枚举、forward-fill、回退或计算。
 
-缺目标月、参考包、无效/不匹配参考、未知日历、非连续/未封口分钟以及不能计算的行情前提返回200和 UNAVAILABLE/null/原因，current_usable=false；尚未读取 Raw 时 revision/quality/provenance 明确未知或空，不伪造完整性。日库实际读取抛出的404/503原样保留，不变成业务缺翼。序列采用10秒执行预算（逐分钟检查，单帧仍受 Store 的3秒 SQL预算约束），超限503并丢弃部分响应；这不是 P95≤2秒的性能证明。所有响应 no-store，不启用派生持久化或缓存。
+缺目标月、参考包、无效/不匹配参考、未知日历、非连续/未封口分钟以及不能计算的行情前提返回200和 UNAVAILABLE/null/原因，current_usable=false；尚未读取 Raw 时 revision/quality/provenance 明确未知或空，不伪造完整性。日库实际读取抛出的404/503原样保留，不变成业务缺翼。序列采用10秒执行预算（逐分钟检查），超限503并丢弃部分响应；这不是 P95≤2秒的性能证明。所有响应 no-store，不启用派生持久化或缓存。
 
 参考选择、不可变包核对、历史 Universe/Calendar 固定及生产/TEST DOUBLE 准入由 [Reference adapter](../../query/contracts/references.md)和 [Skew Contract](../../query/contracts/analytics-skew.md)定义；HTTP/环境变量不增加绕过开关。

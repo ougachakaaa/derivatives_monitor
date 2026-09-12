@@ -118,7 +118,7 @@ application store 是专属应用持久目录，不位于 Collector 数据目录
 
 当前导航为根 AGENTS/README/DESIGN/ARCHITECTURE → docs 入口与共享 Contracts；Collector、tools、Query、Dashboard、Monitoring 与 Harness 已有局部入口和对应 authority。Harness README 负责实际用法，Contract 负责验证/证据语义，AGENTS 负责局部工作纪律。实验区仍沿用逐层 SPEC/REFERENCE 组织，并只从上层链接其现有入口。
 
-受管理的现行文件如下；未列出的对称文件不创建。已退役中央副本不得恢复，未来能力也不以空目录或占位 authority 预先登记。
+受管理的现行文件如下；文件角色、占位文档与退役路径规则见[文档治理](docs/README.md#authority-rules)。
 
 ```text
 /

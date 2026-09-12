@@ -29,7 +29,7 @@ python3 -m unittest discover -s collector/tests -p 'test_universe.py' -v
 ./collector/scripts/native.sh stop
 ```
 
-这些命令会管理 Collector、Query、Dashboard 用户服务和 Universe timer；`up` / `update` 不是只读检查。配置准备、enable/restart、停止、更新与长期禁用步骤见 [Operations](../../docs/operations.md#native-systemd-部署)。
+`up` / `update` 会改变服务状态；配置准备、三服务与 Universe timer 的 enable/restart、停止、更新与长期禁用步骤见 [Operations](../../docs/operations.md#native-systemd-部署)。
 
 ## Container helpers
 

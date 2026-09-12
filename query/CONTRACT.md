@@ -14,7 +14,7 @@ Query 按共享 Raw Boundary 打开日库，查询使用参数绑定，不接受
 
 ## Calendar 与 coverage 适配
 
-`market_calendar.py` 是纯标准库模块，加载随 Query 发布的版本化年历；可从已核对哈希的原字节初始化。文件缺失、损坏、范围外或下一交易日无法确认时明确返回 UNKNOWN；日历语义与 UNKNOWN 归属见共享 [Market Session Contract](../docs/contracts/market-session.md#market-session-shared-contract)。JSON 更新在下次请求生效，profile 代码变化才需重启 Query。
+`market_calendar.py` 是纯标准库模块，加载随 Query 发布的版本化年历；可从已核对哈希的原字节初始化。UNKNOWN 的触发条件与消费者边界由共享 [Market Session Contract](../docs/contracts/market-session.md#market-session-shared-contract)拥有，模块按该契约返回 UNKNOWN 和原因。JSON 更新在下次请求生效，profile 代码变化才需重启 Query。
 
 `/api/sessions` 和 Calendar CLI 使用同一解释结果；CLI 同时提供 `--validate`。Query coverage 按 exchange/product 分组，并按共享 Universe manifest 中各产品的目标日期核对清单；它分别表达订阅、接收、缺口、stale/error 与进程健康，不以 Calendar 状态改写 Collector 事实或控制 Collector。
 
@@ -38,5 +38,7 @@ Query 使用显式的 `feature_id → provider` 注册表。生产注册表只�
 完整结果放入 `evidence`，通用字段直接投影，不重新计算、不按显示精度舍入、不重选分钟或报价。冻结的模型、单位、数值容差、官方参考准入、封口分钟选择及当前报价质量全部沿用 [mo-skew-25d-v1](contracts/analytics-skew.md)及其[机器策略](contracts/analytics-skew-v1.json)。特别是 PARTIAL 可以有合格 Skew；历史有效值或当前陈旧值可以保留数值，但不能因此成为当前有效判断。未选到分钟时不构造采样键。
 
 这里新增的是通用投影，不新增 basis、return 或 ATM IV 定义。Skew 中的单合约求解结果、两翼 IV 和平价远期不自动成为独立 ATM IV 或 IM basis。basis 的现货输入尚无本次授权的正式来源；示例测试不得替代数据源及指标契约。envelope、错误与版本语义仍由 repository [Feature Contract](../docs/contracts/features.md)拥有。
+
+provider 回归必须验证与既有 Skew latest 在相同输入下数值、时间、状态、质量和证据一致，并覆盖缺参考、历史/休市、未封口、PARTIAL、陈旧、404/503、参数拒绝与生产拒绝 TEST DOUBLE；独立验证门槛与容差不放宽，沿用 [Skew v1 §8](contracts/analytics-skew.md#8-独立验证与收尾门槛)。
 
 未来 provider 必须先有明确指标定义和证据，再登记同一接口。rolling market window 的归属、输入选择、身份要求与写权边界唯一见 repository [Feature Contract §4](../docs/contracts/features.md#4-rolling-window-与后续指标)。
