@@ -53,20 +53,7 @@ UNAVAILABLE 仍保留已经知道的时间/身份/原因，未知身份保持 nu
 
 ## 3. MO Skew provider 映射
 
-复用 `SkewService.query('latest', month=显式月份, at=requested_at)`。完整结果放入 `evidence`；通用字段直接投影，不重新计算、不按显示精度舍入、不重选分钟或报价。
-
-| Feature 字段 | 既有 Skew 结果来源 |
-|---|---|
-| `value / unit` | `skew_25d_vp / unit`（`vol_point`） |
-| `scope / status / reasons` | 同名字段 |
-| `effective_at / evaluated_at` | `valuation_at / evaluated_at` |
-| `historical / current_usable` | 同名字段 |
-| `sample_key` | 实际交易日、业务 scope 与封口分钟的确定性身份；不含 raw_revision、参考修订或请求时间 |
-| `evidence` | 包括 algorithm、quality、raw_revision、Universe/Calendar/ReferenceBundle 身份和哈希、provenance 的完整公共结果 |
-
-冻结的模型、单位、数值容差、官方参考准入、封口分钟选择及当前报价质量全部沿用 [mo-skew-25d-v1](../../query/contracts/analytics-skew.md)及其[机器策略](../../query/contracts/analytics-skew-v1.json)。特别是 PARTIAL 可以有合格 Skew；历史有效值或当前陈旧值可以保留数值，但不能因此成为当前有效判断。未选到分钟时不构造采样键。
-
-这里新增的是通用投影，不新增 basis、return 或 ATM IV 定义。Skew 中的单合约求解结果、两翼 IV 和平价远期不自动成为独立 ATM IV 或 IM basis。basis 的现货输入尚无本次授权的正式来源；示例测试不得替代数据源及指标契约。
+首个生产 provider 为 `mo-skew-25d-v1`；其字段映射、采样键身份与投影边界属于 provider 级细节，唯一见 [Query Contract](../../query/CONTRACT.md#feature-provider)。本文只冻结通用 envelope、消费者边界与错误/版本规则。
 
 ## 4. Rolling window 与后续指标
 

@@ -44,7 +44,7 @@ docker stop --time 60 "$(docker ps -q --filter label=com.docker.compose.project=
 
 恢复采集仍执行 `./scripts/deploy.sh up`。Compose、镜像输入、挂载和停止宽限的精确约束见 [Deployment Contract](contracts/deployment.md)。
 
-日常分别检查主循环心跳、连接/登录、逐合约订阅、最后接收/提交、源交易日和清单/日历版本。市场 CLOSED/BREAK、不活跃合约无推送、订阅失败不是同一状态。查看 `snapshot_commit` 与两次只读行数/最近时间确认推进；不要把 accepted、written 和跨 run 日行数相互比较为同一指标。
+日常分别检查主循环心跳、连接/登录、逐合约订阅、最后接收/提交、源交易日和清单/日历版本；查看 `snapshot_commit` 与两次只读行数/最近时间确认推进。市场 CLOSED/BREAK、不活跃合约无推送、订阅失败与进程健康是不同状态，计数与证据口径见 [Raw Boundary](contracts/raw-boundary.md#collector-运行诊断协议)，不要在它们之间直接互推。
 
 ## 前台开发会话
 
@@ -70,9 +70,9 @@ QUERY_URL=http://127.0.0.1:8000 ./dev doctor dashboard --dashboard-port 8101
 QUERY_URL=http://127.0.0.1:8000 ./dev up dashboard --dashboard-port 8101
 ```
 
-启动选项放在 `up` 或所选组件之后；旧顶层 `./dev collector/query/dashboard` 已退役。参数解析、路径基准、环境变量优先级和联合派生规则以 [Deployment Contract](contracts/deployment.md#developer-runner-的生命周期边界) 为准；联合会话不要设置与派生值冲突的 `DATA_DIR` 或 `QUERY_URL`。诊断只检查本地运行条件，不证明 CTP 登录、行情推进、Raw 可读或 Skew 可计算。
+启动选项放在 `up` 或所选组件之后；旧顶层 `./dev collector/query/dashboard` 已退役。参数解析、路径基准、环境变量优先级和联合派生规则以 [Developer Runner Contract](contracts/developer-runner.md#repository-developer-runner-contract) 为准；联合会话不要设置与派生值冲突的 `DATA_DIR` 或 `QUERY_URL`。诊断只检查本地运行条件，不证明 CTP 登录、行情推进、Raw 可读或 Skew 可计算。
 
-保持 `./dev` 在前台；Ctrl-C、SIGTERM 或终端 SIGHUP 会触发本次自有进程的正常收尾，Query/Dashboard 退出或失败不会连带停止 Collector（信号与所有权边界见 [Deployment Contract](contracts/deployment.md#developer-runner-的生命周期边界)）。已有端口或 writer 冲突应通过其原管理入口处理。需要跨终端自动启动、重启、状态和日志管理时，改用上表的 native systemd 或 Docker Compose 入口，不要同时写同一 Raw 目录。
+保持 `./dev` 在前台；Ctrl-C、SIGTERM 或终端 SIGHUP 会触发本次自有进程的正常收尾，Query/Dashboard 退出或失败不会连带停止 Collector（信号与所有权边界见 [Developer Runner Contract](contracts/developer-runner.md#repository-developer-runner-contract)）。已有端口或 writer 冲突应通过其原管理入口处理。需要跨终端自动启动、重启、状态和日志管理时，改用上表的 native systemd 或 Docker Compose 入口，不要同时写同一 Raw 目录。
 
 ## 更新参考与软件
 
@@ -87,7 +87,7 @@ API 失败先检查 `/healthz` 与数据读取错误；Collector 可能仍正常
 
 持久化错误非零退出；检查空间、权限、writer 冲突及日志。保留未提交 WAL，避免删除 sidecar。崩溃后由正常 Collector/SQLite 恢复，再正常停止验证；不直接改库或伪造 run 结束状态。
 
-Collector 活跃但所查历史日已关闭且缺 sidecar 时，当前 Query 按契约返回 503。需要读取该日时安排正常停止 Collector 并保留 Query。不得为了绕过错误改成 RW 或直接设置 immutable。若此限制阻断 MVP 的日常回看，记录为未满足 G4，而非隐藏错误。
+Collector 活跃但所查历史日已关闭且缺 sidecar 时，Query 按 [Read Path](contracts/read-path.md#sqlite-只读限制)返回 503。需要读取该日时安排正常停止 Collector 并保留 Query；不得为了绕过错误改成 RW 或直接设置 immutable。若此限制阻断 MVP 的日常回看，记录为未满足 G4，而非隐藏错误。
 
 ## 备份与隔离恢复演练
 

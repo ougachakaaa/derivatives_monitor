@@ -44,11 +44,11 @@ WAL、sidecar、immutable、共享锁、复制和 backup 的唯一约束见 [Raw
 
 ## 市场时段与覆盖
 
-`/api/sessions` 独立读取审核后的交易日历，按 exchange/product 回答交易日、时段与连续交易状态，不读取/改写行情，也不控制采集进程；日历未知必须明确 UNKNOWN。`/api/coverage` 的分组、目标日核对及订阅/接收/缺口/stale/进程健康区分见 [Query Contract](../../query/CONTRACT.md#calendar-与-coverage-适配)，本契约只定义其 HTTP 入口。Query 模块及参考年历随 Docker 镜像发布，Collector 没有新增依赖。
+`GET /api/sessions?exchange=SHFE&product=AU&at=<带时区ISO时间>` 独立读取审核后的交易日历，按 exchange/product 回答交易日、时段与连续交易状态，不读取/改写行情，也不控制采集进程。exchange/product 可省略以返回全部/某交易所，product 单独给出非法，默认当前时刻；非法参数 400，日历不可用在 200 响应中明确 UNKNOWN。`/api/coverage` 的分组、目标日核对及订阅/接收/缺口/stale/进程健康区分见 [Query Contract](../../query/CONTRACT.md#calendar-与-coverage-适配)，本契约只定义其 HTTP 入口。Query 模块及参考年历随 Docker 镜像发布，Collector 没有新增依赖。
 
 ## MVP MO Skew JSON 业务查询
 
-已实现于 `query/skew_service.py` / `skew_references.py`；数学定义和时间选择严格沿用 [mo-skew-25d-v1](../../query/contracts/analytics-skew.md)，不新增行情时间模型。当前证据见 [Query Acceptance](../../query/ACCEPTANCE.md)，G2/G3 真实业务门槛仍见[根 Acceptance](../acceptance.md)。
+数学定义和时间选择严格沿用 [mo-skew-25d-v1](../../query/contracts/analytics-skew.md)，不新增行情时间模型；实现与验证状态见 [Query Acceptance](../../query/ACCEPTANCE.md)，G2/G3 真实业务门槛仍见[根 Acceptance](../acceptance.md)。
 
 | GET 路径 | 必需参数 | 能力 |
 |---|---|---|
@@ -60,9 +60,9 @@ WAL、sidecar、immutable、共享锁、复制和 backup 的唯一约束见 [Raw
 
 最新分钟选择、封口、BREAK/CLOSED/竞价、缺数据不回退和 current usability 统一由 [Skew Contract](../../query/contracts/analytics-skew.md#时间入口)定义；本 HTTP contract 只投影其结果。
 
-单点返回 `schema_version=1`、契约/算法版本、业务 scope（exchange/product/month/trading_day）、minute、valuation_at/effective_as_of、requested_at/evaluated_at、session、historical/current_usable/reconstructed/display_age_us、status/reasons、`skew_25d_vp` 和 `unit=vol_point`。`quality` 保留 Market State 完整性及 expected/observed/usable/missing/stale/invalid 计数；Analytics eligible/excluded 与计算原因单独表达。原始 Raw rows、内部 scope 清单、表结构和本地路径不公开。
+单点响应是 [Skew Contract §7 逻辑输出](../../query/contracts/analytics-skew.md#7-输出错误及当日变化)的 JSON 投影（含 `skew_25d_vp`、`unit=vol_point`、`status/reasons`、quality 与 eligible/excluded 计数），字段语义不在本契约重复；HTTP 呈现另加 `schema_version=1`、`session`、`display_age_us` 等协议字段。原始 Raw rows、内部 scope 清单、表结构和本地路径不公开。
 
-追溯字段包括 raw_revision、Universe/Calendar/ReferenceBundle 版本与实际原文件 SHA-256、参考 manifest 和官方清单原响应哈希、冻结模型参数、平价三对、两翼端点及权重、provenance。每个 provenance 提供 instrument、observation_id、run_id、received_us、snapshot_us、源 trading_day/action_day/time/millisec、bid/ask/mid、质量、排除原因、使用角色和求解结果。源时间保留原值；不拼造交易所时间戳。Market State 的四个 `invalid_BidPrice1/AskPrice1/BidVolume1/AskVolume1` 原因在 HTTP 中对应 `invalid_bid/invalid_ask/invalid_bid_size/invalid_ask_size`，其余质量语义不变。完整数值不按页面显示精度舍入。
+追溯字段与 provenance 内容沿用 [Skew Contract §7 与 §10](../../query/contracts/analytics-skew.md#7-输出错误及当日变化)，本契约只固定 HTTP 命名差异：Market State 的四个 `invalid_BidPrice1/AskPrice1/BidVolume1/AskVolume1` 原因在 HTTP 中对应 `invalid_bid/invalid_ask/invalid_bid_size/invalid_ask_size`，其余质量语义不变。源时间保留原值，不拼造交易所时间戳；完整数值不按页面显示精度舍入。
 
 当日响应直接投影 [Skew Contract 的序列结果](../../query/contracts/analytics-skew.md#7-输出错误及当日变化)：`points`、`baseline`、`change_vp` 与 `change_minute` 保持原顺序、值、null 和逐点状态，不在 HTTP 层重新枚举、forward-fill、回退或计算。
 

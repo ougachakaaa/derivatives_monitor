@@ -21,7 +21,7 @@ Monitoring 的实现、工程证据与 M2–M5 缺口只见 [Monitoring Acceptan
 
 ## 本地开发入口交付状态
 
-2026-09-10：从 Git 和当前代码复核 `94ed099`（范围与契约准备）、`c4501e7`（可选行情账号回归）及 `fd8ba28`（启动命令分组）。根 `./dev` 已实现 `doctor [component]`、`up [component]`、参数边界及前台监督；不带组件的 `up` 联合启动三个组件，单组件启动统一为 `up collector/query/dashboard`，退役的顶层组件命令返回 2、给出迁移提示且不启动。长期要求见 [Deployment Contract](contracts/deployment.md#developer-runner-的生命周期边界)，实际命令见 [Operations](operations.md#前台开发会话)。任务 A 的真实 Collector 配置校验与 doctor TEST DOUBLE 回归覆盖账号字段缺省、空值、正常已填、分别过长、整体失败脱敏和无持久写入；任务 B 的 32 项 runner 回归覆盖新 help、参数位置/适用范围、旧入口零分派、单组件/联合分派及既有监督器边界。
+2026-09-10：从 Git 和当前代码复核 `94ed099`（范围与契约准备）、`c4501e7`（可选行情账号回归）及 `fd8ba28`（启动命令分组）。根 `./dev` 已实现 `doctor [component]`、`up [component]`、参数边界及前台监督；不带组件的 `up` 联合启动三个组件，单组件启动统一为 `up collector/query/dashboard`，退役的顶层组件命令返回 2、给出迁移提示且不启动。长期要求见 [Developer Runner Contract](contracts/developer-runner.md#repository-developer-runner-contract)，实际命令见 [Operations](operations.md#前台开发会话)。任务 A 的真实 Collector 配置校验与 doctor TEST DOUBLE 回归覆盖账号字段缺省、空值、正常已填、分别过长、整体失败脱敏和无持久写入；任务 B 的 32 项 runner 回归覆盖新 help、参数位置/适用范围、旧入口零分派、单组件/联合分派及既有监督器边界。
 
 2026-09-10 的 `python3 harness/run.py offline` 为 PASS（14 步均实际执行），基线为 `c4501e7` 加工作树补丁（该补丁对应 `c4501e7..fd8ba28` 的 Git binary diff）。该次运行通过 docs、harness-tests、configure/build、7 项 CTest、显式 credentials/CLI 语义、32 项 runner tests、实际 runner smoke、76 项 Query、Universe、deploy、verify、React 和 frontend-build。实际 smoke 只使用临时配置/data/flow、随机 loopback 端口和 TEST DOUBLE SDK，经过 Collector → SQLite → Uvicorn → Vite，验证共享 Raw、Dashboard 代理、下游隔离、writer/端口冲突、会话清理及重启保留追加。
 

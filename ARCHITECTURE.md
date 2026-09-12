@@ -60,7 +60,7 @@ flowchart LR
 
 正式 runtime 由独立的 C++ Collector、Python Query/FastAPI 和 React Dashboard 组成。原生 systemd 通过 Vite 服务页面，Docker Compose 通过 Nginx 服务构建产物。两套部署入口共享上述组件边界，但具体进程、挂载、端口、构建输入和生命周期规则由 [Deployment Contract](docs/contracts/deployment.md)定义，实际命令见 [Operations](docs/operations.md)及模块 README。
 
-本地 developer runner 的职责属于开发工具层，只组合现有组件进程，不进入业务数据流，也不成为持久部署管理器。其会话所有权由 [Deployment Contract](docs/contracts/deployment.md#developer-runner-的生命周期边界)规定；实现状态见 [Acceptance](docs/acceptance.md)。这一边界不新增业务组件或改变上文数据所有权。
+本地 developer runner 的职责属于开发工具层，只组合现有组件进程，不进入业务数据流，也不成为持久部署管理器。其会话所有权由 [Developer Runner Contract](docs/contracts/developer-runner.md#repository-developer-runner-contract)规定；实现状态见 [Acceptance](docs/acceptance.md)。这一边界不新增业务组件或改变上文数据所有权。
 
 `experiments/` 是探索空间，不是正式 runtime、Architecture 或 Contract 的替代来源。实验成果只有在明确纳入相应正式模块并同步 Architecture/Contract 后，才成为系统结构的一部分。
 
@@ -128,7 +128,7 @@ application store 是专属应用持久目录，不位于 Collector 数据目录
 │  ├─ monitoring-execution-plan.md（实施交接，不定义 authority）
 │  ├─ contracts/
 │  │  ├─ raw-boundary.md / read-path.md / market-session.md
-│  │  └─ features.md / deployment.md
+│  │  └─ features.md / deployment.md / developer-runner.md
 │  ├─ references/
 │  └─ archive/
 ├─ collector/
@@ -181,9 +181,9 @@ Monitoring 已建立非空文档 scope，README 当前只导航设计和状态�
 | [Market State](query/contracts/market-state.md) | 位于 Query；引用根 Raw/Calendar 协议，不重复采集事实 |
 | [Skew](query/contracts/analytics-skew.md)、[Reference adapter](query/contracts/references.md)、[Query Acceptance](query/ACCEPTANCE.md)、[Dashboard Contract](dashboard/CONTRACT.md) | 数值、solver、参考适配和 Query 证据归 Query；显示精度、状态标识与页面交互归 Dashboard |
 | [Skew 策略](query/contracts/analytics-skew-v1.json)、[来源说明](query/references/analytics-skew-sources.md) | 机器策略和局部来源说明在 Query；共享原件档案只保存外部来源 |
-| [Feature](docs/contracts/features.md)、[Query Contract](query/CONTRACT.md) | 通用 envelope、身份/采样键、时间、错误、版本、消费者与窗口归属边界在根；registry/provider 内部要求在 Query；Skew 映射由根引用 Query 数值契约 |
+| [Feature](docs/contracts/features.md)、[Query Contract](query/CONTRACT.md) | 通用 envelope、身份/采样键、时间、错误、版本、消费者与窗口归属边界在根；registry/provider 要求与 MO Skew 映射在 Query，数值仍由 [Skew v1](query/contracts/analytics-skew.md)拥有 |
 | [Monitoring](monitoring/CONTRACT.md) | Rule、crossing、UNKNOWN、配置、事务、恢复和投递归 Monitoring；跨模块访问和系统 lifecycle 引用根 |
-| [Deployment](docs/contracts/deployment.md) | 拥有真实跨组件约束；Collector 自身停机引用 Collector，Monitoring 自有停止、锁与重试引用 Monitoring |
+| [Deployment](docs/contracts/deployment.md)、[Developer runner](docs/contracts/developer-runner.md) | 部署契约拥有真实跨组件约束；Collector 自身停机引用 Collector，Monitoring 自有停止、锁与重试引用 Monitoring；`./dev` 的命令面、输入解析、所有权与收尾归 Developer runner |
 | [Collector README](collector/README.md)、[scripts README](collector/scripts/README.md) | Collector 配置/直接运行用法与工具命令分开；规范归各自 Contract，三服务部署教程归根 Operations |
 | [Query README](query/README.md)、[Dashboard README](dashboard/README.md) | 保留实际用法、故障定位与本级导航；Query 同时提供已实现 Feature 的用法 |
 | [Calendar README](query/calendars/README.md) | 保留参考数据维护步骤，不承接 Query 解释算法 |

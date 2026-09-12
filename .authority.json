@@ -18,6 +18,7 @@
     {"path": "docs/contracts/read-path.md", "role": "contract"},
     {"path": "docs/contracts/market-session.md", "role": "contract"},
     {"path": "docs/contracts/deployment.md", "role": "contract"},
+    {"path": "docs/contracts/developer-runner.md", "role": "contract"},
     {"path": "docs/contracts/features.md", "role": "contract"},
     {"path": "docs/acceptance.md", "role": "acceptance"},
     {"path": "docs/operations.md", "role": "operations"},
@@ -35,6 +36,7 @@
     {"id": "repository.market-session", "definition": {"path": "docs/contracts/market-session.md", "anchor": "market-session-shared-contract"}, "constrained_scopes": ["collector-tools", "query", "dashboard"]},
     {"id": "repository.feature-contract", "definition": {"path": "docs/contracts/features.md", "anchor": "feature-shared-contract"}, "constrained_scopes": ["query", "monitoring"]},
     {"id": "repository.deployment-contract", "definition": {"path": "docs/contracts/deployment.md", "anchor": "repository-deployment-contract"}, "constrained_scopes": ["repo"]},
+    {"id": "repository.developer-runner", "definition": {"path": "docs/contracts/developer-runner.md", "anchor": "repository-developer-runner-contract"}, "constrained_scopes": ["repo"]},
     {"id": "repository.operations", "definition": {"path": "docs/operations.md", "anchor": "repository-operations"}, "constrained_scopes": ["repo"]}
   ],
   "claim_references": [
