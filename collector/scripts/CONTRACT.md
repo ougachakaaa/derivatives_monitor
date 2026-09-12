@@ -6,7 +6,7 @@
 
 ## 能力边界与来源
 
-- 工具保留原 11 个 CFFEX 产品和 Sina fallback，并增加 SHFE AU/AG 期货；拒绝 SHFE 期权及其他商品。SHFE 使用官方 ContractBaseInfo 日期接口；工具不把来源中的价格写入持久行情。
+- 工具按 [MVP](../../docs/mvp.md) 的采集范围保留 CFFEX 现有产品与 Sina fallback，并覆盖 SHFE AU/AG 期货；拒绝 SHFE 期权及其他商品。SHFE 使用官方 ContractBaseInfo 日期接口；工具不把来源中的价格写入持久行情。
 - CFFEX 保持既有清单刷新日期口径；SHFE 使用共享 Calendar 给出的当前/下一逻辑交易日，支持夜盘前发布的次日清单。`--date` 显式指定时两交易所均按该日期查询。缺失 Calendar 时保留旧 SHFE 清单并明确失败，不靠自然日期猜测夜盘归属。
 - 来源代码、来源日期、上市日、到期日与产品类型严格验证；SHFE 精确代码为小写 `au` / `ag`。
 

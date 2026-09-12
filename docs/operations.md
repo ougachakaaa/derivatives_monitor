@@ -70,14 +70,14 @@ QUERY_URL=http://127.0.0.1:8000 ./dev doctor dashboard --dashboard-port 8101
 QUERY_URL=http://127.0.0.1:8000 ./dev up dashboard --dashboard-port 8101
 ```
 
-启动选项放在 `up` 或所选组件之后；旧顶层 `./dev collector/query/dashboard` 已退役。相对路径、环境变量优先级和联合派生规则以 [Deployment Contract](contracts/deployment.md#developer-runner-的生命周期边界) 为准。`up` 从 Collector 配置取得 Query 的 Raw 目录，并从 Query 端口生成 Dashboard 代理；不要为联合会话设置冲突的 `DATA_DIR` 或 `QUERY_URL`。诊断只检查本地运行条件，不证明 CTP 登录、行情推进、Raw 可读或 Skew 可计算。
+启动选项放在 `up` 或所选组件之后；旧顶层 `./dev collector/query/dashboard` 已退役。参数解析、路径基准、环境变量优先级和联合派生规则以 [Deployment Contract](contracts/deployment.md#developer-runner-的生命周期边界) 为准；联合会话不要设置与派生值冲突的 `DATA_DIR` 或 `QUERY_URL`。诊断只检查本地运行条件，不证明 CTP 登录、行情推进、Raw 可读或 Skew 可计算。
 
-保持 `./dev` 在前台；Ctrl-C、SIGTERM 或终端 SIGHUP 会触发本次自有进程的正常收尾。Query/Dashboard 退出或一次性 HTTP 检查失败不会停止 Collector；已有端口或 writer 冲突应通过其原管理入口处理。需要跨终端自动启动、重启、状态和日志管理时，改用上表的 native systemd 或 Docker Compose 入口，不要同时写同一 Raw 目录。
+保持 `./dev` 在前台；Ctrl-C、SIGTERM 或终端 SIGHUP 会触发本次自有进程的正常收尾，Query/Dashboard 退出或失败不会连带停止 Collector（信号与所有权边界见 [Deployment Contract](contracts/deployment.md#developer-runner-的生命周期边界)）。已有端口或 writer 冲突应通过其原管理入口处理。需要跨终端自动启动、重启、状态和日志管理时，改用上表的 native systemd 或 Docker Compose 入口，不要同时写同一 Raw 目录。
 
 ## 更新参考与软件
 
 - 原生 `update` 获取并发布公开清单，可能正常重启 Collector；不要把维护命令当成只读检查。具体失败、旧清单保留和发布判定见 [Universe Tool Contract](../collector/scripts/CONTRACT.md)，Docker/手工入口不自动提供相同的 universe 定时器。
-- 日历当前覆盖 2026，跨年前按[年历维护规则](../query/calendars/README.md)审核新版本。JSON 原子发布后下次查询生效；profile 代码修改需重启 Query。UNKNOWN 不能用工作日推断兜底。
+- 日历当前覆盖 2026，跨年前按[年历维护规则](../query/calendars/README.md)审核并发布新版本；发布后的生效行为与 UNKNOWN 语义见 [Query Contract](../query/CONTRACT.md#calendar-与-coverage-适配)及共享 [Market Session Contract](contracts/market-session.md#market-session-shared-contract)。
 - 软件更新前保留版本、日志和数据。构建与配置预检成功后部署，使用正常 SIGTERM 尾部提交。已有采样配置不自动改写；显式 `1000` 仍为一秒，需要改成 `15000` 时由操作人明确配置。
 - 不删除运行依赖的 `collector/build/` 工具、不清理配置/data/flow；Raw、universe 原响应与 generations 暂不自动轮转，观察剩余磁盘并制定保留策略。磁盘故障时优先保留证据，不能删库换取“健康”。
 

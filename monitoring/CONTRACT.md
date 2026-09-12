@@ -108,7 +108,7 @@ Attempt 记录开始/结束时间、HTTP 状态（若有）、结果 `ACCEPTED /
 
 ## 7. 扩展与验收边界
 
-去重来自采样位置、状态机和事务唯一性，不借 cooldown 替代。未来持续满足、cooldown、hysteresis 属于版本化触发策略与 Evaluation State；市场 rolling window 属于 Feature。v1 不预建未使用的字段、表、策略框架或复合规则表达式。
+去重来自采样位置、状态机和事务唯一性，不借 cooldown 替代。未来持续满足、cooldown、hysteresis 属于版本化触发策略与 Evaluation State；市场 rolling window 的归属见共享 [Feature Contract](../docs/contracts/features.md#4-rolling-window-与后续指标)，不属于本契约的触发策略。v1 不预建未使用的字段、表、策略框架或复合规则表达式。
 
 必须覆盖首次基线、四种比较的等号边界、单位/非有限值拒绝、持续满足/重入、UNKNOWN 前后两种 crossing、同分钟修订/旧响应、重启/规则修订/停用、原子提交前后崩溃、双实例及库失败。通知验证成功、非 2xx、超时、接收后崩溃、次数耗尽和重启续投，并证明发送等待不阻塞判断；跨进程隔离证据按[共享 Deployment Contract](../docs/contracts/deployment.md#monitoring-v1-跨系统边界已冻结待实现)取得。
 

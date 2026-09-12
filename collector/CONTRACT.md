@@ -30,7 +30,7 @@
 - 原始有效字段全部保存（五档、成交量额、持仓、结算、涨跌停等），不存 SDK padding/reserve 字节。CTP 无效极大浮点值和非有限数写 NULL；源字符串保持原值。不由合约代码猜测交易所或合约元数据。
 - **分区仅取每条行情的合法 `TradingDay`**；不使用本地日期、`ActionDay` 或登录日替代。非法/空交易日拒收并计数。登录日仅用于诊断。
 - 状态按 `(TradingDay, InstrumentID)` 隔离；保留相邻两天的状态，乱序旧日不覆盖新日；第三个交易日到来前未物化状态不得静默丢弃，超容量终止并报错。很旧数据拒收并计数。
-- 一日一个 `YYYYMMDD.sqlite`，元数据明确 schema 版本和交易日；写入约束阻止混日。允许同日重启追加；每次进程运行有独立 run ID，事务与唯一键防止同次物化重复写入。
+- 采集产物按共享 [Raw Boundary 的已发布事实形状](../docs/contracts/raw-boundary.md#所有权与已发布事实)写入（日文件与 schema 元数据、同日追加、run ID、同次物化唯一性）；本契约不重复该形状。
 
 <a id="collector-lifecycle-contract"></a>
 

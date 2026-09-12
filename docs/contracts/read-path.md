@@ -13,7 +13,7 @@ API 按共享 [Raw Boundary](raw-boundary.md) 只读同一份数据，页面独�
 
 - Query 使用 FastAPI/Uvicorn 提供 JSON，Dashboard 通过同源 `/api/` 消费；系统组件与依赖方向见 [Architecture](../../ARCHITECTURE.md)，镜像、挂载及 lifecycle 见 [Deployment](deployment.md)。
 - Query 的日库适配遵守 [Raw Boundary](raw-boundary.md#只读消费与-wal)，内部读取与错误适配见 [Query Contract](../../query/CONTRACT.md#只读数据适配)；公共接口不接受任意 SQL 或文件路径。
-- 前端 HTTP 仅发布至宿主 `127.0.0.1:8101`，后端直接访问仅发布至 `127.0.0.1:8000`；浏览器通过前端同源 `/api/` 查询，无需宽泛 CORS；开发时 Vite 使用相同代理。服务用于本地观察，不引入认证、外网部署、交易或 WebSocket。
+- 服务用于本地观察，不引入认证、外网部署、交易或 WebSocket；浏览器通过前端同源 `/api/` 查询，无需宽泛 CORS，开发时 Vite 使用相同代理。监听与发布地址、端口及代理实现由 [Deployment Contract](deployment.md#数据与隔离)定义。
 
 ## 最小接口
 
@@ -44,7 +44,7 @@ WAL、sidecar、immutable、共享锁、复制和 backup 的唯一约束见 [Raw
 
 ## 市场时段与覆盖
 
-`/api/sessions` 独立读取审核后的交易日历，按 exchange/product 回答交易日、时段与连续交易状态，不读取/改写行情，也不控制采集进程。日历未知必须明确UNKNOWN。覆盖统计支持原有CFFEX与SHFE AU/AG期货，按各自来源目标交易日核对清单；市场休市/休息、行情无推送、订阅失败与进程健康分别表达。Query模块及参考年历随Docker镜像发布，Collector没有新增依赖。
+`/api/sessions` 独立读取审核后的交易日历，按 exchange/product 回答交易日、时段与连续交易状态，不读取/改写行情，也不控制采集进程；日历未知必须明确 UNKNOWN。`/api/coverage` 的分组、目标日核对及订阅/接收/缺口/stale/进程健康区分见 [Query Contract](../../query/CONTRACT.md#calendar-与-coverage-适配)，本契约只定义其 HTTP 入口。Query 模块及参考年历随 Docker 镜像发布，Collector 没有新增依赖。
 
 ## MVP MO Skew JSON 业务查询
 

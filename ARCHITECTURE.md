@@ -92,8 +92,8 @@ flowchart LR
 - Market State、Feature、Conclusion、Opportunity Event 的语义分别由 [Market State](query/contracts/market-state.md)、[Feature](docs/contracts/features.md)和 [Monitoring](monitoring/CONTRACT.md) Contracts 定义；目录归属不混淆语义归属。
 - Market State、Analytics 数值核心、参考包适配和 SkewService 暂留 `query/`。新增薄 Feature service 和 HTTP 投影复用它们；现有 API 与 Dashboard 保持兼容，不迁移首页。
 - `monitoring/` 目标为一个可选独立前台进程，经 Feature HTTP 消费输入并拥有专属 application state；内部职责关系见 [Monitoring Architecture](monitoring/ARCHITECTURE.md)。
-- Monitoring 只经 Feature HTTP 消费指标，不读 Raw、不导入 Query 内部模块、不挂载行情目录。Query 不依赖 Monitoring 启动，也不为显示指标读取规则状态。
-- Analytics/provider 不依赖 Monitoring；任何 Monitoring 或通知错误都不能成为 Query/Collector 停启、写入或健康的前置条件。规则判断与投递的内部分工见 [Monitoring Architecture](monitoring/ARCHITECTURE.md)。
+- Monitoring 只经 Feature HTTP 消费指标；访问禁令、挂载隔离、失败隔离与组件生命周期约束唯一见 [Deployment Contract](docs/contracts/deployment.md#monitoring-v1-跨系统边界已冻结待实现)。
+- Analytics/provider 不依赖 Monitoring，Query 不依赖 Monitoring 启动，也不为显示指标读取规则状态。规则判断与投递的内部分工见 [Monitoring Architecture](monitoring/ARCHITECTURE.md)。
 - 首版不提取顶层 `analytics/`，不新增消息队列、Derived Market DB 或 distributed runtime。共享包提取以独立 Python 消费者、独立发布需求或 HTTP 性能证据为触发条件，理由见 [Design](DESIGN.md)；提取不得改变 Feature 业务语义。
 
 ### 扩展数据所有权
@@ -202,4 +202,4 @@ Monitoring 已建立非空文档 scope，README 当前只导航设计和状态�
 
 claim 按可独立修改的接口或规则组划分，不为每句话建 ID。Markdown 与机器策略各自登记职责：Skew 已有机器字段值以原 JSON 为机器 authority，Markdown 解释含义，重复数值展示只作为受一致性检查的投影。登记不能制造第二套规则或把 evidence/ExecPlan 注册为规范。
 
-登记从根 [`.authority.json`](.authority.json) 开始，局部 scope 由各自同名文件登记。最终 topology 只接受真实 existing scope，不接受 pending scope、entrypoint migration、claim migration exception 或未登记的 authority-shaped 文档；所有 claim 必须直接定义在受约束 scopes 的 smallest common scope。离线检查实现位于 `harness/authority.py`，当前完成状态见 [Acceptance](docs/acceptance.md#documentation-authority-topology)。
+登记从根 [`.authority.json`](.authority.json) 开始，局部 scope 由各自同名文件登记；接受范围、claim 唯一性与 smallest-common-scope 要求由[文档治理](docs/README.md#authority-rules)拥有。离线检查实现位于 `harness/authority.py`，当前完成状态见 [Acceptance](docs/acceptance.md#documentation-authority-topology)。

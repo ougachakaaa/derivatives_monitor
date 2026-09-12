@@ -3,7 +3,7 @@
 # Market Calendar / Session 与 SHFE AU、AG 设计
 
 
-Calendar 和 Universe 是独立参考能力，不进入 C++ callback 或 Raw 写入链路。C++ 接受精确代码、源 TradingDay 分区、默认 15 秒物化，无交易所专用分支。当前覆盖原有 11 个 CFFEX 品种与 SHFE AU/AG 期货。
+Calendar 和 Universe 是独立参考能力，不进入 C++ callback 或 Raw 写入链路；采集侧的精确代码、分区与采样规则见 [Collector Contract](../../collector/CONTRACT.md)。采集范围由 [MVP](../mvp.md)定义。
 
 Query 的 Calendar/coverage 适配见 [Query Contract](../../query/CONTRACT.md#calendar-与-coverage-适配)；独立 universe 工具使用同一共享日历协议选择来源日期。来源链接是 2026-09-07/08 的既有设计依据，整理时未重新核对交易所规则。
 
@@ -19,7 +19,7 @@ Query 的 Calendar/coverage 适配见 [Query Contract](../../query/CONTRACT.md#c
 ## Calendar / Session 契约
 
 - 版本化参考文件显式列出每交易所的交易日及 SHFE 每个交易日对应的 night_start 自然日期（无夜盘为 null），附来源、核对日期、有效自然日期范围。年历从官方年公告人工核对后生成并审查，运行时不抓取网页，不以周一到周五兜底。临时休市通过修订对应交易日/night_start 表达，保留版本与来源。
-- 首版覆盖 2026。缺失、损坏、范围外或无法确认跨年下一交易日时返回 UNKNOWN 和原因；不把未知当 CLOSED/OPEN。更新方式为审核新文件、CLI 校验、测试后原子替换/发布；JSON 下次请求生效，profile 代码发布才需重启 Query；旧文件保留在 Git，更新失败不影响 Collector。
+- 首版覆盖 2026。缺失、损坏、范围外或无法确认跨年下一交易日时返回 UNKNOWN 和原因；不把未知当 CLOSED/OPEN。年历的审核、校验与发布步骤见[参考年历说明](../../query/calendars/README.md)，加载与生效行为见 [Query Contract](../../query/CONTRACT.md#calendar-与-coverage-适配)；更新失败不影响 Collector。
 - Asia/Shanghai 为解释时区；输入必须带时区，统一转换。会话区间左闭右开；night_start 的次日02:30仍归同一 trading_day。日盘段间为 BREAK；夜盘结束到日盘开始、周末/节假日及盘后为 CLOSED。
 - 输出 exchange/product、as_of、trading_day、market_state（OPEN/BREAK/CLOSED/UNKNOWN）、session（DAY/NIGHT/null）、phase（CONTINUOUS/AUCTION/null）、is_continuous、当前区间、最近已开始的有效连续时段与下一连续时段。OPEN 包含集合竞价但 is_continuous=false；quote_expected 只代表连续交易时段应有市场活动，不代表每合约必有推送，不生成报警。
 - OPEN/BREAK 的 trading_day 为当前逻辑交易日；CLOSED 使用下一已知有效交易时段所属交易日，同时提供最近时段自己的交易日。没有可确认归属时为 null/UNKNOWN。此推导只解释日历，绝不改写 CTP 事实 TradingDay。
@@ -27,9 +27,9 @@ Query 的 Calendar/coverage 适配见 [Query Contract](../../query/CONTRACT.md#c
 
 ## Universe / Coverage 共享交接
 
-- Universe manifest v1 保留原 `products` 键，并向生产者与消费者共享 exchange、各产品 requested day、来源、完整性及 stale/error 状态。清单只提供精确订阅代码与审核元数据，不把来源价格转成 Raw 行情，也不改写 CTP `TradingDay`。
+- Universe manifest v1 的字段、生成与发布由 [Universe Tool Contract](../../collector/scripts/CONTRACT.md)定义；消费者按共享语义解释 exchange、各产品 requested day、来源、完整性与 stale/error 状态，只使用清单提供的精确订阅代码与审核元数据，不把来源价格转成 Raw 行情，也不改写 CTP `TradingDay`。
 - Universe 工具使用本 Calendar 的逻辑交易日选择 SHFE 来源日；显式日期同时作为两交易所 requested day。Calendar 无法确认时必须以未知/失败交接，不能由消费者按自然日期补猜。具体来源抓取、字段校验、旧代码保留、generation 发布与可选重启归 [Universe Tool Contract](../../collector/scripts/CONTRACT.md)。
-- Query coverage 按 exchange/product 分组，SHFE 以各自目标日期核对清单；保留原订阅、无推送、缺口与心跳语义。页面如何并列展示各市场及在请求失败时清理状态由 [Dashboard Contract](../../dashboard/CONTRACT.md#dashboard-session-contract)定义。
+- Query coverage 的分组、目标日核对与订阅/接收/缺口/stale/进程健康语义见 [Query Contract](../../query/CONTRACT.md#calendar-与-coverage-适配)；页面如何并列展示各市场及在请求失败时清理状态由 [Dashboard Contract](../../dashboard/CONTRACT.md#dashboard-session-contract)定义。
 - Market Session 只解释市场时段，不据此启动或停止 Collector，也不新增 Runtime Scheduler。repository manager 的三服务生命周期见 [Deployment Contract](deployment.md)。
 
 ## 维护与验收

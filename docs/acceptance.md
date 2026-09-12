@@ -60,6 +60,6 @@ Query 的数值核心、Skew JSON、reference adapter、Feature provider/HTTP �
 
 2026-09-11 完成 repository semantic embedding 迁移（M0 freeze 与 S1–S8）：现行文档拓扑见 [Architecture](../ARCHITECTURE.md#knowledge-topology)，治理规则见[文档入口](README.md#authority-rules)，机器可读关系从根 [`.authority.json`](../.authority.json) 开始。root、collector、collector/scripts、query、query/calendars、dashboard、monitoring 与 harness 八个受管理 scope 均为 `existing`；每个 claim 只在受约束 scopes 的 smallest common scope 定义一处，旧中央副本已退役并列入负向检查。
 
-离线检查（`harness/check_docs.py`、`harness/authority.py`）拒绝 pending scope、entrypoint/claim migration metadata、未登记的 authority-shaped 文档、重复规范段落、未登记跨 scope 依赖及已退役中央路径。迁移完成时 `python3 harness/run.py docs` 与完整 `harness/tests` 在实施工作树上实际执行通过；该结构证据不证明自然语言语义等价、业务实现或现场验收。
+迁移完成时 `python3 harness/run.py docs` 与完整 `harness/tests` 在实施工作树上实际执行通过；检查范围与拒绝规则见[文档治理](README.md#authority-rules)与 [Architecture](../ARCHITECTURE.md#机器导航)，该结构证据不证明自然语言语义等价、业务实现或现场验收。
 
 各阶段的一次性过程记录（M0 semantic freeze、S1 scope 登记、S2 根 authority、S3 Collector/tools、S4 Query/Market/Analytics、S5 Dashboard、S6 Monitoring、S7 Harness、S8 最终拓扑）已从本文件移除，只从 Git 追溯；本文件不再保留其逐阶段证据路径与当时工作树状态。迁移只涉及文档、authority 登记与离线检查，未修改生产代码、Skew 策略/oracle/fixtures、SDK、参考原件、Docker 输入或 experiments，也不改变本文件的 G1–G6/P1/P2 或任何模块业务状态。
