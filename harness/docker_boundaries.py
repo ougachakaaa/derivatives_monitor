@@ -103,7 +103,7 @@ FORBIDDEN_SAMPLES = (
     'dashboard/.env.local',
     'dashboard/node_modules/react/index.js',
     'dashboard/src/NewView.jsx',
-    'docs/references/originals/csc-ctp-mvp-questions-and-replies.docx',
+    'docs/unrelated-private-document.docx',
     'experiments/ctp/README.md',
     'artifacts/harness/result.json',
 )

@@ -1,21 +1,12 @@
-# Dashboard Acceptance
+# Dashboard 当前状态
 
-本文件只记录 Dashboard 当前实现、工程证据与局部缺口；页面规范见[本级 Contract](CONTRACT.md)，系统 G1–G6/P1/P2 门槛仍由[根 Acceptance](../docs/acceptance.md)拥有。历史 PASS 只证明指定版本和环境中的 TEST DOUBLE 场景，不证明当前版本、真实 Skew 或人工可用性。
-
-## 当前实现与覆盖缺口
-
-当前 `src/App.jsx` 实现汇报首页、默认 5 秒轮询、4 秒 abort、两位 Skew/变化显示、当前与指定分钟视图、折叠诊断及独立失败清值；日期时间 formatter 也固定使用 Asia/Shanghai。组件测试可缩短轮询并覆盖主要状态，但没有单独以真实 4 秒时钟断言超时边界；返回当前视图控件、除最后接收时间外的具体时区格式、具体中文标签和诊断表列属于当前代码证据，既有规范未把这些细节冻结为独立业务 Contract。
+页面行为见 [Contract](CONTRACT.md)，系统门槛见[根状态矩阵](../docs/acceptance.md)。
 
 <a id="dashboard-presentation-evidence"></a>
 
-## 汇报首页工程证据（2026-09-09）
+| 能力 | 当前状态 | 未验证事项 |
+|---|---|---|
+| 汇报首页 | 已实现月份选择、当前值与变化、质量原因、指定分钟回看和折叠诊断 | 真实官方参考与完整 MO 月链上的三次日常使用、三十秒理解 |
+| 轮询与失败处理 | 已实现超时、断线清值和诊断独立失效；有组件与浏览器 TEST DOUBLE 回归 | 独立真实四秒时钟的超时边界断言、真实接收至显示延迟 |
 
-React 组件 7 项通过，覆盖当前 Skew、当日变化、完整性与 TEST DOUBLE 标记、PARTIAL、STALE、UNAVAILABLE、指定分钟回看、Skew API 断线清值/恢复以及诊断独立失效；`npm run build` 通过。`browser` 为 PASS（实际 Chromium），覆盖同样的 Skew TEST DOUBLE 状态、移动端无整页溢出，并保留真实临时 C++ → SQLite → FastAPI 诊断路径；`packaging` 为 PASS，证明 Dashboard 生产构建输入仍符合镜像 allowlist。
-
-这些数值和参考均为 TEST DOUBLE，没有已审核的真实官方日包、真实完整 MO 月链或人工日常使用记录。因此本节只表明汇报页工程行为可回归，**不签收 G4**。
-
-## 待验
-
-- 在已审核真实日参考包与完整 MO 月链上完成 3 次日常观察，记录是否能在 30 秒内理解对象、水平、变化、时间与可信程度，且无需 SQL/日志；此前未取得该证据。
-- 页面接收至显示的真实延迟仍须按根 P2 配对 observation 源、received、snapshot 和显示时间；默认轮询/超时配置本身不是性能证据。
-- 本版本的结构检查不覆盖上述 browser/packaging 证据，也未运行 Docker 或真实服务。
+工程 TEST DOUBLE 不签收 G4/P2；当前版本浏览器和部署验证需按 [Harness](../harness/README.md)实际执行。

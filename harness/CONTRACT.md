@@ -2,7 +2,7 @@
 
 # Harness Verification Contract
 
-本 Contract 只定义 Harness 自身的执行结果、证据身份和边界。产品完成条件由 [MVP](../docs/mvp.md)及各级 Acceptance 拥有，业务行为由相应 Contract 拥有；Harness 组织检查并记录证据，不定义或改写这些行为。
+本 Contract 只定义 Harness 自身的执行结果、证据身份和边界。产品完成条件由 [MVP](../docs/mvp.md)定义，当前缺口由 Acceptance 记录，业务行为由相应 Contract 拥有；Harness 组织检查并记录证据，不定义或改写这些行为。
 
 ## 结果分类与传播
 
@@ -28,7 +28,7 @@ step 未达到 `PASS` 后，依赖其结果的后续 step 不再启动并明确�
 
 同目录的 `worktree.patch` 与 SHA-256 保存除 `experiments/` 外的 tracked working-tree diff，`result.json` 另记录未跟踪且未被 Git ignore 的文件哈希。Harness 不复制配置、运行数据或凭据。报告只证明该身份所指版本、dirty state、环境和实际 step；历史报告不自动证明当前 HEAD 或另一环境。
 
-`result.json` 不是完整环境快照。归档 dirty-tree 结果时必须同时保留可取得的对应源码 revision、patch 和未跟踪输入；缺少这些输入就不能宣称可复现。只提交脱敏摘要，不提交 Harness artifacts、行情或配置；摘要保留数据来源、版本（Git revision 与工作树状态）、profile/命令、结论及未覆盖边界。`artifacts/` 不随仓库分发，持久文档只记录上述身份而不引用其文件系统路径；需要原始报告时在保存该报告的机器上按身份定位。
+`result.json` 不是完整环境快照。归档 dirty-tree 结果时必须同时保留可取得的对应源码 revision、patch 和未跟踪输入；缺少这些输入就不能宣称可复现。对外提供的证据摘要须脱敏，保留数据来源、版本（Git revision 与工作树状态）、profile/命令、结论及未覆盖边界；不提交 Harness artifacts、行情或配置。`artifacts/` 不随仓库分发，长期文档只保留当前状态与缺口，不累计上述运行身份或文件系统路径；需要原始报告时在保存该报告的机器上按身份定位。
 
 ## 现场证据边界
 

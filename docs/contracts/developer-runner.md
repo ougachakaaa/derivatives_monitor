@@ -2,7 +2,7 @@
 
 # Developer runner 长期契约
 
-本契约定义仓库根 `./dev` 前台开发会话的命令面、输入解析、进程所有权与收尾边界，不改变两种持久部署方式。部署、挂载与端口见 [Deployment Contract](deployment.md)，实际操作见[运行与恢复](../operations.md#前台开发会话)，实现与验证状态见 [Acceptance](../acceptance.md#本地开发入口交付状态)。
+本契约定义仓库根 `./dev` 前台开发会话的命令面、输入解析、进程所有权与收尾边界，不改变两种持久部署方式。部署、挂载与端口见 [Deployment Contract](deployment.md)，实际操作见[运行与恢复](../operations.md#前台开发会话)，实现与验证状态见 [Acceptance](../acceptance.md)。
 
 ## 命令面与诊断
 

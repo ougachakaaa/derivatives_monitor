@@ -6,7 +6,7 @@
 
 ## Monitoring v1 跨系统边界（已冻结，待实现）
 
-当前三服务部署保持不变。平行扩展增加一个独立本地 Python 前台进程，入口实现在后续 milestone 交付；不修改 Compose/systemd 或平行 developer runner，不自动启动/停止/重启现有组件。当前进度见 [Monitoring Acceptance](../../monitoring/ACCEPTANCE.md)，目标模块见 [Architecture](../../ARCHITECTURE.md)。
+当前三服务部署保持不变。平行扩展增加一个独立本地 Python 前台进程，入口尚未实现；不修改 Compose/systemd 或平行 developer runner，不自动启动/停止/重启现有组件。当前进度见 [Monitoring Acceptance](../../monitoring/ACCEPTANCE.md)，目标模块见 [Architecture](../../ARCHITECTURE.md)。
 
 Monitoring 仅通过 Query HTTP 消费 Feature；不读取 Raw、不导入 Query 内部模块、不挂载行情、Collector 配置、flow、CTP 凭据或管理 socket。Query 不可达时记录输入不可用，不管理 Query 生命周期。Collector 对所有下游均无启动/健康依赖，Query 和 Dashboard 也不要求 Monitoring 运行。
 

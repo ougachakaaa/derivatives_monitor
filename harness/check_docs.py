@@ -1,72 +1,35 @@
 #!/usr/bin/env python3
-"""Check maintained documentation, archived originals and required build inputs.
+"""Check maintained documentation and required build inputs.
 
 No network, data directory reads, service management or experiments mutations.
 Docker ignore checks deliberately cover this repository's simple glob allowlist;
 real Docker semantics and COPY are additionally exercised by the docker profile.
 """
+import ast
 import fnmatch
 import hashlib
-import json
+import os
+from collections import Counter
 from pathlib import Path
 import re
 from urllib.parse import unquote
 
-from authority import authority_errors
 from docker_boundaries import BOUNDARIES, FORBIDDEN_SAMPLES
 
 ROOT = Path(__file__).resolve().parents[1]
 
 REQUIRED_PATHS = (
-    'README.md',
-    'AGENTS.md',
-    'docs/README.md',
-    'docs/mvp.md',
-    'DESIGN.md',
-    'ARCHITECTURE.md',
-    'docs/acceptance.md',
-    'docs/operations.md',
-    'docs/references/README.md',
-    'docs/archive/README.md',
-    'harness/AGENTS.md',
-    'harness/README.md',
-    'harness/CONTRACT.md',
-    'harness/live-acceptance-template.md',
-    'compose.yaml',
-    'dev',
-    'scripts/deploy.sh',
-    'scripts/dev.py',
-    'collector/AGENTS.md',
-    'collector/README.md',
-    'collector/ARCHITECTURE.md',
-    'collector/CONTRACT.md',
-    'collector/scripts/AGENTS.md',
-    'collector/scripts/README.md',
-    'collector/scripts/CONTRACT.md',
-    'query/AGENTS.md',
-    'query/README.md',
-    'query/DESIGN.md',
-    'query/ARCHITECTURE.md',
-    'query/CONTRACT.md',
-    'query/ACCEPTANCE.md',
-    'query/contracts/market-state.md',
-    'query/contracts/analytics-skew.md',
-    'query/contracts/analytics-skew-v1.json',
-    'query/contracts/references.md',
-    'query/references/analytics-skew-sources.md',
-    'dashboard/README.md',
-    'dashboard/AGENTS.md',
-    'dashboard/CONTRACT.md',
-    'dashboard/ACCEPTANCE.md',
-    'monitoring/AGENTS.md',
-    'monitoring/README.md',
-    'monitoring/DESIGN.md',
-    'monitoring/ARCHITECTURE.md',
-    'monitoring/CONTRACT.md',
-    'monitoring/ACCEPTANCE.md',
+    'README.md', 'AGENTS.md', 'docs/README.md', 'docs/mvp.md',
+    'DESIGN.md', 'ARCHITECTURE.md', 'docs/operations.md',
+    'harness/README.md', 'harness/CONTRACT.md',
+    'compose.yaml', 'dev', 'scripts/deploy.sh', 'scripts/dev.py',
+    *(f'{module}/CONTRACT.md' for module in
+      ('collector', 'collector/scripts', 'query', 'dashboard', 'monitoring')),
     *(f'docs/contracts/{name}.md' for name in
       ('raw-boundary', 'read-path', 'market-session', 'deployment',
-       'features')),
+       'developer-runner', 'features')),
+    *(f'query/contracts/{name}' for name in
+      ('market-state.md', 'analytics-skew.md', 'analytics-skew-v1.json', 'references.md')),
     'harness/fixtures/analytics-skew-v1.json',
 )
 
@@ -84,12 +47,6 @@ NON_IMAGE_PRODUCTION_INPUTS = (
 
 EXPERIMENT_PATH = re.compile(r'(?<![A-Za-z0-9_-])experiments[/\\]')
 EXPERIMENT_IMPORT = re.compile(r'^\s*(?:from|import)\s+experiments(?:\.|\s|$)')
-RETIRED_AUTHORITY_PATHS = (
-    'docs/design.md', 'docs/architecture.md', 'docs/contracts/collector.md',
-    'docs/contracts/market-state.md', 'docs/contracts/analytics-skew.md',
-    'docs/contracts/analytics-skew-v1.json', 'docs/references/analytics-skew-sources.md',
-    'docs/contracts/monitoring.md', 'docs/semantic-embedding-execplan.md',
-)
 
 
 def docker_included(relative, rules):
@@ -112,6 +69,10 @@ def production_dependency_errors(root=ROOT, boundaries=BOUNDARIES):
     inputs = set(NON_IMAGE_PRODUCTION_INPUTS)
     for service, declared_inputs in boundaries.items():
         for relative in declared_inputs:
+            target = Path(relative).parts[0]
+            if target in MODULES | {'harness'} and target != service and not (
+                    service == 'query' and relative == 'harness/fixtures/analytics-skew-v1.json'):
+                errors.append(f'{service} Docker input crosses module boundary: {relative} (ARCHITECTURE.md)')
             if Path(relative).parts[:1] == ('experiments',):
                 errors.append(
                     f'{service} Docker input is experiment-owned: {relative}; formal images must only '
@@ -145,9 +106,134 @@ def production_dependency_errors(root=ROOT, boundaries=BOUNDARIES):
     return errors
 
 
-def retired_authority_errors(root=ROOT):
-    return [f'Retired repository authority path must not return: {relative}'
-            for relative in RETIRED_AUTHORITY_PATHS if (root / relative).exists()]
+def _explicit_anchors(text: str):
+    return set(re.findall(r'<a\s+(?:name|id)=["\']([^"\']+)["\']\s*>', text, re.I))
+
+
+def _heading_slug(title: str):
+    title = re.sub(r'[`*_~]', '', title.strip().lower())
+    title = re.sub(r'[^\w\-\u4e00-\u9fff ]', '', title)
+    return re.sub(r'[\s-]+', '-', title).strip('-')
+
+
+def markdown_anchors(text: str):
+    anchors = _explicit_anchors(text)
+    counts = Counter()
+    for title in re.findall(r'^#{1,6}\s+(.+?)\s*#*$', text, re.M):
+        base = _heading_slug(title)
+        if not base:
+            continue
+        suffix = counts[base]
+        counts[base] += 1
+        anchors.add(base if suffix == 0 else f'{base}-{suffix}')
+    return anchors
+
+
+def markdown_links(text: str):
+    """Return inline and reference-style Markdown targets outside code fences."""
+    text = re.sub(r'```.*?```', '', text, flags=re.S)
+    definitions = {
+        key.lower(): target.strip('<>')
+        for key, target in re.findall(r'^\s*\[([^]]+)\]:\s*(\S+)', text, re.M)
+    }
+    targets = [target.strip('<>') for target in re.findall(r'(?<!!)\[[^]]+\]\(([^)]+)\)', text)]
+    for key in re.findall(r'(?<!!)\[[^]]+\]\[([^]]*)\]', text):
+        if key.lower() in definitions:
+            targets.append(definitions[key.lower()])
+    return targets
+
+
+def link_and_anchor_errors(root: Path, markdown_paths):
+    errors = []
+    for relative in sorted(set(markdown_paths)):
+        path = root / relative
+        if not path.is_file():
+            continue
+        text = path.read_text(errors='replace')
+        for raw_target in markdown_links(text):
+            target = raw_target.split(None, 1)[0]
+            if re.match(r'^[A-Za-z][A-Za-z0-9+.-]*:', target):
+                continue
+            file_part, marker, anchor = unquote(target).partition('#')
+            destination = path if not file_part else path.parent / file_part
+            if not destination.exists():
+                errors.append(f'{relative}: broken link {raw_target}')
+                continue
+            if marker and anchor:
+                if not destination.is_file() or destination.suffix.lower() not in ('.md', '.markdown'):
+                    errors.append(f'{relative}: anchor target is not Markdown: {raw_target}')
+                elif anchor not in markdown_anchors(destination.read_text(errors='replace')):
+                    errors.append(f'{relative}: missing anchor {raw_target}')
+    return errors
+
+
+# Scan source trees only: never traverse live data, SDKs or build dependencies.
+EXCLUDED_DIRS = {'.git', '.venv', 'venv', 'node_modules', '__pycache__',
+                 'build', 'dist', 'artifacts', 'data', 'flow', 'logs',
+                 'third_party', 'experiments', '.cache'}
+MODULES = {'collector', 'query', 'dashboard', 'monitoring'}
+
+
+def source_files(root, folders):
+    for folder in folders:
+        for directory, dirs, files in os.walk(root / folder):
+            dirs[:] = sorted(d for d in dirs if d not in EXCLUDED_DIRS)
+            for name in sorted(files):
+                yield Path(directory) / name
+
+
+def maintained_markdown(root):
+    paths = list(root.glob('*.md'))
+    paths.extend(p for p in source_files(root, sorted(MODULES | {'docs', 'harness'}))
+                 if p.suffix == '.md')
+    return [p.relative_to(root).as_posix() for p in paths]
+
+
+def module_dependency_errors(root=ROOT):
+    """Check runtime imports directly against the system's component boundaries.
+
+    Universe's pure Calendar dependency is the sole cross-module Python import.
+    Deployment tools may launch components; they are not Collector runtime.
+    """
+    errors = []
+    for path in source_files(root, sorted(MODULES)):
+        relative = path.relative_to(root)
+        if 'tests' in relative.parts:
+            continue
+        owner = relative.parts[0]
+        targets = set()
+        if path.suffix == '.py':
+            content = path.read_text(errors='replace')
+            try:
+                tree = ast.parse(content)
+            except SyntaxError as error:
+                errors.append(f'{relative}: cannot inspect Python imports: {error}')
+                continue
+            for node in ast.walk(tree):
+                if isinstance(node, ast.ImportFrom) and not node.level:
+                    targets.add(node.module or '')
+                elif isinstance(node, ast.Import):
+                    targets.update(alias.name for alias in node.names)
+            for target in sorted(targets):
+                other = target.split('.')[0]
+                # universe.py bootstraps query/ on sys.path to import Calendar.
+                if target == 'market_calendar' and owner != 'query':
+                    other = 'query'
+                if other not in MODULES | {'harness', 'experiments'} or other == owner:
+                    continue
+                if relative.as_posix() == 'collector/scripts/universe.py' and target in (
+                        'market_calendar', 'query.market_calendar'):
+                    continue
+                errors.append(f'{relative}: forbidden module dependency: {target} (ARCHITECTURE.md)')
+        elif (path.suffix in {'.c', '.cc', '.cpp', '.h', '.hpp', '.cmake'}
+              or path.name == 'CMakeLists.txt') and owner == 'collector':
+            content = path.read_text(errors='replace')
+            for line in content.splitlines():
+                if line.lstrip().startswith(('# ', '//', '/*', '*')):
+                    continue
+                if re.search(r'(?<![\w-])(?:query|dashboard|monitoring|experiments)[/\\]', line):
+                    errors.append(f'{relative}: Collector runtime depends on another component (ARCHITECTURE.md)')
+    return errors
 
 
 def check(root=ROOT):
@@ -155,10 +241,6 @@ def check(root=ROOT):
     for relative in REQUIRED_PATHS:
         if not (root / relative).is_file():
             errors.append('Missing document: ' + relative)
-    if (root / 'docs/tasks').exists():
-        errors.append('Deprecated process specs must not return under docs/tasks; '
-                      'use the durable authority map in docs/README.md')
-    errors.extend(retired_authority_errors(root))
     if (root / 'collector/compose.yaml').exists():
         errors.append('Deprecated collector/compose.yaml exists; system Compose is owned by '
                       'compose.yaml (docs/contracts/deployment.md)')
@@ -166,30 +248,16 @@ def check(root=ROOT):
         errors.append('Deprecated collector/scripts/deploy.sh exists; system deployment is owned by '
                       'scripts/deploy.sh (docs/contracts/deployment.md)')
     errors.extend(production_dependency_errors(root))
-    errors.extend(authority_errors(root, BOUNDARIES))
-    files = [root / p for p in ('README.md', 'AGENTS.md', 'collector/README.md',
-                               'query/README.md', 'query/calendars/README.md', 'dashboard/README.md')]
-    files += list((root / 'docs').rglob('*.md')) + list((root / 'harness').rglob('*.md'))
-    for path in files:
-        if not path.is_file():
-            continue
-        content = re.sub(r'```.*?```', '', path.read_text(), flags=re.S)
-        for target in re.findall(r'\[[^\]]+\]\(([^)]+)\)', content):
-            target = target.strip('<>')
-            if re.match(r'^[A-Za-z][A-Za-z0-9+.-]*:', target) or target.startswith('#'):
-                continue
-            relative = unquote(target.split('#', 1)[0])
-            if relative and not (path.parent / relative).exists():
-                errors.append(f'{path.relative_to(root)}: broken link {target}')
-    manifest_path = root / 'docs/references/originals/manifest.json'
-    try:
-        manifest = json.loads(manifest_path.read_text())
-        for artifact in manifest['artifacts']:
-            path = manifest_path.parent / artifact['path']
-            if hashlib.sha256(path.read_bytes()).hexdigest() != artifact['sha256']:
-                errors.append('Archived original hash mismatch: ' + artifact['path'])
-    except (OSError, ValueError, KeyError) as error:
-        errors.append('Reference manifest invalid: ' + str(error))
+    errors.extend(module_dependency_errors(root))
+    errors.extend(link_and_anchor_errors(root, maintained_markdown(root)))
+    errors.extend(sdk_errors(root))
+    errors.extend(docker_boundary_errors(root))
+
+    return errors
+
+
+def sdk_errors(root=ROOT):
+    errors = []
     sdk = root / 'collector/third_party/ctp/v6.7.13_20260225'
     try:
         entries = dict(line.split('=', 1) for line in (sdk / 'MANIFEST.txt').read_text().splitlines() if '=' in line)
@@ -199,9 +267,14 @@ def check(root=ROOT):
                 errors.append('SDK hash mismatch: ' + name)
     except (OSError, ValueError, KeyError) as error:
         errors.append('SDK manifest invalid: ' + str(error))
+    return errors
+
+
+def docker_boundary_errors(root=ROOT, boundaries=BOUNDARIES):
+    errors = []
     if (root / '.dockerignore').exists():
         errors.append('Root .dockerignore must not own formal image boundaries')
-    for service, inputs in BOUNDARIES.items():
+    for service, inputs in boundaries.items():
         policy_path = root / service / 'Dockerfile.dockerignore'
         try:
             rules = policy_path.read_text().splitlines()
@@ -227,7 +300,7 @@ def main():
     for error in errors:
         print('FAIL:', error)
     if not errors:
-        print('PASS: scoped authority registration, links/anchors, claims, dependencies, hashes and Docker allowlists')
+        print('PASS: links/anchors, module dependencies, SDK hashes and Docker allowlists')
         print('Scope: offline structural checks; no external URL availability or business correctness claim.')
     return int(bool(errors))
 

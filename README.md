@@ -15,14 +15,12 @@
 
 - Agent 工作规则：[AGENTS.md](AGENTS.md)
 - 产品、设计与结构：[MVP](docs/mvp.md)、[Design](DESIGN.md)、[Architecture](ARCHITECTURE.md)
-- Knowledge authority：[治理规则](docs/README.md#authority-rules)、[现行拓扑与 authority mapping](ARCHITECTURE.md#knowledge-topology)
 - 精确行为：[当前契约入口](docs/README.md)
 - 当前状态与证据缺口：[Acceptance](docs/acceptance.md)
 - 实际部署、维护与恢复：[Operations](docs/operations.md)
 - Build / run / usage / examples / troubleshooting：[Collector](collector/README.md)、[Query](query/README.md)、[Dashboard](dashboard/README.md)
-- 已冻结、尚未实现的 Monitoring authority：[Monitoring](monitoring/README.md)
+- 已冻结、尚未实现的 Monitoring：[Monitoring](monitoring/README.md)
 - 安全回归：[Harness README](harness/README.md)；结果与证据语义：[Harness Contract](harness/CONTRACT.md)
 - 探索性工作入口：[CTP experiment](experiments/ctp/README.md)、[Data Coverage experiment](experiments/data_coverage/README.md)
-- 外部来源与历史记录：[References](docs/references/README.md)、[Archive](docs/archive/README.md)
 
 `experiments/` 原位保留并服从各自局部文档；它不是正式 Architecture 或 Contract 的替代来源。

@@ -41,7 +41,7 @@ flowchart LR
 
 正式依赖只沿图中箭头向下游移动。Dashboard、Analytics、Query 或参考数据故障不会形成反向调用来控制 Collector；部署工具协调生命周期，但不进入行情 callback 或 Raw 写入路径。
 
-这里的 runtime 依赖不等于目录内所有工具的依赖：`collector/scripts/universe.py` 实际导入 `query/market_calendar.py`，但 C++ Collector 不导入或启动 Query；`collector/scripts/native.py` 虽位于 Collector 目录，却作为 repository integration 工具管理三个服务。两者均不改变采集 runtime 的故障隔离或 Raw 写所有权，精确允许边登记在 [authority registration](.authority.json)。
+这里的 runtime 依赖不等于目录内所有工具的依赖：`collector/scripts/universe.py` 实际导入 `query/market_calendar.py`，但 C++ Collector 不导入或启动 Query；`collector/scripts/native.py` 虽位于 Collector 目录，却作为 repository integration 工具管理三个服务。两者均不改变采集 runtime 的故障隔离或 Raw 写所有权。
 
 ## 数据所有权
 
@@ -66,7 +66,7 @@ flowchart LR
 
 ## Monitoring v1 目标结构（已冻结，待实现）
 
-本节是 [MVP 平行扩展](docs/mvp.md)的目标边界，不将现有三组件部署改称已部署四组件。Monitoring 当前实现/验证程度见 [Monitoring Acceptance](monitoring/ACCEPTANCE.md)；结构变化以 additive development 落地。
+本节是 [MVP 平行扩展](docs/mvp.md)的目标边界，不将现有三组件部署改称已部署四组件。Monitoring 当前实现/验证程度见 [Monitoring Acceptance](monitoring/ACCEPTANCE.md)。
 
 ```mermaid
 flowchart LR
@@ -90,7 +90,7 @@ flowchart LR
 ### 必须落地的边界与保留的实现
 
 - Market State、Feature、Conclusion、Opportunity Event 的语义分别由 [Market State](query/contracts/market-state.md)、[Feature](docs/contracts/features.md)和 [Monitoring](monitoring/CONTRACT.md) Contracts 定义；目录归属不混淆语义归属。
-- Market State、Analytics 数值核心、参考包适配和 SkewService 暂留 `query/`。新增薄 Feature service 和 HTTP 投影复用它们；现有 API 与 Dashboard 保持兼容，不迁移首页。
+- Market State、Analytics 数值核心、参考包适配和 SkewService 位于 `query/`。现有 Feature service 和 HTTP 投影复用它们；现有 API 与 Dashboard 保持兼容。
 - `monitoring/` 目标为一个可选独立前台进程，经 Feature HTTP 消费输入并拥有专属 application state；内部职责关系见 [Monitoring Architecture](monitoring/ARCHITECTURE.md)。
 - Monitoring 只经 Feature HTTP 消费指标；访问禁令、挂载隔离、失败隔离与组件生命周期约束唯一见 [Deployment Contract](docs/contracts/deployment.md#monitoring-v1-跨系统边界已冻结待实现)。
 - Analytics/provider 不依赖 Monitoring，Query 不依赖 Monitoring 启动，也不为显示指标读取规则状态。规则判断与投递的内部分工见 [Monitoring Architecture](monitoring/ARCHITECTURE.md)。
@@ -109,97 +109,3 @@ flowchart LR
 application store 是专属应用持久目录，不位于 Collector 数据目录。原子提交、去重、缺口、配置版本和投递恢复的唯一行为来源为 [Monitoring Contract](monitoring/CONTRACT.md)，不得用物理共库推导通知可以修改事件或规则状态。
 
 目标 runtime 仅增加一个可选本地进程，不接入当前 Compose/systemd 或平行 developer runner；生命周期约束见 [Deployment Contract](docs/contracts/deployment.md)。故障隔离是调用、进程和写所有权边界，不承诺同宿主 CPU/磁盘资源完全隔离；轮询负载与延迟需实际验证，不能以进程独立替代性能证据。
-
-<a id="knowledge-topology"></a>
-
-## Repository knowledge architecture：现行拓扑
-
-本节拥有现行 documentation topology 和语义归属导航；治理规则唯一见[文档入口](docs/README.md#authority-rules)，实现与验证状态见 [Acceptance](docs/acceptance.md)。根、Collector/Collector tools、Query、Dashboard、Monitoring 及 Harness 各自拥有其登记的 authority，跨模块不变量保留在共同的 repository scope。
-
-当前导航为根 AGENTS/README/DESIGN/ARCHITECTURE → docs 入口与共享 Contracts；Collector、tools、Query、Dashboard、Monitoring 与 Harness 已有局部入口和对应 authority。Harness README 负责实际用法，Contract 负责验证/证据语义，AGENTS 负责局部工作纪律。实验区仍沿用逐层 SPEC/REFERENCE 组织，并只从上层链接其现有入口。
-
-受管理的现行文件如下；文件角色、占位文档与退役路径规则见[文档治理](docs/README.md#authority-rules)。
-
-```text
-/
-├─ AGENTS.md / README.md / DESIGN.md / ARCHITECTURE.md / .authority.json
-├─ docs/
-│  ├─ README.md / mvp.md / acceptance.md / operations.md
-│  ├─ monitoring-execution-plan.md（实施交接，不定义 authority）
-│  ├─ contracts/
-│  │  ├─ raw-boundary.md / read-path.md / market-session.md
-│  │  └─ features.md / deployment.md / developer-runner.md
-│  ├─ references/
-│  └─ archive/
-├─ collector/
-│  ├─ AGENTS.md / README.md / ARCHITECTURE.md / CONTRACT.md / .authority.json
-│  └─ scripts/
-│     └─ AGENTS.md / README.md / CONTRACT.md / .authority.json
-├─ query/
-│  ├─ AGENTS.md / README.md / DESIGN.md / ARCHITECTURE.md
-│  ├─ CONTRACT.md / ACCEPTANCE.md / .authority.json
-│  ├─ contracts/
-│  │  ├─ market-state.md / analytics-skew.md / analytics-skew-v1.json
-│  │  └─ references.md
-│  ├─ references/analytics-skew-sources.md
-│  └─ calendars/README.md / .authority.json
-├─ dashboard/
-│  └─ AGENTS.md / README.md / CONTRACT.md / ACCEPTANCE.md / .authority.json
-├─ monitoring/
-│  ├─ AGENTS.md / README.md / DESIGN.md / ARCHITECTURE.md
-│  └─ CONTRACT.md / ACCEPTANCE.md / .authority.json
-├─ harness/
-│  ├─ AGENTS.md / README.md / CONTRACT.md / .authority.json
-│  └─ 原有实现、测试、oracle、fixtures
-└─ experiments/（原位保留）
-```
-
-`query/contracts/` 是扁平 Query 的文档分卷，不是代码子模块；Calendar 解释算法仍归 Query，`query/calendars/` 只拥有参考文件维护入口。`collector/scripts/` 是现有真实工具 scope。根 `scripts/` 当前承担 repository integration，由系统 Operations/Deployment 导航，不另加空文档。
-
-Monitoring 已建立非空文档 scope，README 当前只导航设计和状态；没有实现时不提供虚构运行命令。不预建 rules/notification/storage 子目录，不创建顶层 analytics 包。
-
-实验入口为 [CTP](experiments/ctp/README.md) 和 [Data Coverage](experiments/data_coverage/README.md)。后者沿 AGENTS/DESIGN/SPEC → 数据类型 SPEC → 来源 REFERENCE/coverage/templates 渐进读取；实验内容、命名、样本和局部规则仍由实验区自身拥有。
-
-<a id="authority-mapping"></a>
-
-## 现行 authority navigation
-
-本表只登记现行归属与拆分边界，不复制业务规则，也不记录迁移过程或实现状态。精确内容以链接的当前 authority 为准。
-
-| 语义范围 | 现行唯一 authority 与拆分边界 |
-|---|---|
-| [根 AGENTS](AGENTS.md)、[docs 入口](docs/README.md) | 根 AGENTS 工作纪律及导航；docs README 治理规则。根不列全仓领域必读清单 |
-| [根 Design](DESIGN.md) §1–8、[Query Design](query/DESIGN.md) | 跨模块原则在根；Analytics 按请求计算等局部理由在 Query |
-| 根 Design §9、Query Design | HTTP 共享、拆包触发和反向依赖理由在根；薄 provider 组织理由在 Query |
-| [根 Design](DESIGN.md) §10、[Monitoring Design](monitoring/DESIGN.md) | 与 Market Facts 的跨模块边界在根；机会记录/通知恢复内部取舍在 Monitoring |
-| [本文](ARCHITECTURE.md)、[Query Architecture](query/ARCHITECTURE.md)、[Monitoring Architecture](monitoring/ARCHITECTURE.md) | 一级模块、跨模块流和当前/冻结目标 runtime 在根；Query 文件关系与 Monitoring 循环/存储结构分别在本级 |
-| [Collector Contract](collector/CONTRACT.md)、[Raw Boundary](docs/contracts/raw-boundary.md) | Raw 共享读写、锁、诊断协议归 raw-boundary；callback、采样、session、配置、重连、提交和 Collector 自身停止归本地 Contract |
-| [Read Path](docs/contracts/read-path.md)、[Query Contract](query/CONTRACT.md)：边界/健康/SQLite | 公共 HTTP 在 read-path；Query 内部读取要求在本级；系统 lifecycle 与共享 Raw/心跳各引用其协议 |
-| Read Path：Skew | HTTP 参数、wire shape、状态映射在根 read-path；分钟选择、series 计算只由 Query Skew 定义 |
-| [Read Path](docs/contracts/read-path.md)、[Dashboard Contract](dashboard/CONTRACT.md) | 公共 HTTP 协议与 wire shape 在根；布局、轮询、失败清值、显示精度、历史与当前视图交互在 Dashboard |
-| [Market Session](docs/contracts/market-session.md)、[Universe Tool](collector/scripts/CONTRACT.md)、[Query Contract](query/CONTRACT.md)、[Dashboard Contract](dashboard/CONTRACT.md) | Calendar/Universe 跨模块版本、时间、交接协议在根；来源抓取/发布在工具；Query Calendar/coverage 适配在 Query；页面时段表在 Dashboard |
-| [Market State](query/contracts/market-state.md) | 位于 Query；引用根 Raw/Calendar 协议，不重复采集事实 |
-| [Skew](query/contracts/analytics-skew.md)、[Reference adapter](query/contracts/references.md)、[Query Acceptance](query/ACCEPTANCE.md)、[Dashboard Contract](dashboard/CONTRACT.md) | 数值、solver、参考适配和 Query 证据归 Query；显示精度、状态标识与页面交互归 Dashboard |
-| [Skew 策略](query/contracts/analytics-skew-v1.json)、[来源说明](query/references/analytics-skew-sources.md) | 机器策略和局部来源说明在 Query；共享原件档案只保存外部来源 |
-| [Feature](docs/contracts/features.md)、[Query Contract](query/CONTRACT.md) | 通用 envelope、身份/采样键、时间、错误、版本、消费者与窗口归属边界在根；registry/provider 要求与 MO Skew 映射在 Query，数值仍由 [Skew v1](query/contracts/analytics-skew.md)拥有 |
-| [Monitoring](monitoring/CONTRACT.md) | Rule、crossing、UNKNOWN、配置、事务、恢复和投递归 Monitoring；跨模块访问和系统 lifecycle 引用根 |
-| [Deployment](docs/contracts/deployment.md)、[Developer runner](docs/contracts/developer-runner.md) | 部署契约拥有真实跨组件约束；Collector 自身停机引用 Collector，Monitoring 自有停止、锁与重试引用 Monitoring；`./dev` 的命令面、输入解析、所有权与收尾归 Developer runner |
-| [Collector README](collector/README.md)、[scripts README](collector/scripts/README.md) | Collector 配置/直接运行用法与工具命令分开；规范归各自 Contract，三服务部署教程归根 Operations |
-| [Query README](query/README.md)、[Dashboard README](dashboard/README.md) | 保留实际用法、故障定位与本级导航；Query 同时提供已实现 Feature 的用法 |
-| [Calendar README](query/calendars/README.md) | 保留参考数据维护步骤，不承接 Query 解释算法 |
-| [Acceptance](docs/acceptance.md)、[Query Acceptance](query/ACCEPTANCE.md)、[Dashboard Acceptance](dashboard/ACCEPTANCE.md)、[Monitoring Acceptance](monitoring/ACCEPTANCE.md) | G1–G6/P1/P2、跨进程/部署/runner 证据在根；Query、Dashboard 与 Monitoring 局部记录只在各自 ACCEPTANCE，根只导航 |
-| [Operations](docs/operations.md) | 系统组合、部署、备份恢复保留根；模块操作归所属 README，根导航而不重复步骤 |
-| [Harness README](harness/README.md)、[Harness Contract](harness/CONTRACT.md)、[Harness AGENTS](harness/AGENTS.md) | README 保留用法/依赖；PASS/FAIL/NOT_RUN、证据身份和结果边界归 Contract，工作指导归 AGENTS |
-| [Monitoring execution plan](docs/monitoring-execution-plan.md) | 是独立业务交接；不成为规则定义，状态以 Monitoring Acceptance 为准 |
-| [References](docs/references/README.md)、[Archive](docs/archive/README.md) | 共享原件与历史正文留原位；局部 Skew 来源见 Query |
-| [CTP experiment](experiments/ctp/README.md)、[Data Coverage experiment](experiments/data_coverage/README.md) | 沿用既有局部 authority；根只导航，实验不替代正式系统 authority |
-
-<a id="authority-registration"></a>
-
-## 机器导航
-
-受管理 scope 的 `.authority.json` 只保存关系，不保存业务正文：版本、existing scope ID/物理根/parent/入口、文档路径与角色；唯一 claim ID、定义路径及稳定显式锚点、受约束 scopes；引用/证据/参考关系；允许的跨 scope 代码依赖及根约束来源。
-
-claim 按可独立修改的接口或规则组划分，不为每句话建 ID。Markdown 与机器策略各自登记职责：Skew 已有机器字段值以原 JSON 为机器 authority，Markdown 解释含义，重复数值展示只作为受一致性检查的投影。登记不能制造第二套规则或把 evidence/ExecPlan 注册为规范。
-
-登记从根 [`.authority.json`](.authority.json) 开始，局部 scope 由各自同名文件登记；接受范围、claim 唯一性与 smallest-common-scope 要求由[文档治理](docs/README.md#authority-rules)拥有。离线检查实现位于 `harness/authority.py`，当前完成状态见 [Acceptance](docs/acceptance.md#documentation-authority-topology)。

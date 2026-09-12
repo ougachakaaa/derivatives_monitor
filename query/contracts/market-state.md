@@ -3,7 +3,7 @@
 # Minute Market Frame / Latest Market State
 
 
-Python 契约 v1；已实现，历史离线证据见[归档](../../docs/archive/acceptance/Market_State_Read_Model_Acceptance_CN.md)，当前状态见[本级 Acceptance](../ACCEPTANCE.md)，系统收尾门槛见[根验收矩阵](../../docs/acceptance.md)。
+Python 契约 v1；已实现，当前状态见[本级 Acceptance](../ACCEPTANCE.md)，系统收尾门槛见[根验收矩阵](../../docs/acceptance.md)。
 
 ## 架构位置
 

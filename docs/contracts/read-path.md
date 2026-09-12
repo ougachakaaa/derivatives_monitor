@@ -7,7 +7,7 @@ API 按共享 [Raw Boundary](raw-boundary.md) 只读同一份数据，页面独�
 
 ## Feature 查询扩展（已冻结）
 
-只读 `POST /api/features/evaluate` 以 JSON body 承载一次单 Feature 查询，不写规则或应用状态。请求/响应、采样身份与 envelope 失败语义唯一由 [Feature Contract](features.md)定义，MO Skew 的字段映射见 [Query Contract](../../query/CONTRACT.md#feature-provider)；沿用本契约本地 HTTP、[Raw 只读保护](raw-boundary.md#只读消费与-wal)和 no-store。既有 Skew GET 与 Dashboard 不迁移，Query 不依赖 Monitoring；当前实现与验证程度只见 [Query Acceptance](../../query/ACCEPTANCE.md#query-feature-evidence)。
+只读 `POST /api/features/evaluate` 以 JSON body 承载一次单 Feature 查询，不写规则或应用状态。请求/响应、采样身份与 envelope 失败语义唯一由 [Feature Contract](features.md)定义，MO Skew 的字段映射见 [Query Contract](../../query/CONTRACT.md#feature-provider)；沿用本契约本地 HTTP、[Raw 只读保护](raw-boundary.md#只读消费与-wal)和 no-store。既有 Skew GET 与 Dashboard 保持兼容，Query 不依赖 Monitoring；当前实现与验证程度只见 [Query Acceptance](../../query/ACCEPTANCE.md#query-feature-evidence)。
 
 ## 边界
 
@@ -36,11 +36,10 @@ Dashboard 如何轮询、布局和清理显示状态由[页面契约](../../dash
 
 WAL、sidecar、immutable、共享锁、复制和 backup 的唯一约束见 [Raw Boundary](raw-boundary.md#只读消费与-wal)。本 HTTP 层将缺失合法日库映射为 404，将日库不可读、不兼容、锁/WAL 条件不成立或查询超时映射为 503。
 
-## 验证与依据
+## 验证边界
 
 覆盖真实 SQLite/HTTP、并发写入只读消费、独立停启、心跳过期、坏参数/坏库、浏览器错误恢复及部署隔离。统一入口见[Harness](../../harness/README.md)。Docker 不可用时不能用宿主测试宣称容器通过。
 
-技术选型来源：[FastAPI 容器部署](https://fastapi.tiangolo.com/deployment/docker/)、[Poetry 锁定依赖](https://python-poetry.org/docs/basic-usage/)、[Vite 项目构建](https://vite.dev/guide/)。SQLite 依据由 [Raw Boundary](raw-boundary.md) 统一维护。
 
 ## 市场时段与覆盖
 

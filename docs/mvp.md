@@ -48,6 +48,6 @@ MVP 使用 **`mo-skew-25d-v1`** 作为唯一 Skew 指标定义。模型、远期
 
 IM basis、IM 5 分钟收益率和 MO ATM IV 是扩展性验证例子，首版只以标明 TEST DOUBLE 的 Feature 输出验证核心可复用；不将其登记为生产支持，不新增现货源或修改冻结 Skew。后续生产接入需要各自指标与输入契约。产品模型不绑定这几个例子。
 
-完成边界为一个本地独立前台 Monitoring 进程的可恢复工程闭环，真实市场与真实通知证据另列 [Monitoring Acceptance](../monitoring/ACCEPTANCE.md)。本阶段只冻结设计和实施交接；后续实现不包含规则管理 UI、复杂 DSL、消息队列、独立通知服务、分布式系统、自动换月、历史机会补发、cooldown/持续满足等新增触发策略，也不接管现有部署或 developer runner。
+完成边界为一个本地独立前台 Monitoring 进程的可恢复工程闭环，真实市场与真实通知证据另列 [Monitoring Acceptance](../monitoring/ACCEPTANCE.md)。首版不包含规则管理 UI、复杂 DSL、消息队列、独立通知服务、分布式系统、自动换月、历史机会补发、cooldown/持续满足等新增触发策略，也不接管现有部署或 developer runner。
 
 平行扩展不改变原 Skew MVP 的 G1–G6、P1/P2；扩展工程通过不等于真实指标、真实通知或整个 MVP 完成。

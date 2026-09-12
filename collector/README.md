@@ -74,3 +74,9 @@ sqlite3 -readonly collector/data/YYYYMMDD.sqlite \
   ```
 
   该测试使用合成 SDK 和压缩时间，只是 TEST DOUBLE。真实跨日状态与待补证据见 [Acceptance](../docs/acceptance.md)。
+
+## SDK 来源
+
+构建使用已入库的 **v6.7.13_20260225 / Linux x86-64 Market Data** 最小 SDK，无需联网下载。原包及头文件、动态库哈希见 [MANIFEST](third_party/ctp/v6.7.13_20260225/MANIFEST.txt)；头文件仅将注释由 GB18030 转为 UTF-8，二进制未改。原包名含 trader 不代表使用 Trader API。
+
+官方入口：[上期技术](https://www.sfit.com.cn/5_2_DocumentDown_2.htm)、[SimNow](https://www.simnow.com.cn/static/apiDownload.action)。这些是查找入口，不是已确认可用的固定版本直链；重新取得原包时必须核对清单哈希。

@@ -15,4 +15,4 @@
 
 没有外部来源规定本项目的：三对近ATM排名/中位数、0.1%一致性、30/5/15秒接收时间阈值、20%盘口价差、25Δ线性插值区间、σ范围、time value/vega门槛、flat 3M折现或验证误差。这些均由本次授权作为MVP策略冻结，变更必须升级契约。
 
-资料与验证包位于独立 references/harness，不移动 SDK 或修改 `experiments/`。参考摘要不替代原始来源；运行参考包须保存真实URL、发布/获取时间、原响应哈希与审核版本。验证环境依赖见[oracle requirements](../../harness/analytics-oracle-requirements.txt)。共享原件档案仍见[repository references](../../docs/references/README.md)。
+资料与验证包位于独立 references/harness，不移动 SDK 或修改 `experiments/`。参考摘要不替代原始来源；运行参考包须保存真实URL、发布/获取时间、原响应哈希与审核版本。验证环境依赖见[oracle requirements](../../harness/analytics-oracle-requirements.txt)。

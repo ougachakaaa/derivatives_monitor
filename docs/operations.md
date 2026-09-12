@@ -16,7 +16,7 @@
 
 同一数据目录只能有一个 Collector。离线测试无需启动真实服务；文档整理无需执行 up/update/stop。宿主安装步骤见各模块 README，不依赖历史报告中 `/tmp` 下的工具路径。
 
-本地前台入口的实现与验证状态见 [Acceptance](acceptance.md#本地开发入口交付状态)。持久部署的具体步骤如下；工具自身参数入口见 [`collector/scripts` 手册](../collector/scripts/README.md)。
+本地前台入口的实现与验证状态见 [Acceptance](acceptance.md)。持久部署的具体步骤如下；工具自身参数入口见 [`collector/scripts` 手册](../collector/scripts/README.md)。
 
 <a id="native-systemd-部署"></a>
 

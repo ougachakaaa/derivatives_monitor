@@ -2,7 +2,7 @@
 
 Query 是 Python 3.12 / FastAPI 服务：读取 Collector 的 Raw 数据，提供诊断、Market Session、Market State、MO Skew 与 Feature JSON。这里提供安装、启动、调用和排障方法；内部设计与结构见本级 [Design](DESIGN.md)和 [Architecture](ARCHITECTURE.md)，共享 Raw 与 HTTP 分别见 [Raw Boundary](../docs/contracts/raw-boundary.md)和 [Read Path](../docs/contracts/read-path.md)。
 
-本级 authority：[组件 Contract](CONTRACT.md) · [Market State](contracts/market-state.md) · [Analytics / Skew](contracts/analytics-skew.md) · [Reference adapter](contracts/references.md) · [Query Acceptance](ACCEPTANCE.md)。共享协议：[Market Session](../docs/contracts/market-session.md) · [Feature](../docs/contracts/features.md)。系统状态与验证入口见[根 Acceptance](../docs/acceptance.md)和 [Harness](../harness/README.md)。
+本级契约与状态：[组件 Contract](CONTRACT.md) · [Market State](contracts/market-state.md) · [Analytics / Skew](contracts/analytics-skew.md) · [Reference adapter](contracts/references.md) · [Query Acceptance](ACCEPTANCE.md)。共享协议：[Market Session](../docs/contracts/market-session.md) · [Feature](../docs/contracts/features.md)。系统状态与验证入口见[根 Acceptance](../docs/acceptance.md)和 [Harness](../harness/README.md)。
 
 统一前台开发入口位于仓库根：`./dev doctor query` 检查本组件，`./dev up query` 运行本组件，`./dev up` 运行完整开发会话。参数示例和与持久部署的区别见 [Operations](../docs/operations.md#前台开发会话)；下面保留 Query 自身的安装、直接运行和调用用法。
 

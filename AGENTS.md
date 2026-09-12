@@ -1,13 +1,13 @@
 # Agent 工作协议
 
-## 阅读与 authority
+## 阅读入口
 
-先读本文件和[文档入口](docs/README.md)，按其中的 [scope 与文档职责规则](docs/README.md#authority-rules)定位唯一 authority，再读取任务所需的局部入口及适用祖先 AGENTS，不默认加载全部文档。现行 scope、authority 与导航见 [Architecture](ARCHITECTURE.md#authority-mapping)及从根开始的 `.authority.json` 登记；不创建未登记副本或把计划当业务规范。用户当前指令优先。
+先读本文件和[文档入口](docs/README.md)，再按任务读取模块 README、适用祖先 AGENTS 和相关 Contract。系统结构见 [Architecture](ARCHITECTURE.md)，不默认加载全部文档。用户当前指令优先。
 
 ## 修改规则
 
-- 只修改任务涉及的 SoR，并用链接连接其他职责文档，不复制同一套事实。改变产品边界、设计理由、系统结构或精确行为时，分别同步 MVP、Design、Architecture 或对应 Contract；再按影响更新验收矩阵与必要测试。
-- 不恢复 `docs/tasks/` 或积累 T1/T2 类过程 specs。模块 README 按[文档职责规则](docs/README.md#authority-rules)维护；发现其中重复设计或契约时，优先链接其 SoR。
+- 只修改任务涉及的 SoR，并用链接连接其他职责文档，不复制同一套事实。改变产品边界、设计理由、系统结构或精确行为时，分别同步 MVP、Design、Architecture 或对应 Contract；再按影响更新当前缺口与必要测试。
+- 长期文档只记录当前系统和稳定约束，不累计实施计划、迁移历史或测试流水；模块 README 提供用法，重复设计和契约改为链接其定义。
 - 发现代码、文档或证据不一致时，先指出不一致及各自 authority，再在任务范围内修正；不要用旧报告覆盖当前事实，也不要因测试通过把尚缺业务证据的能力写成已完成。
 - `experiments/` 的实验文档、SDK、demo 和局部 coverage harness 服从其目录内的局部说明与任务范围；仓库级文档治理不把它们改写成正式系统 SoR，也不在未明确要求时搬动、复制或重构。
 
