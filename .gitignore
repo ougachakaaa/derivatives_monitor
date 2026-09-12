@@ -35,6 +35,4 @@ Desktop.ini
 # Local acceptance evidence and tool caches (never source of truth in Git)
 /artifacts/
 /.mypy_cache/
-/harness/__pycache__/
-/harness/tests/__pycache__/
 /dashboard/.vite/

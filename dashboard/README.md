@@ -2,7 +2,7 @@
 
 Dashboard 是独立 React/Vite 前端，用于展示 MO Skew 业务结果和运行诊断。它通过 JSON API 工作，不在浏览器内计算 IV / Skew；页面在系统中的位置见[系统架构](../ARCHITECTURE.md)，产品目标见 [MVP](../docs/mvp.md)。页面布局、轮询、显示、当前/历史交互与失败清值见[本级 Contract](CONTRACT.md)，公共 HTTP 协议和 wire shape 见[共享 Read Path](../docs/contracts/read-path.md)。
 
-相关入口：[本级 Acceptance](ACCEPTANCE.md) · [Deployment Contract](../docs/contracts/deployment.md) · [Operations](../docs/operations.md) · [根 Acceptance](../docs/acceptance.md) · [Harness](../harness/README.md)
+相关入口：[本级 Acceptance](ACCEPTANCE.md) · [Deployment Contract](../docs/contracts/deployment.md) · [Operations](../docs/operations.md) · [根 Acceptance](../docs/acceptance.md) · [Verification](../tests/README.md)
 
 统一前台开发入口位于仓库根：`./dev doctor dashboard` 检查本组件，`./dev up dashboard` 运行本组件，`./dev up` 运行完整开发会话。参数示例和与持久部署的区别见 [Operations](../docs/operations.md#前台开发会话)；下面保留 Dashboard 自身的依赖安装、直接运行和测试用法。
 

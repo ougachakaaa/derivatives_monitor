@@ -77,6 +77,47 @@ def wait_pids(log_path: Path) -> dict[str, int]:
     return wait(read_started, "three ./dev-owned component process groups")
 
 
+def check_credential_semantics(work: Path, environment: dict[str, str]) -> None:
+    cases = (
+        ('omitted', ''),
+        ('empty', 'UserID=\nPassword=\n'),
+        ('filled', 'UserID=TEST_USER\nPassword=TEST_DOUBLE_PASSWORD\n'),
+    )
+    for label, fields in cases:
+        folder = work / ('credentials-' + label)
+        folder.mkdir()
+        config = folder / 'config.ini'
+        content = ('# TEST DOUBLE: configuration only; no connection\n[config]\n'
+                   'FrontMdAddr=tcp://127.0.0.1:1\nInstruments=IF2609\n'
+                   'DataDirectory=data\nFlowPath=flow\n' + fields)
+        config.write_text(content)
+        result = subprocess.run(
+            [str(ROOT / 'dev'), 'doctor', 'collector', '--config', str(config)],
+            cwd=ROOT, env=environment, capture_output=True, text=True, timeout=30)
+        output = result.stdout + result.stderr
+        assert result.returncode == 0, f'{label} optional credentials failed: {output}'
+        assert 'userid' not in output.lower() and 'password' not in output.lower()
+        assert config.read_text() == content and set(folder.iterdir()) == {config}
+
+    for field, value, companion in (
+            ('UserID', 'U' * 128, 'Password=TEST_DOUBLE_PASSWORD\n'),
+            ('Password', 'P' * 128, 'UserID=TEST_USER\n')):
+        folder = work / ('credentials-overlong-' + field.lower())
+        folder.mkdir()
+        config = folder / 'config.ini'
+        content = ('# TEST DOUBLE: configuration only; no connection\n[config]\n'
+                   'FrontMdAddr=tcp://127.0.0.1:1\nInstruments=IF2609\n'
+                   'DataDirectory=data\nFlowPath=flow\n' + companion + f'{field}={value}\n')
+        config.write_text(content)
+        result = subprocess.run(
+            [str(ROOT / 'dev'), 'doctor', 'collector', '--config', str(config)],
+            cwd=ROOT, env=environment, capture_output=True, text=True, timeout=30)
+        output = result.stdout + result.stderr
+        assert result.returncode == 1 and 'Collector rejected the configuration' in output
+        assert value not in output and 'is too long for the CTP field' not in output
+        assert config.read_text() == content and set(folder.iterdir()) == {config}
+
+
 def stop_runner(process: subprocess.Popen, pids: dict[str, int], expected: tuple[int, ...]) -> int:
     if process.poll() is None:
         process.send_signal(signal.SIGTERM)
@@ -143,6 +184,8 @@ def main() -> None:
         existing_library_path = environment.get("LD_LIBRARY_PATH")
         environment["LD_LIBRARY_PATH"] = str(sdk) + ((":" + existing_library_path) if existing_library_path else "")
         environment["PYTHONDONTWRITEBYTECODE"] = "1"
+
+        check_credential_semantics(work, environment)
 
         def start_session(label: str):
             query_port = unused_port()
@@ -247,7 +290,7 @@ def main() -> None:
                 assert connection.execute("SELECT COUNT(*) FROM runs WHERE source LIKE '%TEST DOUBLE%'").fetchone()[0] >= 2
                 assert connection.execute("SELECT COUNT(*) FROM runs WHERE stopped_us IS NULL").fetchone()[0] == 0
 
-            print("PASS: actual ./dev TEST DOUBLE Collector -> SQLite -> Uvicorn -> Vite chain")
+            print("PASS: actual ./dev credential semantics and Collector -> SQLite -> Uvicorn -> Vite chain")
             print("PASS: shared Raw, Dashboard proxy, downstream independence, conflicts, clean stop and preserved restart")
             print("Scope: temporary paths/random ports only; no real config, CTP, deployment manager, Docker, or browser.")
         except BaseException:

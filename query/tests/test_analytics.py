@@ -17,7 +17,7 @@ from storage import Store
 
 
 ROOT = Path(__file__).resolve().parents[2]
-GOLDEN = json.loads((ROOT / 'harness/fixtures/analytics-skew-v1.json').read_text())
+GOLDEN = json.loads((Path(__file__).resolve().parent / 'fixtures/analytics-skew-v1.json').read_text())
 CHAIN = GOLDEN['chains'][0]
 VALUATION = datetime.fromisoformat('2026-09-16T15:00:00+08:00')
 EXPIRY = datetime.fromisoformat('2026-10-16T15:00:00+08:00')

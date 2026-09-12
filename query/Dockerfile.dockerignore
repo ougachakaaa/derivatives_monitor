@@ -29,11 +29,12 @@ query/tests/**
 !query/tests/test_skew_api.py
 !query/tests/test_feature_service.py
 !query/tests/test_features_api.py
-!harness/
-harness/**
-!harness/fixtures/
-harness/fixtures/**
-!harness/fixtures/analytics-skew-v1.json
+!query/tests/analytics_contract.py
+!query/tests/analytics_oracle.py
+!query/tests/test_analytics_contract.py
+!query/tests/fixtures/
+query/tests/fixtures/**
+!query/tests/fixtures/analytics-skew-v1.json
 
 # Defense in depth for secrets and runtime state.
 **/.env

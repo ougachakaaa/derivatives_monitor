@@ -3,7 +3,7 @@
   "contract_id": "mo-skew-25d-v1",
   "source": "SYNTHETIC_NOT_LIVE",
   "policy_sha256": "d520d8a2831f81df1372efe280898e2e682f5e039669488417c1f4fe7ec56f14",
-  "generator_sha256": "f716456544f912a79b4082ecb7709b585c92b11dc972af48d685f915dbc90e9d",
+  "generator_sha256": "e4a9fb6075532c4f901490d19f8cf984acf1e037f41f002bcb23cb79de72a310",
   "oracle": {
     "QuantLib": "1.40",
     "mpmath": "1.3.0",

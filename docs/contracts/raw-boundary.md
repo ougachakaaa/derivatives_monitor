@@ -29,6 +29,6 @@
 
 ## 失败与证据边界
 
-缺失合法日库与日库不可读、不兼容、锁/WAL 条件不成立或查询超时必须区分；公共 HTTP 如何映射为 404/503 由 [Read Path Contract](read-path.md)定义。空目录、空数据、登录成功或模拟输入不能单独证明真实行情闭环。工程和现场证据的归属见 [Acceptance](../acceptance.md)与 [Harness](../../harness/README.md)。
+缺失合法日库与日库不可读、不兼容、锁/WAL 条件不成立或查询超时必须区分；公共 HTTP 如何映射为 404/503 由 [Read Path Contract](read-path.md)定义。空目录、空数据、登录成功或模拟输入不能单独证明真实行情闭环。工程和现场证据的归属见 [Acceptance](../acceptance.md)与 [Verification](../verification.md)。
 
 技术依据：[SQLite WAL](https://www.sqlite.org/wal.html)、[同步级别](https://www.sqlite.org/pragma.html#pragma_synchronous)、[只读 URI](https://www.sqlite.org/uri.html)。

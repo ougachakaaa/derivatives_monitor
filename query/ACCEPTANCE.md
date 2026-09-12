@@ -10,4 +10,4 @@
 | Skew JSON 与参考适配 | 已实现当前、分钟和日序列、固定身份重放、参考准入与失败语义 | 真实业务闭环与性能 |
 | Feature service / HTTP | 已实现通用 v1 envelope、显式注册表、mo-skew-25d-v1 provider 和只读 POST /api/features/evaluate；有投影等价与错误回归 | 真实 Feature 可用性；basis、return、ATM IV 尚未实现生产 provider |
 
-工程回归只证明其 TEST DOUBLE 场景，不签收 G3/P1/P2。当前版本需要的回归按 [Harness](../harness/README.md)执行，不从历史通过推断当前部署可用。
+工程回归只证明其 TEST DOUBLE 场景，不签收 G3/P1/P2。当前版本需要的回归按 [Repository Verification](../tests/README.md)执行，不从历史通过推断当前部署可用。

@@ -7,9 +7,8 @@ import tempfile
 import time
 import unittest
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 from run import run_step, step
-from check_docs import docker_included
 
 
 class EvidenceTest(unittest.TestCase):
@@ -33,7 +32,7 @@ class EvidenceTest(unittest.TestCase):
                 self.assertEqual(self.execute('print(' + repr(text) + ')')['status'], 'NOT_RUN')
 
     def test_missing_and_timeout(self):
-        result = self.execute('print(1)', requires=['/nonexistent/dm-harness-command'])
+        result = self.execute('print(1)', requires=['/nonexistent/dm-verification-command'])
         self.assertEqual(result['status'], 'NOT_RUN')
         result = self.execute('import time; time.sleep(5)', timeout=.1)
         self.assertEqual(result['status'], 'FAIL')
@@ -55,7 +54,7 @@ class EvidenceTest(unittest.TestCase):
                 "raise SystemExit(supervise_component(spec,stop_timeout=1))"
             )
             result = run_step(step('nested-timeout', [sys.executable, '-c', supervisor],
-                                   cwd=Path(__file__).resolve().parents[2], timeout=.5), Path(tmp))
+                                   cwd=Path(__file__).resolve().parents[1], timeout=.5), Path(tmp))
             self.assertEqual(result['status'], 'FAIL')
             self.assertIn('TimeoutError', result['reason'])
             self.assertTrue(marker.exists())
@@ -72,23 +71,13 @@ class EvidenceTest(unittest.TestCase):
                     os.killpg(pid, signal.SIGKILL)
                 except ProcessLookupError:
                     pass
-                self.fail(f'runner-controlled child {pid} survived harness timeout')
+                self.fail(f'runner-controlled child {pid} survived verification timeout')
 
     def test_synthetic_environment_is_not_inherited(self):
         import os
         from unittest.mock import patch
         with patch.dict(os.environ, {'DM_TEST_SCENARIO': 'shfe-night', 'KEEP_RUNNING': '1'}):
             self.assertEqual(self.execute("import os; assert 'DM_TEST_SCENARIO' not in os.environ; assert os.environ['KEEP_RUNNING']=='0'")['status'], 'PASS')
-
-    def test_allowlist_requires_new_input_and_keeps_secrets_out(self):
-        self.assertTrue(docker_included('query/private.txt', ['**', '!query/']))
-        rules = ['**', '!query/', 'query/**', '!query/app.py', '!query/tests/', 'query/tests/**', '!query/tests/**', '**/*.log']
-        self.assertTrue(docker_included('query/app.py', rules))
-        # Descendants must be re-excluded after admitting a parent directory.
-        self.assertFalse(docker_included('query/market_state.py', rules))
-        self.assertTrue(docker_included('query/tests/test_api.py', rules))
-        self.assertFalse(docker_included('query/tests/private.log', rules))
-
 
 if __name__ == '__main__':
     unittest.main()

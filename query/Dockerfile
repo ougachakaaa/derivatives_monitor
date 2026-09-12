@@ -10,7 +10,6 @@ RUN poetry sync --no-interaction
 COPY query/app.py query/storage.py query/contract_coverage.py query/market_calendar.py query/market_state.py query/analytics.py query/skew_service.py query/skew_references.py query/feature_service.py ./
 COPY query/calendars/ ./calendars/
 COPY query/tests/ ./tests/
-COPY harness/fixtures/analytics-skew-v1.json /harness/fixtures/analytics-skew-v1.json
 RUN poetry run python -m unittest discover -s tests -v && poetry sync --only main --no-interaction
 
 FROM python:3.12-slim-bookworm AS runtime

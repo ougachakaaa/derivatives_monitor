@@ -42,6 +42,6 @@ Latest 分开报告 calendar_trading_day（CLOSED 常为下一交易日）和 fr
 
 ## 验证
 
-使用临时真实 SQLite/WAL、固定时间及受控 writer，覆盖分钟、完整链、平局、质量、跨 session、夜盘、迟到/revision、只读和错误。入口为 `python3 harness/run.py offline`；业务计算另按[MVP 验收条件](../../docs/acceptance.md)验证。
+使用临时真实 SQLite/WAL、固定时间及受控 writer，覆盖分钟、完整链、平局、质量、跨 session、夜盘、迟到/revision、只读和错误。入口为 `python3 tests/run.py offline`；业务计算另按[MVP 验收条件](../../docs/acceptance.md)验证。
 
 审核 Skew 读取上下文可显式传 `MarketStateReader(..., calendar=已加载Calendar)`；一旦提供即固定使用该对象，默认目录读取行为不变。Calendar 支持从已核对哈希的原字节初始化。该注入只固定参考身份，不改变 as-of/minute/latest、session、age 或 revision 规则。

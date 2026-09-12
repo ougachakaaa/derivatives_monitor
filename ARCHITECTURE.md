@@ -30,7 +30,7 @@ flowchart LR
 | `query/` | 只读访问 Raw，将显式 Universe/Calendar 组合为 Market State，并计算和发布可重建 Analytics / Feature JSON | 不写 Raw、不依赖 Dashboard/Monitoring；内部关系见 [Query Architecture](query/ARCHITECTURE.md) |
 | `dashboard/` | 构建独立 React 汇报页面；Docker 由 Nginx、原生 systemd 由 Vite 提供页面及 API 代理 | 只消费 JSON；不读 SQLite，不维护另一套指标公式 |
 | `compose.yaml` / `scripts/deploy.sh` | 组成和管理仓库级三服务 Docker runtime | 属于系统 integration layer；服务内部构建和运行输入仍由各模块拥有 |
-| `harness/` 与模块测试 | 组织回归并记录验证证据 | 不定义产品行为，也不进入生产数据路径 |
+| 根 `tests/` 与模块测试 | 根测试组织跨模块回归并记录证据；模块测试证明 owner 行为 | 不定义产品行为，也不进入生产数据路径 |
 
 ## 数据流与依赖方向
 
@@ -52,7 +52,7 @@ flowchart LR
 | Calendar 版本 | Query 参考数据模块 | Market State、业务 service、coverage 与运维检查 |
 | Analytics ReferenceBundle | 独立审核/导入流程 | Analytics 及其只读适配层 |
 | IV / Skew 响应 | Analytics / business service | API 与 Dashboard；当前不是第二份持久化事实库 |
-| 验收日志和现场证据 | Harness / 验收流程 | Acceptance 引用；不进入 runtime |
+| 验收日志和现场证据 | Repository verification / 验收流程 | Acceptance 引用；不进入 runtime |
 
 数据集的精确 schema、锁、版本、时间、质量、选择和错误规则不在本表重复，分别见 [Raw Boundary](docs/contracts/raw-boundary.md)、[Collector](collector/CONTRACT.md)、[Universe tool](collector/scripts/CONTRACT.md)、[Read Path](docs/contracts/read-path.md)、[Query](query/CONTRACT.md)、[Market State](query/contracts/market-state.md)、[Calendar / Universe](docs/contracts/market-session.md)、[Deployment](docs/contracts/deployment.md)及 [Analytics / Skew v1](query/contracts/analytics-skew.md)。
 

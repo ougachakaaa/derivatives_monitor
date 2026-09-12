@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Independent frozen-contract oracle; no imports from production or other harness math.
+"""Independent frozen-contract oracle; no imports from production or production math.
 
 Install analytics-oracle-requirements.txt in a separate environment.
 Default verifies checked-in fixtures. --output writes a NEW file for review.
@@ -13,9 +13,9 @@ from pathlib import Path
 import QuantLib as ql
 import mpmath as mp
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 POLICY = ROOT / 'query/contracts/analytics-skew-v1.json'
-FIXTURES = ROOT / 'harness/fixtures/analytics-skew-v1.json'
+FIXTURES = Path(__file__).resolve().parent / 'fixtures/analytics-skew-v1.json'
 
 
 def build():

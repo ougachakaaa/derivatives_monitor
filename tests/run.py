@@ -32,20 +32,24 @@ def build_steps():
 
 
 def profiles(profile):
-    checks = [step('docs', [sys.executable, ROOT / 'harness/check_docs.py'])]
+    checks = [step('docs', [sys.executable, ROOT / 'tests/check_docs.py']),
+              step('repository-boundaries', [sys.executable, ROOT / 'tests/check_repository.py']),
+              step('collector-sdk', [sys.executable, '-m', 'unittest',
+                                     'collector.tests.test_sdk_manifest', '-v'])]
     if profile == 'docs':
-        return checks + [step('docs-tests', [sys.executable, '-m', 'unittest',
-                              'harness.tests.test_docs', '-v'])]
-    checks += [step('harness-tests', [sys.executable, '-m', 'unittest', 'discover', '-s', 'harness/tests', '-v'])]
+        return checks + [step('repository-check-tests', [sys.executable, '-m', 'unittest',
+                              'tests.test_repository_checks', '-v'])]
+    checks += [step('verification-tests', [sys.executable, '-m', 'unittest',
+                    'tests.test_repository_checks', 'tests.test_verification_runner', '-v'])]
     if profile == 'analytics-contract':
-        return checks + [step('analytics-contract', [sys.executable, 'harness/check_analytics_contract.py'])]
+        return checks + analytics_contract_steps()
     if profile == 'analytics':
-        return checks + [step('analytics-contract', [sys.executable, 'harness/check_analytics_contract.py']),
+        return checks + analytics_contract_steps() + [
                          step('analytics-production', [PYTHON, '-m', 'unittest',
                               'tests.test_analytics', 'tests.test_skew_api', '-v'], ROOT / 'query')]
     if profile in ('docker', 'packaging'):
         checks += [step('docker-engine', ['docker', 'version'], timeout=30),
-                   step('docker-context', [sys.executable, 'harness/check_docker_context.py'], requires=['docker'], timeout=150)]
+                   step('docker-context', [sys.executable, 'tests/check_docker_context.py'], requires=['docker'], timeout=150)]
         if profile == 'packaging':
             return checks
         return checks + [step('docker-compose', ['docker', 'compose', 'version'], timeout=30),
@@ -54,8 +58,6 @@ def profiles(profile):
     checks += build_steps()
     if profile == 'offline':
         checks += [step('ctest', ['ctest', '--test-dir', BUILD, '--output-on-failure']),
-                   step('dev-semantics', [sys.executable, 'harness/check_dev_semantics.py', '--scope', 'all'],
-                        requires=[BUILD / 'bin/data_collector']),
                    step('dev-runner-tests', [sys.executable, '-m', 'unittest', 'discover',
                                              '-s', 'tests', '-p', 'test_dev*.py', '-v']),
                    step('dev-runner-smoke', [sys.executable, 'tests/dev_runner_smoke.py'],
@@ -73,6 +75,12 @@ def profiles(profile):
                    step('read-path', [PYTHON, 'tests/read_path_smoke.py'] + (['--browser'] if profile == 'browser' else []),
                         requires=['node'] if profile == 'browser' else [])]
     return checks
+
+
+def analytics_contract_steps():
+    return [step('analytics-contract-tests', [sys.executable, '-m', 'unittest',
+                 'tests.test_analytics_contract', '-v'], ROOT / 'query'),
+            step('analytics-contract', [sys.executable, 'query/tests/analytics_contract.py'])]
 
 
 def available(executable):
@@ -143,7 +151,7 @@ def main():
                                             'native', 'browser', 'packaging', 'docker'))
     args = parser.parse_args()
     timestamp = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')
-    folder = ROOT / 'artifacts/harness' / (timestamp + '-' + args.profile + '-' + uuid.uuid4().hex[:8])
+    folder = ROOT / 'artifacts/verification' / (timestamp + '-' + args.profile + '-' + uuid.uuid4().hex[:8])
     folder.mkdir(parents=True)
     report = dict(schema_version=1, profile=args.profile, started_at_utc=timestamp,
                   revision=git('rev-parse', 'HEAD'), worktree_status=git('status', '--short'),

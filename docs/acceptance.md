@@ -15,4 +15,4 @@
 
 模块状态：[Query](../query/ACCEPTANCE.md) · [Dashboard](../dashboard/ACCEPTANCE.md) · [Monitoring](../monitoring/ACCEPTANCE.md)。Query Feature 接口已实现，Monitoring runtime 尚未实现；平行扩展不替代上述门槛。
 
-运行与恢复见 [Operations](operations.md)，验证命令及结果边界见 [Harness](../harness/README.md)。真实验证使用[现场记录模板](../harness/live-acceptance-template.md)，原始证据单独保存，不在本文累计测试流水。
+运行与恢复见 [Operations](operations.md)，验证命令见 [Repository Verification](../tests/README.md)，结果边界见[证据语义](verification.md)。真实验证使用[现场记录模板](live-acceptance-template.md)，原始证据单独保存，不在本文累计测试流水。
