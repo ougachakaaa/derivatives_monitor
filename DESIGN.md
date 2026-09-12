@@ -30,7 +30,7 @@
 
 ## 5. 让派生结果可重放、可丢弃
 
-派生计算通过受契约约束的只读市场状态消费事实，并显式携带输入 revision、参考版本和算法身份。这样可以区分“同一历史输入的重建”与“当时已经产出的结果”，也避免分析代码依赖 Raw 表结构或隐藏的当前状态。
+派生计算通过受契约约束的只读 Market Frame 消费事实，并显式携带输入 revision、参考版本和算法身份。这样可以区分“同一历史输入的重建”与“当时已经产出的结果”，也避免分析代码依赖 Raw 表结构或隐藏的当前状态。
 
 Query 内部选择按请求计算、可重建派生值，理由见 [Query Design](query/DESIGN.md)；这不改变派生结果不能成为市场事实来源的跨模块边界。
 
@@ -52,8 +52,31 @@ Query 内部选择按请求计算、可重建派生值，理由见 [Query Design
 
 缓存、额外存储、调度或更宽部署面只应由明确的产品需求和真实性能/运维证据驱动。工程回归证明的是已覆盖行为，TEST DOUBLE、跳过项和历史报告不能替代实盘观察。探索性实验可以提供证据，但在明确纳入 Architecture 和 Contracts 前，不是正式运行时设计。
 
-## 9. 以稳定语义共享 Analytics，按实际需要拆模块
+## 9. 统一市场分析领域语言
 
-当前 Market State 解释已保存事实，Feature 以稳定、可追溯的语义发布派生结果。Query 采用薄 Feature provider 复用已有 Analytics，局部理由见 [Query Design](query/DESIGN.md)；无真实消费者或失败模式时，不预建计算图、动态插件和窗口框架。
+系统沿以下稳定语义关系演进；它描述领域概念及依赖方向，不表示每一层当前都已实现为独立模块：
 
-只有出现独立 Python 消费者、独立发布需求，或性能证据表明当前物理边界不合适时，才值得提取共享 Analytics 包；新增一个指标本身不足以触发拆包。提取保持 Feature ID、数值、时间、质量和追溯语义，并用相同输入对等验证，不借搬迁变更业务。当前物理边界见 [Architecture](ARCHITECTURE.md)，公共语义见 [Feature Contract](docs/contracts/features.md)。
+```text
+Raw Market Data
+→ Market Frame
+→ Market Indicator
+→ Market State
+→ Candidate Selection
+→ Human Decision
+```
+
+- **Raw Market Data** 是 Collector 保存的市场事实。
+- **Market Frame** 是按明确 scope、time 与 revision 组织的结构化市场数据视图。
+- **Market Indicator** 是从市场数据计算出的描述性分析结果，例如 Skew、IV Gradient 或 Return。
+- **Market State** 是综合多个 Market Indicators 后形成的市场决策状态；当前尚未实现。
+- **Candidate Selection** 结合 Market State 与 position/risk context 形成具体交易候选；当前尚未实现。
+- **Human Decision** 是系统外的最终交易判断。
+- **Market Session State** 只表示 `OPEN / BREAK / CLOSED / UNKNOWN` 交易时段状态，不是 Market State。
+
+实现职责与领域输出分开：Data Provider 产生 Market Frame，Analytics 计算 Market Indicator。Analytics 是计算能力，不是与 Market Indicator 平级的领域输出。系统不引入 Derived Feature、Opportunity State 等平行概念，也不因保留未来术语就预建 Market State Engine 或 Candidate Selector。
+
+## 10. 以稳定语义共享 Analytics，按实际需要拆模块
+
+当前 Query 以稳定、可追溯的 Market Indicator 发布派生结果，并采用薄 Indicator provider 复用已有 Analytics；局部理由见 [Query Design](query/DESIGN.md)。无真实消费者或失败模式时，不预建计算图、动态插件和窗口框架。
+
+只有出现独立 Python 消费者、独立发布需求，或性能证据表明当前物理边界不合适时，才值得提取共享 Analytics 包；新增一个指标本身不足以触发拆包。提取保持 Indicator ID、数值、时间、质量和追溯语义，并用相同输入对等验证，不借搬迁变更业务。当前物理边界见 [Architecture](ARCHITECTURE.md)，公共语义见共享指标 Contract。
