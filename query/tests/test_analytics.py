@@ -11,7 +11,7 @@ from unittest.mock import patch
 import analytics
 from analytics import (ALGORITHM_VERSION, CONTRACT_ID, SolverFailure, black_price,
                        _choose_wing, calculate_skew, solve_iv)
-from market_state import (OBSERVATION_COLUMNS, MarketStateReader, Scope, Universe,
+from market_frame import (OBSERVATION_COLUMNS, MarketFrameReader, Scope, Universe,
                           micros)
 from storage import Store
 
@@ -136,7 +136,7 @@ class PricingTest(unittest.TestCase):
 
 
 class SkewTest(unittest.TestCase):
-    def test_actual_market_state_reader_frame_is_consumed(self):
+    def test_actual_market_frame_reader_is_consumed(self):
         with tempfile.TemporaryDirectory() as directory_name:
             directory = Path(directory_name)
             path = directory / '20260916.sqlite'
@@ -182,7 +182,7 @@ class SkewTest(unittest.TestCase):
             members = tuple(row['instrument'] for row in CHAIN['rows'])
             universe = Universe('20260916', 'synthetic-chain-v1', members, True)
             scope = Scope.select(universe, 'CFFEX', 'MO', month='2610', option_chain=True)
-            reader = MarketStateReader(Store(directory))
+            reader = MarketFrameReader(Store(directory))
             actual_frame = reader.minute(scope, integration_end - timedelta(minutes=1),
                                          evaluated_at=integration_end,
                                          stale_after_us=30_000_000)

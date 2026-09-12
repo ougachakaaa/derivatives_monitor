@@ -1,4 +1,4 @@
-"""Pure MVP MO IV/Skew analytics over a Market State minute frame.
+"""Pure MVP MO IV/Skew analytics over a Market Frame minute view.
 
 The module never opens Raw storage, reads current reference files, or supplies
 fallback inputs.  Contract: query/contracts/analytics-skew.md (mo-skew-25d-v1).
@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 import math
 import re
 
-from market_state import ZONE, aware, micros
+from market_frame import ZONE, aware, micros
 
 
 CONTRACT_ID = 'mo-skew-25d-v1'
@@ -450,9 +450,9 @@ def calculate_skew(frame, reference, requested_at, *, historical):
             or type(frame['raw_revision']) is not int or frame['raw_revision'] < 0
             or frame['observation_clock'] != 'received_us'
             or frame['completeness'] not in ('COMPLETE', 'PARTIAL', 'EMPTY')):
-        raise ValueError('Analytics requires a Market State v1 MO option_chain minute frame')
+        raise ValueError('Analytics requires a Market Frame v1 MO option_chain minute view')
     if frame['stale_after_us'] != MAX_AGE_US:
-        raise ValueError('Analytics requires Market State stale_after_us=30000000')
+        raise ValueError('Analytics requires Market Frame stale_after_us=30000000')
     contracts = _parse_reference(reference)
     valuation_at = _timestamp(frame['effective_as_of'], 'frame.effective_as_of')
     minute_at = _timestamp(frame['minute'], 'frame.minute')

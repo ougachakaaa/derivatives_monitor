@@ -1,8 +1,8 @@
 # 只读查询后端
 
-Query 是 Python 3.12 / FastAPI 服务：读取 Collector 的 Raw 数据，提供诊断、Market Session、Market State、MO Skew 与 Feature JSON。这里提供安装、启动、调用和排障方法；内部设计与结构见本级 [Design](DESIGN.md)和 [Architecture](ARCHITECTURE.md)，共享 Raw 与 HTTP 分别见 [Raw Boundary](../docs/contracts/raw-boundary.md)和 [Read Path](../docs/contracts/read-path.md)。
+Query 是 Python 3.12 / FastAPI 服务：读取 Collector 的 Raw 数据，提供诊断、Market Session、Market Frame、MO Skew 与 Feature JSON。这里提供安装、启动、调用和排障方法；内部设计与结构见本级 [Design](DESIGN.md)和 [Architecture](ARCHITECTURE.md)，共享 Raw 与 HTTP 分别见 [Raw Boundary](../docs/contracts/raw-boundary.md)和 [Read Path](../docs/contracts/read-path.md)。
 
-本级契约与状态：[组件 Contract](CONTRACT.md) · [Market State](contracts/market-state.md) · [Analytics / Skew](contracts/analytics-skew.md) · [Reference adapter](contracts/references.md) · [Query Acceptance](ACCEPTANCE.md)。共享协议：[Market Session](../docs/contracts/market-session.md) · [Feature](../docs/contracts/features.md)。系统状态与验证入口见[根 Acceptance](../docs/acceptance.md)和 [Repository Verification](../tests/README.md)。
+本级契约与状态：[组件 Contract](CONTRACT.md) · [Market Frame](contracts/market-frame.md) · [Analytics / Skew](contracts/analytics-skew.md) · [Reference adapter](contracts/references.md) · [Query Acceptance](ACCEPTANCE.md)。共享协议：[Market Session](../docs/contracts/market-session.md) · [Feature](../docs/contracts/features.md)。系统状态与验证入口见[根 Acceptance](../docs/acceptance.md)和 [Repository Verification](../tests/README.md)。
 
 统一前台开发入口位于仓库根：`./dev doctor query` 检查本组件，`./dev up query` 运行本组件，`./dev up` 运行完整开发会话。参数示例和与持久部署的区别见 [Operations](../docs/operations.md#前台开发会话)；下面保留 Query 自身的安装、直接运行和调用用法。
 
@@ -66,16 +66,16 @@ python3 query/market_calendar.py --validate query/calendars/2026.json
 
 输入需使用带时区时间。Calendar 的交易日、OPEN/BREAK/CLOSED/UNKNOWN、夜盘归属和 source TradingDay 边界由 [Market Session Contract](../docs/contracts/market-session.md) 定义；参考文件维护见 [Calendar README](calendars/README.md)。
 
-## Market State Python / CLI
+## Market Frame Python / CLI
 
-`market_state.py` 可作为 Python 读模型使用：
+`market_frame.py` 可作为 Python 读模型使用：
 
 ```python
 from datetime import datetime
-from market_state import MarketStateReader, Scope
+from market_frame import MarketFrameReader, Scope
 from storage import Store
 
-reader = MarketStateReader(Store("../collector/data"))
+reader = MarketFrameReader(Store("../collector/data"))
 scope = Scope.instrument("MO2609-C-5000", "20260908")
 frame = reader.minute(
     scope,
@@ -87,10 +87,10 @@ frame = reader.minute(
 从仓库根目录运行等价 CLI：
 
 ```bash
-query/.venv/bin/python query/market_state.py minute --data-dir collector/data --day 20260908 --instrument MO2609-C-5000 --at '2026-09-08T09:30:00+08:00' --evaluated-at '2026-09-08T09:31:00+08:00'
+query/.venv/bin/python query/market_frame.py minute --data-dir collector/data --day 20260908 --instrument MO2609-C-5000 --at '2026-09-08T09:30:00+08:00' --evaluated-at '2026-09-08T09:31:00+08:00'
 ```
 
-产品、月份或期权链读取需要通过 `--universe` 显式提供保存的 Universe；查看完整参数用 `--help`。Scope、分钟选择、revision、quality、freshness、完整性和失败语义只由 [Market State Contract](contracts/market-state.md) 定义。
+产品、月份或期权链读取需要通过 `--universe` 显式提供保存的 Universe；查看完整参数用 `--help`。Scope、分钟选择、revision、quality、freshness、完整性和失败语义只由 [Market Frame Contract](contracts/market-frame.md) 定义。
 
 ## Skew API
 

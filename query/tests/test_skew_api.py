@@ -1,4 +1,4 @@
-"""TEST DOUBLE quotes/references; real SQLite, Market State, Analytics and HTTP."""
+"""TEST DOUBLE quotes/references; real SQLite, Market Frame, Analytics and HTTP."""
 from datetime import timedelta
 import fcntl
 import json
@@ -14,7 +14,7 @@ from unittest.mock import patch
 from fastapi.testclient import TestClient
 from app import create_app
 from market_calendar import Calendar, DEFAULT_DIRECTORY, parse_at
-from market_state import MarketStateReader, OBSERVATION_COLUMNS, micros
+from market_frame import MarketFrameReader, OBSERVATION_COLUMNS, micros
 from skew_references import ReferenceRepository, ReferenceUnavailable, digest, load_package
 from storage import Store
 from tests.test_analytics import CHAIN, reference
@@ -259,7 +259,7 @@ class SkewApiTest(unittest.TestCase):
 
     def test_series_pins_revision_during_late_write(self):
         append_chain(self.db, START + timedelta(minutes=2))
-        original = MarketStateReader.minute
+        original = MarketFrameReader.minute
         calls = []
         def read(reader, *args, **kwargs):
             result = original(reader, *args, **kwargs)
@@ -267,7 +267,7 @@ class SkewApiTest(unittest.TestCase):
             if len(calls) == 1:
                 append_chain(self.db, START + timedelta(minutes=2), invalid=True)
             return result
-        with patch.object(MarketStateReader, 'minute', read):
+        with patch.object(MarketFrameReader, 'minute', read):
             result = self.get('series', at='2026-09-16T09:32:00+08:00')
         self.assertEqual(calls, [None, result['raw_revision']])
         self.assertEqual([p['status'] for p in result['points']], ['OK', 'OK'])
@@ -278,7 +278,7 @@ class SkewApiTest(unittest.TestCase):
     def test_reference_context_pinned_to_loaded_bytes(self):
         context = self.repository.load(DAY, MONTH)
         (self.package / 'calendar.json').write_text('{}')
-        frame = MarketStateReader(Store(self.root),
+        frame = MarketFrameReader(Store(self.root),
                                   calendar=context.calendar).minute(context.scope, START,
                                   evaluated_at=START + timedelta(minutes=1), stale_after_us=30_000_000)
         self.assertEqual(frame['calendar_version'], context.bundle['calendar']['version'])

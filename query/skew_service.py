@@ -1,4 +1,4 @@
-"""MO business queries over Market State and frozen Analytics, without Raw SQL."""
+"""MO business queries over Market Frame and frozen Analytics, without Raw SQL."""
 from datetime import timedelta
 from pathlib import Path
 import re
@@ -6,7 +6,7 @@ import time
 
 from analytics import ALGORITHM_VERSION, CONTRACT_ID, calculate_skew
 from market_calendar import Calendar, CalendarError, parse_at, parse_day
-from market_state import MarketStateReader, micros
+from market_frame import MarketFrameReader, micros
 from skew_references import IDENTIFIER, ReferenceUnavailable, read_bytes
 from storage import QueryError
 
@@ -165,12 +165,12 @@ class SkewService:
         return result
 
     def _calculate(self, context, minute, at, historical, revision):
-        reader = MarketStateReader(self.store, calendar=context.calendar)
+        reader = MarketFrameReader(self.store, calendar=context.calendar)
         try:
             frame = reader.minute(context.scope, minute, evaluated_at=at,
                                   stale_after_us=30_000_000, raw_revision=revision)
         except ValueError:
-            raise QueryError(400, 'Minute or revision does not match available Market State') from None
+            raise QueryError(400, 'Minute or revision does not match available Market Frame') from None
         result = calculate_skew(frame, context.bundle, at, historical=historical)
         result['reference'].update(manifest_sha256=context.manifest_sha256,
                                    listing_sha256=context.listing_sha256)

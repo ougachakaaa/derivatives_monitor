@@ -7,7 +7,7 @@ int main() {
     using namespace collector;
     TempDirectory temp;
     DailyStore store(temp.path, 1000, {"IF2609"}, "TEST DOUBLE - health");
-    SessionStatus session; StateStats stats;
+    SessionStatus session; SnapshotBufferStats stats;
     session.instruments.emplace("IF2609", InstrumentStatus{});
     const auto path = temp.path / ".collector-status.json";
     CHECK(PublishHealth(temp.path, session, stats, store, ProcessState::Starting));

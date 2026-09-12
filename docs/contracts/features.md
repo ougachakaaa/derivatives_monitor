@@ -8,10 +8,10 @@
 
 | 层次 | 输出与职责 | 不承担 |
 |---|---|---|
-| Market State | 已保存事实的 as-of/minute/latest 解释，含时间、session、quality、completeness、revision | 定价和金融指标 |
-| Feature / Indicator | 按版本化定义计算的描述性数值、单位、有效性和输入证据 | 改写 Market State 或 Raw，以及定义特定消费者流程 |
+| Market Frame | 已保存事实的 as-of/minute/latest 解释，含时间、session、quality、completeness、revision | 定价和金融指标 |
+| Feature / Indicator | 按版本化定义计算的描述性数值、单位、有效性和输入证据 | 改写 Market Frame 或 Raw，以及定义特定消费者流程 |
 
-Market State 的精确行为沿用 [Market State Contract](../../query/contracts/market-state.md)。Feature 的公式、输入质量、时间选择、窗口和参考要求由对应指标 Contract 决定；通用层不把某个金融指标的口径推广为全部指标的默认口径。
+Market Frame 的精确行为沿用 [Market Frame Contract](../../query/contracts/market-frame.md)。Feature 的公式、输入质量、时间选择、窗口和参考要求由对应指标 Contract 决定；通用层不把某个金融指标的口径推广为全部指标的默认口径。
 
 Query 的注册表、provider 与内部依赖规则见 [Query Contract](../../query/CONTRACT.md#feature-provider)。
 
@@ -55,7 +55,7 @@ UNAVAILABLE 仍保留已经知道的时间/身份/原因，未知身份保持 nu
 
 ## 4. Rolling window 与后续指标
 
-需要 rolling market window 的 Feature provider 通过 Market State 的显式历史读取形成输入窗口，窗口选择和计算语义由 provider 所属指标 Contract 负责。
+需要 rolling market window 的 Feature provider 通过 Market Frame 的显式历史读取形成输入窗口，窗口选择和计算语义由 provider 所属指标 Contract 负责。
 
 窗口必须由对应指标 Contract 冻结长度、采样时钟、session 边界、缺口、参考身份和读取一致性；同一 Raw 日内固定 revision，多输入的实际身份必须显式保留，不能假称跨库原子快照。当前不新增窗口库或通用窗口框架。需要缓存时保持可重建、可失效，不能获得 Market Facts 写所有权。
 

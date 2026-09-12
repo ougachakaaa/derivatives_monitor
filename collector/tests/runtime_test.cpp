@@ -7,7 +7,7 @@ int main() {
     {
         Config batch_config; batch_config.subscription_batch_size = 100;
         for (int i = 0; i < 205; ++i) batch_config.instruments.push_back("IO2609-C-" + std::to_string(3000 + i * 50));
-        MarketState batch_state(batch_config.instruments); FakeApi batch_api;
+        MarketSnapshotBuffer batch_state(batch_config.instruments); FakeApi batch_api;
         CtpSession batch(batch_api, batch_config, batch_state, "test-double-batches");
         batch_api.RegisterSpi(&batch); batch_api.Init();
         const auto start = SteadyMs(); batch.Pump(start); batch_api.Login();
@@ -30,7 +30,7 @@ int main() {
     Config config;
     config.instruments = {"IF2609", "IO2609-C-4000"};
     config.connect_timeout_seconds = 2; config.retry_interval_seconds = 1; config.subscription_batch_size = 1;
-    MarketState state(config.instruments);
+    MarketSnapshotBuffer state(config.instruments);
     FakeApi api;
     CtpSession session(api, config, state, "test-double"); api.RegisterSpi(&session);
     auto now = SteadyMs();
@@ -75,7 +75,7 @@ int main() {
     api.spi->OnRtnDepthMarketData(&day1); api.spi->OnRtnDepthMarketData(&day2); api.spi->OnRtnDepthMarketData(&day3);
     Throws([&] { session.CheckFailure(); });
     {
-        MarketState zero_state(config.instruments);
+        MarketSnapshotBuffer zero_state(config.instruments);
         FakeApi zero_api;
         CtpSession zero_session(zero_api, config, zero_state, "test-double-zero-id");
         zero_api.RegisterSpi(&zero_session);

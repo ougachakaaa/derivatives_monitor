@@ -1,4 +1,4 @@
-"""TEST DOUBLE Feature projection over real SQLite, Market State and SkewService."""
+"""TEST DOUBLE Feature projection over real SQLite, Market Frame and SkewService."""
 from datetime import timedelta
 from pathlib import Path
 import tempfile

@@ -1,4 +1,4 @@
-"""TEST DOUBLE Feature HTTP over real SQLite, Market State and SkewService."""
+"""TEST DOUBLE Feature HTTP over real SQLite, Market Frame and SkewService."""
 from datetime import timedelta
 import fcntl
 import json

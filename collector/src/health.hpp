@@ -17,7 +17,7 @@ inline const char* ProcessStateName(ProcessState state) {
 
 // Diagnostic only: failure must never make the ingestion path depend on its reader.
 inline bool PublishHealth(const std::filesystem::path& directory, const SessionStatus& session,
-                          const StateStats& market, const DailyStore& store, ProcessState state) {
+                          const SnapshotBufferStats& buffer, const DailyStore& store, ProcessState state) {
     const auto temporary = directory / ".collector-status.tmp";
     const auto coverage_temporary = directory / ".collector-coverage.tmp";
     try {
@@ -40,9 +40,9 @@ inline bool PublishHealth(const std::filesystem::path& directory, const SessionS
              << ",\n  \"expected\": " << session.instruments.size()
              << ",\n  \"subscribed\": " << subscribed
              << ",\n  \"subscription_failed\": " << failed
-             << ",\n  \"accepted\": " << market.accepted
+             << ",\n  \"accepted\": " << buffer.accepted
              << ",\n  \"written\": " << store.Written()
-             << ",\n  \"last_received_us\": " << market.last_received_us
+             << ",\n  \"last_received_us\": " << buffer.last_received_us
              << ",\n  \"last_commit_us\": " << store.LastCommitUs() << "\n}\n";
         std::ofstream output(temporary, std::ios::trunc);
         output << json.str(); output.close();

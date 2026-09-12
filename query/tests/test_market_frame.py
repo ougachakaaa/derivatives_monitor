@@ -1,7 +1,7 @@
 from datetime import datetime
 import unittest
 
-from market_state import Scope, Universe, aware, micros
+from market_frame import Scope, Universe, aware, micros
 
 
 def at(value):
@@ -55,7 +55,7 @@ from pathlib import Path
 import sqlite3
 import tempfile
 
-from market_state import MarketStateReader
+from market_frame import MarketFrameReader
 from storage import QueryError, Store
 
 # Actual v1 fact columns; same names/types as Collector VisitFacts, no mock Store.
@@ -86,8 +86,8 @@ class FrameTest(unittest.TestCase):
             INSERT INTO dataset VALUES(1,'20260908',1);
             CREATE TABLE runs(run_id TEXT PRIMARY KEY, started_us INTEGER, stopped_us INTEGER,
                               last_write_us INTEGER, snapshot_interval_ms INTEGER, instruments TEXT, source TEXT);
-            INSERT INTO runs VALUES('a',1,NULL,2,15000,'MO2609-C-5000','TEST_DOUBLE_MARKET_STATE');
-            INSERT INTO runs VALUES('b',3,NULL,4,1000,'MO2609-C-5000','TEST_DOUBLE_MARKET_STATE');
+            INSERT INTO runs VALUES('a',1,NULL,2,15000,'MO2609-C-5000','TEST_DOUBLE_MARKET_FRAME');
+            INSERT INTO runs VALUES('b',3,NULL,4,1000,'MO2609-C-5000','TEST_DOUBLE_MARKET_FRAME');
         ''')
         columns = (['id INTEGER PRIMARY KEY', 'run_id TEXT', 'sequence INTEGER',
                     'received_us INTEGER', 'snapshot_us INTEGER']
@@ -99,7 +99,7 @@ class FrameTest(unittest.TestCase):
         self.db.commit()
         # Active writer semantics: reader must consume existing WAL/SHM.
         fcntl.flock(self.lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        self.reader = MarketStateReader(Store(self.directory))
+        self.reader = MarketFrameReader(Store(self.directory))
         self.scope = Scope.instrument('MO2609-C-5000', '20260908')
         self.sequence = 0
 
@@ -277,7 +277,7 @@ class FrameTest(unittest.TestCase):
         self.assertEqual(closed['frame']['rows'][0]['quality']['quote_age_us'], 3615000000)
 
     def test_latest_unknown_and_scope_day_mismatch(self):
-        unknown_reader = MarketStateReader(Store(self.directory / 'absent'), self.directory / 'no-calendar')
+        unknown_reader = MarketFrameReader(Store(self.directory / 'absent'), self.directory / 'no-calendar')
         unknown = unknown_reader.latest(self.scope, at('10:00:00'))
         self.assertEqual(unknown['market_state'], 'UNKNOWN')
         self.assertIsNone(unknown['frame'])
@@ -322,7 +322,7 @@ class FrameTest(unittest.TestCase):
         listing = self.directory / 'universe.json'
         listing.write_text(json.dumps(dict(trading_day='20260908', version='synthetic-80-v1',
                                          instruments=codes, complete=True)))
-        base = [sys.executable, str(Path(__file__).resolve().parents[1] / 'market_state.py'),
+        base = [sys.executable, str(Path(__file__).resolve().parents[1] / 'market_frame.py'),
                 'minute', '--data-dir', str(self.directory), '--day', '20260908',
                 '--at', at('09:30:00').isoformat(), '--evaluated-at', at('09:31:00').isoformat(),
                 '--universe', str(listing), '--exchange', 'CFFEX', '--product', 'MO',
@@ -359,12 +359,12 @@ class FrameTest(unittest.TestCase):
 
     def test_wal_commit_during_frame_is_not_mixed(self):
         from unittest.mock import patch
-        import market_state
+        import market_frame
         codes = ('MO2609-C-5000', 'MO2609-P-5000')
         self.scope = Scope.select(Universe('20260908', 'v1', codes, True), 'CFFEX', 'MO', month='2609')
         self.insert(code=codes[0])
         self.insert(code=codes[1])
-        old_quality = market_state.quality
+        old_quality = market_frame.quality
         calls = 0
         before_files = set(self.directory.iterdir())
         def quality_with_writer(*args):
@@ -373,7 +373,7 @@ class FrameTest(unittest.TestCase):
             if calls == 1:
                 self.insert('09:30:59', code=codes[1])
             return old_quality(*args)
-        with patch('market_state.quality', side_effect=quality_with_writer):
+        with patch('market_frame.quality', side_effect=quality_with_writer):
             frame = self.frame()
         self.assertEqual(frame['raw_revision'], 2)
         self.assertEqual([row['observation']['id'] for row in frame['rows']], [1, 2])

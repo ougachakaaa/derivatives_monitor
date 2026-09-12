@@ -1,6 +1,6 @@
-"""Deterministic market state over persisted Raw observations; never writes Raw.
+"""Deterministic Market Frames over persisted Raw observations; never writes Raw.
 
-Public contract v1: Universe, Scope, MarketStateReader, JSON-compatible results.
+Public contract v1: Universe, Scope, MarketFrameReader, JSON-compatible results.
 All times supplied by callers; source exchange clocks are retained as facts.
 """
 from dataclasses import dataclass
@@ -187,7 +187,7 @@ def quality(observation, age_reference_us, stale_after_us, scope):
                 flags=flags, reasons=reasons, quote_age_us=age)
 
 
-class MarketStateReader:
+class MarketFrameReader:
     """One short, read-only SQLite transaction per frame; no implicit current clock."""
 
     def __init__(self, store, calendar_directory=DEFAULT_DIRECTORY, *, calendar=None):
@@ -355,7 +355,7 @@ def main(argv=None):
                 raise ValueError('universe day differs from --day')
             scope = Scope.select(universe, args.exchange, args.product, month=args.month,
                                  option_chain=args.option_chain)
-        reader = MarketStateReader(Store(args.data_dir), args.calendar_dir)
+        reader = MarketFrameReader(Store(args.data_dir), args.calendar_dir)
         policy = dict(stale_after_us=args.stale_after_us, raw_revision=args.raw_revision)
         at = parse_at(args.at)
         if args.mode == 'minute':

@@ -33,8 +33,8 @@ struct SessionStatus {
 
 class CtpSession final : public CThostFtdcMdSpi {
 public:
-    CtpSession(CThostFtdcMdApi& api, const Config& config, MarketState& market, std::string run_id)
-        : api_(api), config_(config), market_(market), run_id_(std::move(run_id)) {
+    CtpSession(CThostFtdcMdApi& api, const Config& config, MarketSnapshotBuffer& buffer, std::string run_id)
+        : api_(api), config_(config), buffer_(buffer), run_id_(std::move(run_id)) {
         for (const auto& id : config.instruments) status_.instruments.emplace(id, InstrumentStatus{});
     }
     void OnFrontConnected() override;
@@ -63,7 +63,7 @@ private:
     }
     CThostFtdcMdApi& api_;
     const Config config_;
-    MarketState& market_;
+    MarketSnapshotBuffer& buffer_;
     const std::string run_id_;
     mutable std::mutex mutex_;
     SessionStatus status_;

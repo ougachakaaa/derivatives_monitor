@@ -18,7 +18,7 @@
 
 仅 `CFFEX / MO / 一个显式 YYMM`，同一 expiry 的完整上市清单。用户显式选月，v1 不自动换月、不混月、不拼期限曲面。清单须完整且当天已验证；Raw frame 可以 PARTIAL，只有本契约所需输入全部合格才产出 Skew。缺失其他合约仍报告缺口，不能将 PARTIAL 改为 COMPLETE。
 
-只消费 [Market State v1](market-state.md) 的 `option_chain` frame 与独立参考包；不直接访问 SQLite，不改变 Collector、Raw schema、15秒物化、日历、部署或 `experiments/`。派生值按请求在 Python 计算，不写 Raw 或 Derived SQLite，不把计算放进浏览器。现有 Market State 的 `usable` 不是 IV 保证。
+只消费 [Market Frame v1](market-frame.md) 的 `option_chain` frame 与独立参考包；不直接访问 SQLite，不改变 Collector、Raw schema、15秒物化、日历、部署或 `experiments/`。派生值按请求在 Python 计算，不写 Raw 或 Derived SQLite，不把计算放进浏览器。现有 Market Frame 的 `usable` 不是 IV 保证。
 
 ## 2. 数学定义与单位
 
@@ -101,7 +101,7 @@ MO 的法律标的是中证1000指数；v1 的估值输入是该到期月的**�
 
 ### 时间入口
 
-数值核心只接受 `kind=minute, sealed=true, session.phase=CONTINUOUS` 的完整单分钟 frame。`valuation_at=effective_as_of=minute_end`；请求的当前时间另作 `requested_at`，不得改变 T 或历史报价的计算 age。尚未封口返回 `MINUTE_UNSEALED`；竞价、跨 period、错 day、UNKNOWN 分别明确拒绝，不改 Calendar/Market State 语义。
+数值核心只接受 `kind=minute, sealed=true, session.phase=CONTINUOUS` 的完整单分钟 frame。`valuation_at=effective_as_of=minute_end`；请求的当前时间另作 `requested_at`，不得改变 T 或历史报价的计算 age。尚未封口返回 `MINUTE_UNSEALED`；竞价、跨 period、错 day、UNKNOWN 分别明确拒绝，不改 Calendar/Market Frame 语义。
 
 产品“最新值”选择规则也冻结：连续交易中只选**当前 period 最近已结束的整分钟**，首分钟未结束返回 `WAITING_FOR_MINUTE`；BREAK/CLOSED/竞价时，选日历上最近结束的连续交易分钟，输出 `historical=true`。这是按日历定位，不是查找有数据的旧分钟；所选分钟缺数据就失败，不再后退。调用 `reader.minute(..., evaluated_at=requested_at, stale_after_us=30000000)`，不消费或重写 `reader.latest()` 的盘后陈旧标志。
 
@@ -111,13 +111,13 @@ MO 的法律标的是中证1000指数；v1 的估值输入是该到期月的**�
 
 每个合约只使用 frame 已选择的真实 observation，不回查更老报价。以下全部满足才可作为平价或翼候选：
 
-- observation 存在，Raw/Market State 身份正确、invalid=false；`0≤minute_end_us−received_us≤30,000,000`。不修改 frame.quality，也不把比30秒宽的通用 usable 当通过。
+- observation 存在，Raw/Market Frame 身份正确、invalid=false；`0≤minute_end_us−received_us≤30,000,000`。不修改 frame.quality，也不把比30秒宽的通用 usable 当通过。
 - bid/ask 正数且有限、bid≤ask，BidVolume1/AskVolume1 是正整数（至少1手）；不使用 LastPrice、结算价或挂量加权价。
 - 报价符合0.2点格：`abs(price−round(price/0.2)*0.2)≤1e−8` 点；不替原报价取整。源 null、NaN/Inf、极大无效值仍无效。
 - `mid=(bid+ask)/2≥1.0` 点，`(ask−bid)/mid≤0.20+1e−12`。mid 可为0.1点格，不强行按交易tick取整；不要求盘口每分钟有新 callback。
 - 所有参考身份/期权类型/strike/expiry 与 bundle、scope 一致，revision 来自同一 frame。
 
-基础剔除原因固定为 `MISSING, INVALID_IDENTITY, INVALID_BOOK, INVALID_TICK, PRICE_TOO_SMALL, SPREAD_TOO_WIDE, NEGATIVE_AGE, STALE_QUOTE`，一条可有多个原因，按上述阶段检查并输出去重排序结果；Market State原始flags/reasons另字段保留。
+基础剔除原因固定为 `MISSING, INVALID_IDENTITY, INVALID_BOOK, INVALID_TICK, PRICE_TOO_SMALL, SPREAD_TOO_WIDE, NEGATIVE_AGE, STALE_QUOTE`，一条可有多个原因，按上述阶段检查并输出去重排序结果；Market Frame原始flags/reasons另字段保留。
 
 平价三对冻结后，对其余翼候选增加“该 observation 与平价六条合并跨度≤15秒”的筛选。最终实际使用的平价六条和左右翼插值端点（去重后最多10条）仍须整体跨度≤15秒；失败 `INPUTS_UNSYNCHRONIZED`，不重新选另一组。边界30秒/5秒/15秒均包含等号，使用整数 received_us 判断；不拿 snapshot_us/source UpdateTime 代替。
 
@@ -163,10 +163,10 @@ MO 的法律标的是中证1000指数；v1 的估值输入是该到期月的**�
 
 ## 10. 数值核心接口
 
-`calculate_skew(frame, reference_bundle, requested_at, historical=...)` 的依赖只有单个 Market State v1 MO option-chain minute frame、显式日参考包、请求时间与调用方按 Calendar 判定的历史标志；它不打开 Raw SQLite、不读取可变 `current`、不联网、不写 Derived SQLite，也不启动后台任务。
+`calculate_skew(frame, reference_bundle, requested_at, historical=...)` 的依赖只有单个 Market Frame v1 MO option-chain minute frame、显式日参考包、请求时间与调用方按 Calendar 判定的历史标志；它不打开 Raw SQLite、不读取可变 `current`、不联网、不写 Derived SQLite，也不启动后台任务。
 
 参考包的对象字段按§4表格落为：顶层 `schema_version/bundle_id/bundle_sha256/valid_trading_day/exchange/product/month/reviewed_at/review/source_kind/expiry_at`；`universe.version/sha256/instruments[]`，每个合约含 `id/side/strike/expiry`；`calendar.version/sha256/previous_cffex_trading_day`；`product_rules` 含产品事实、`source_url/source_version/source_sha256`；`rate` 含原始 `percent`、换算后 `decimal`、fixing/publish/retrieve/source 身份及计息元数据。必需结构缺失抛 `ValueError`，完整但不匹配返回 `UNAVAILABLE`。`SYNTHETIC` 只在 review 明确含 `TEST DOUBLE` 时接受。
 
-结果除§7字段外，将冻结的模型、delta、插值、报价阈值和 solver 常量放入 `algorithm`，并在 `reference` 给出 bundle、Universe、Calendar、产品规则与利率来源哈希。`provenance` 为每个 scope 成员保留 TradingDay、observation/run ID、received/snapshot/source time、bid/ask/mid、原 Market State quality、剔除原因、使用角色与 solver 详情；`excluded_count` 与 `eligible_count` 分开。错误不复用旧报价、旧 IV 或旧 Skew。
+结果除§7字段外，将冻结的模型、delta、插值、报价阈值和 solver 常量放入 `algorithm`，并在 `reference` 给出 bundle、Universe、Calendar、产品规则与利率来源哈希。`provenance` 为每个 scope 成员保留 TradingDay、observation/run ID、received/snapshot/source time、bid/ask/mid、原 Market Frame quality、剔除原因、使用角色与 solver 详情；`excluded_count` 与 `eligible_count` 分开。错误不复用旧报价、旧 IV 或旧 Skew。
 
 实现和回归证据只见[本级 Acceptance](../ACCEPTANCE.md)，不能由本接口规范推断生产或实盘验收状态。

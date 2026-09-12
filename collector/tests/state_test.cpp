@@ -13,7 +13,7 @@ int main() {
     CHECK(ValidNumber(0)); CHECK(ValidNumber(-3));
     // Logical 15-second windows: received order wins, including older source time.
     {
-        MarketState windows({"IF2609", "IO2609-C-4000"});
+        MarketSnapshotBuffer windows({"IF2609", "IO2609-C-4000"});
         auto first = Tick();
         CHECK(windows.Receive(first, 1000000));
         auto latest = first;
@@ -47,7 +47,7 @@ int main() {
         CHECK(batch[0].received_us == 46000000 && batch[0].snapshot_us == 60000000);
         CHECK(windows.Stats().accepted == 4);
     }
-    MarketState state({"IF2609", "IO2609-C-4000"});
+    MarketSnapshotBuffer state({"IF2609", "IO2609-C-4000"});
     auto tick = Tick();
     CHECK(state.Receive(tick, 10));
     tick.LastPrice = 4010;

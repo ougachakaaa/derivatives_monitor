@@ -5,9 +5,9 @@
 
 namespace collector {
 namespace {
-void Report(const CtpSession& session, const MarketState& state, const DailyStore& store) {
+void Report(const CtpSession& session, const MarketSnapshotBuffer& buffer, const DailyStore& store) {
     const auto status = session.Status();
-    const auto stats = state.Stats();
+    const auto stats = buffer.Stats();
     const auto now = NowUs();
     std::size_t subscribed = 0, failed = 0, receiving = 0;
     for (const auto& item : status.instruments) {
@@ -34,13 +34,13 @@ void Report(const CtpSession& session, const MarketState& state, const DailyStor
 int RunCollector(const Config& config, const volatile std::sig_atomic_t& stop, ApiPtr api) {
     const std::string source = api ? "TEST DOUBLE - injected API" : std::string("CTP ") + CThostFtdcMdApi::GetApiVersion();
     DailyStore store(config.data_directory, config.snapshot_interval_ms, config.instruments, source);
-    MarketState market(config.instruments);
+    MarketSnapshotBuffer buffer(config.instruments);
     std::filesystem::create_directories(config.flow_path);
     std::string flow_path = config.flow_path.string();
     if (flow_path.back() != '/') flow_path += '/';
     if (!api) api.reset(CThostFtdcMdApi::CreateFtdcMdApi(flow_path.c_str(), false, false, true));
     if (!api) throw std::runtime_error("CreateFtdcMdApi returned null");
-    CtpSession session(*api, config, market, store.RunId());
+    CtpSession session(*api, config, buffer, store.RunId());
     std::string front = config.front;
     const auto started_ms = SteadyMs();
     ctp::Log("utc_us=", NowUs(), " event=start run_id=", store.RunId(),
@@ -50,7 +50,7 @@ int RunCollector(const Config& config, const volatile std::sig_atomic_t& stop, A
         if (api) { api->RegisterSpi(nullptr); api.reset(); }
     };
     const auto flush = [&] {
-        const auto snapshots = market.Materialize(NowUs());
+        const auto snapshots = buffer.Materialize(NowUs());
         if (snapshots.empty()) return;
         try {
             const auto inserted = store.Write(snapshots);
@@ -62,7 +62,7 @@ int RunCollector(const Config& config, const volatile std::sig_atomic_t& stop, A
         }
     };
     const auto publish = [&](ProcessState state) {
-        PublishHealth(config.data_directory, session.Status(), market.Stats(), store, state);
+        PublishHealth(config.data_directory, session.Status(), buffer.Stats(), store, state);
     };
     try {
         publish(ProcessState::Starting);
@@ -83,15 +83,15 @@ int RunCollector(const Config& config, const volatile std::sig_atomic_t& stop, A
                 flush(); next_snapshot_ms = SteadyMs() + config.snapshot_interval_ms;
             }
             if (now_ms >= next_status_ms) {
-                Report(session, market, store); next_status_ms = now_ms + config.status_interval_seconds * 1000;
+                Report(session, buffer, store); next_status_ms = now_ms + config.status_interval_seconds * 1000;
             }
             if (logged_in_ms < 0 && now_ms - started_ms >= config.connect_timeout_seconds * 1000)
                 throw std::runtime_error("startup connection/login timeout");
             if (config.run_seconds > 0 && logged_in_ms >= 0 && now_ms - logged_in_ms >= static_cast<std::int64_t>(config.run_seconds) * 1000) break;
             std::this_thread::sleep_for(std::chrono::milliseconds(20));
         }
-        // The SPI and MarketState outlive Release, including any callbacks already in flight.
-        release(); session.CheckFailure(); flush(); Report(session, market, store);
+        // The SPI and MarketSnapshotBuffer outlive Release, including any callbacks already in flight.
+        release(); session.CheckFailure(); flush(); Report(session, buffer, store);
         try { store.Finish(); }
         catch (const std::exception& error) {
             ctp::Log("utc_us=", NowUs(), " event=persistence_failed run_id=", store.RunId(), " message=\"", error.what(), "\"");

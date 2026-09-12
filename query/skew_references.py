@@ -15,7 +15,7 @@ from urllib.parse import urlsplit
 
 from analytics import _parse_reference, _semantic_reference_reasons
 from market_calendar import Calendar, parse_day, parse_at
-from market_state import Scope, Universe
+from market_frame import Scope, Universe
 
 IDENTIFIER = re.compile(r'[A-Za-z0-9][A-Za-z0-9_-]{0,95}')
 PACKAGE_FILES = ('manifest.json', 'bundle.json', 'universe.json', 'calendar.json')
@@ -63,7 +63,7 @@ class ReferenceContext:
 
 
 def load_package(path, day, month, bundle_id, *, allow_synthetic=False):
-    """Pin all files to verified bytes before any Market State read."""
+    """Pin all files to verified bytes before any Market Frame read."""
     try:
         path = Path(path).resolve(strict=True)
         manifest_bytes = read_bytes(path / 'manifest.json')

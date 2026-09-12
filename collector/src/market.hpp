@@ -50,14 +50,14 @@ struct Snapshot {
     std::int64_t snapshot_us = 0;
     std::int64_t sequence = 0;
 };
-struct StateStats {
+struct SnapshotBufferStats {
     std::uint64_t accepted = 0, invalid_day = 0, unknown_instrument = 0, old_day = 0;
     std::int64_t last_received_us = 0;
 };
 
-class MarketState {
+class MarketSnapshotBuffer {
 public:
-    explicit MarketState(const std::vector<std::string>& instruments)
+    explicit MarketSnapshotBuffer(const std::vector<std::string>& instruments)
         : universe_(instruments.begin(), instruments.end()) {}
 
     bool Receive(const CThostFtdcDepthMarketDataField& data, std::int64_t received_us) {
@@ -95,13 +95,13 @@ public:
         return result;
     }
 
-    StateStats Stats() const { std::lock_guard<std::mutex> lock(mutex_); return stats_; }
+    SnapshotBufferStats Stats() const { std::lock_guard<std::mutex> lock(mutex_); return stats_; }
 private:
     struct Entry { Snapshot value; bool dirty = false; };
     const std::set<std::string> universe_;
     std::map<std::string, std::map<std::string, Entry>> days_;
     mutable std::mutex mutex_;
     std::int64_t sequence_ = 0;
-    StateStats stats_;
+    SnapshotBufferStats stats_;
 };
 } // namespace collector

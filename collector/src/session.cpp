@@ -75,7 +75,7 @@ void CtpSession::OnRtnDepthMarketData(CThostFtdcDepthMarketDataField* data) {
             std::lock_guard<std::mutex> lock(mutex_);
             if (!status_.logged_in) return;
         }
-        if (!market_.Receive(*data, received_us)) return;
+        if (!buffer_.Receive(*data, received_us)) return;
         std::lock_guard<std::mutex> lock(mutex_);
         auto it = status_.instruments.find(ctp::FieldString(data->InstrumentID));
         if (it != status_.instruments.end()) {
