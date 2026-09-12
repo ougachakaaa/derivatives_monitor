@@ -27,7 +27,7 @@ flowchart LR
 | Raw 日 SQLite | 保存 Collector 实际物化的行情事实、运行身份与时间来源 | 由 Collector 拥有；所有下游只读，不为页面或算法建立第二套事实 |
 | `collector/scripts/universe.py` | 通过 Query 的纯 Calendar 模块选择来源日，生成和发布版本化合约清单参考 | 是工具依赖，不进入 C++ runtime；不写行情，清单不替代 CTP 行情事实 |
 | `query/market_calendar.py` | 提供版本化交易日历、产品时段和逻辑交易日解释 | 不改写源 TradingDay，不控制采集启停 |
-| `query/` | 只读访问 Raw，将显式 Universe/Calendar 组合为 Market Frame，并计算和发布可重建 Analytics / Feature JSON | 不写 Raw；内部关系见 [Query Architecture](query/ARCHITECTURE.md) |
+| `query/` | 只读访问 Raw，将显式 Universe/Calendar 组合为 Market Frame，并通过 Analytics 计算和发布可重建 Market Indicator JSON | 不写 Raw；内部关系见 [Query Architecture](query/ARCHITECTURE.md) |
 | `dashboard/` | 构建独立 React 汇报页面；Docker 由 Nginx、原生 systemd 由 Vite 提供页面及 API 代理 | 只消费 JSON；不读 SQLite，不维护另一套指标公式 |
 | `compose.yaml` / `scripts/deploy.sh` | 组成和管理仓库级三服务 Docker runtime | 属于系统 integration layer；服务内部构建和运行输入仍由各模块拥有 |
 | 根 `tests/` 与模块测试 | 根测试组织跨模块回归并记录证据；模块测试证明 owner 行为 | 不定义产品行为，也不进入生产数据路径 |

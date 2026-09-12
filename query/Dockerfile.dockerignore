@@ -14,7 +14,7 @@ query/**
 !query/analytics.py
 !query/skew_service.py
 !query/skew_references.py
-!query/feature_service.py
+!query/indicator_service.py
 !query/calendars/
 query/calendars/**
 !query/calendars/2026.json
@@ -27,8 +27,8 @@ query/tests/**
 !query/tests/test_market_frame.py
 !query/tests/test_sessions_api.py
 !query/tests/test_skew_api.py
-!query/tests/test_feature_service.py
-!query/tests/test_features_api.py
+!query/tests/test_indicator_service.py
+!query/tests/test_indicators_api.py
 !query/tests/analytics_contract.py
 !query/tests/analytics_oracle.py
 !query/tests/test_analytics_contract.py

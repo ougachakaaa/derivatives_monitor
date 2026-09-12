@@ -73,10 +73,10 @@ Raw Market Data
 - **Human Decision** 是系统外的最终交易判断。
 - **Market Session State** 只表示 `OPEN / BREAK / CLOSED / UNKNOWN` 交易时段状态，不是 Market State。
 
-实现职责与领域输出分开：Data Provider 产生 Market Frame，Analytics 计算 Market Indicator。Analytics 是计算能力，不是与 Market Indicator 平级的领域输出。系统不引入 Derived Feature、Opportunity State 等平行概念，也不因保留未来术语就预建 Market State Engine 或 Candidate Selector。
+实现职责与领域输出分开：Data Provider 产生 Market Frame，Analytics 计算 Market Indicator。Analytics 是计算能力，不是与 Market Indicator 平级的领域输出。系统不为派生结果或机会判断引入平行领域层，也不因保留未来术语就预建 Market State Engine 或 Candidate Selector。
 
 ## 10. 以稳定语义共享 Analytics，按实际需要拆模块
 
 当前 Query 以稳定、可追溯的 Market Indicator 发布派生结果，并采用薄 Indicator provider 复用已有 Analytics；局部理由见 [Query Design](query/DESIGN.md)。无真实消费者或失败模式时，不预建计算图、动态插件和窗口框架。
 
-只有出现独立 Python 消费者、独立发布需求，或性能证据表明当前物理边界不合适时，才值得提取共享 Analytics 包；新增一个指标本身不足以触发拆包。提取保持 Indicator ID、数值、时间、质量和追溯语义，并用相同输入对等验证，不借搬迁变更业务。当前物理边界见 [Architecture](ARCHITECTURE.md)，公共语义见共享指标 Contract。
+只有出现独立 Python 消费者、独立发布需求，或性能证据表明当前物理边界不合适时，才值得提取共享 Analytics 包；新增一个指标本身不足以触发拆包。提取保持 Indicator ID、数值、时间、质量和追溯语义，并用相同输入对等验证，不借搬迁变更业务。当前物理边界见 [Architecture](ARCHITECTURE.md)，公共语义见 [Market Indicator Contract](docs/contracts/indicators.md)。

@@ -1,12 +1,12 @@
-"""TEST DOUBLE Feature projection over real SQLite, Market Frame and SkewService."""
+"""TEST DOUBLE Indicator projection over real SQLite, Market Frame and SkewService."""
 from datetime import timedelta
 from pathlib import Path
 import tempfile
 import unittest
 
-from feature_service import (FeatureRegistry, FeatureRequestError, FeatureService,
-                             SkewFeatureProvider, SKEW_FEATURE_ID, feature_envelope,
-                             skew_feature_service)
+from indicator_service import (IndicatorRegistry, IndicatorRequestError, IndicatorService,
+                             SkewIndicatorProvider, SKEW_INDICATOR_ID, indicator_envelope,
+                             skew_indicator_service)
 from market_calendar import DEFAULT_DIRECTORY
 from skew_references import ReferenceRepository
 from skew_service import SkewService
@@ -14,7 +14,7 @@ from storage import Store
 from tests.test_skew_api import DAY, MONTH, START, append_chain, make_database, write_package
 
 
-class FeatureServiceTest(unittest.TestCase):
+class IndicatorServiceTest(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
@@ -26,12 +26,12 @@ class FeatureServiceTest(unittest.TestCase):
         append_chain(self.db, START + timedelta(minutes=1))
         self.skew = SkewService(Store(self.root), ReferenceRepository(refs, allow_synthetic=True),
                                 DEFAULT_DIRECTORY, target_month=MONTH)
-        self.service = skew_feature_service(self.skew)
+        self.service = skew_indicator_service(self.skew)
 
     def request(self, **changes):
         request = {
             'schema_version': 1,
-            'feature_id': SKEW_FEATURE_ID,
+            'indicator_id': SKEW_INDICATOR_ID,
             'scope': {'exchange': 'CFFEX', 'product': 'MO', 'month': MONTH},
             'parameters': {},
             'requested_at': (START + timedelta(minutes=1)).isoformat(),
@@ -63,7 +63,7 @@ class FeatureServiceTest(unittest.TestCase):
         self.assertNotEqual(first['evidence']['raw_revision'], revised['evidence']['raw_revision'])
         self.assertEqual(first['sample_key'], revised['sample_key'])
         self.assertEqual(first['sample_key'], later['sample_key'])
-        self.assertTrue(first['sample_key'].startswith('feature-sample-v1:'))
+        self.assertTrue(first['sample_key'].startswith('indicator-sample-v1:'))
 
     def test_unknown_position_has_no_sample_key_but_preserves_failure(self):
         result = self.service.evaluate(self.request(
@@ -75,21 +75,21 @@ class FeatureServiceTest(unittest.TestCase):
         self.assertIsNone(result['sample_key'])
         self.assertEqual(result['evidence']['skew_25d_vp'], result['value'])
 
-    def test_registry_is_explicit_and_rejects_duplicates_or_unknown_features(self):
-        registry = FeatureRegistry()
-        provider = SkewFeatureProvider(self.skew)
-        registry.register(SKEW_FEATURE_ID, provider)
-        self.assertIs(registry.resolve(SKEW_FEATURE_ID), provider)
+    def test_registry_is_explicit_and_rejects_duplicates_or_unknown_indicators(self):
+        registry = IndicatorRegistry()
+        provider = SkewIndicatorProvider(self.skew)
+        registry.register(SKEW_INDICATOR_ID, provider)
+        self.assertIs(registry.resolve(SKEW_INDICATOR_ID), provider)
         with self.assertRaises(ValueError):
-            registry.register(SKEW_FEATURE_ID, provider)
-        with self.assertRaises(FeatureRequestError):
-            FeatureService(registry).evaluate(self.request(feature_id='unknown-v1'))
+            registry.register(SKEW_INDICATOR_ID, provider)
+        with self.assertRaises(IndicatorRequestError):
+            IndicatorService(registry).evaluate(self.request(indicator_id='unknown-v1'))
 
     def test_common_envelope_rejects_non_finite_provider_values(self):
         evidence = self.skew.query('latest', month=MONTH,
                                    at=(START + timedelta(minutes=1)).isoformat())
         with self.assertRaises(ValueError):
-            feature_envelope('TEST-DOUBLE-v1', {}, evidence, value=float('nan'),
+            indicator_envelope('TEST-DOUBLE-v1', {}, evidence, value=float('nan'),
                              unit='TEST_DOUBLE_UNIT', effective_at=evidence['valuation_at'])
 
     def test_request_scope_parameters_and_time_are_strict(self):
@@ -102,7 +102,7 @@ class FeatureServiceTest(unittest.TestCase):
             self.request(requested_at='2026-09-16T09:31:00'),
         ]
         for request in invalid:
-            with self.subTest(request=request), self.assertRaises(FeatureRequestError):
+            with self.subTest(request=request), self.assertRaises(IndicatorRequestError):
                 self.service.evaluate(request)
 
 

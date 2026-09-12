@@ -2,7 +2,7 @@
 
 # MVP Analytics / Skew contract v1
 
-状态：**FROZEN**，2026-09-08；契约 ID `mo-skew-25d-v1`。本文件冻结七项设计，机器常量见[策略文件](analytics-skew-v1.json)。这是当前单月 Skew MVP 的唯一 Analytics 定义；实现与验证状态见 [Query Acceptance](../ACCEPTANCE.md)，系统门槛见[根 Acceptance](../../docs/acceptance.md)。共享 [Feature 查询](../../docs/contracts/features.md)复用本契约，不改变任何冻结数值或质量要求。
+状态：**FROZEN**，2026-09-08；契约 ID `mo-skew-25d-v1`。本文件冻结七项设计，机器常量见[策略文件](analytics-skew-v1.json)。这是当前单月 Skew MVP 的唯一 Analytics 定义；实现与验证状态见 [Query Acceptance](../ACCEPTANCE.md)，系统门槛见[根 Acceptance](../../docs/acceptance.md)。共享 [Indicator 查询](../../docs/contracts/indicators.md)复用本契约，不改变任何冻结数值或质量要求。
 
 | 决定 | v1 选择 |
 |---|---|

@@ -1,4 +1,4 @@
-"""TEST DOUBLE Feature HTTP over real SQLite, Market Frame and SkewService."""
+"""TEST DOUBLE Indicator HTTP over real SQLite, Market Frame and SkewService."""
 from datetime import timedelta
 import fcntl
 import json
@@ -9,12 +9,12 @@ import unittest
 from fastapi.testclient import TestClient
 
 from app import create_app
-from feature_service import SKEW_FEATURE_ID
+from indicator_service import SKEW_INDICATOR_ID
 from skew_references import ReferenceRepository
 from tests.test_skew_api import DAY, MONTH, START, append_chain, make_database, write_package
 
 
-class FeatureApiTest(unittest.TestCase):
+class IndicatorApiTest(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
@@ -32,7 +32,7 @@ class FeatureApiTest(unittest.TestCase):
     def body(self, **changes):
         body = {
             'schema_version': 1,
-            'feature_id': SKEW_FEATURE_ID,
+            'indicator_id': SKEW_INDICATOR_ID,
             'scope': {'exchange': 'CFFEX', 'product': 'MO', 'month': MONTH},
             'parameters': {},
             'requested_at': (START + timedelta(minutes=1)).isoformat(),
@@ -41,7 +41,7 @@ class FeatureApiTest(unittest.TestCase):
         return body
 
     def post(self, **changes):
-        response = self.client.post('/api/features/evaluate', json=self.body(**changes))
+        response = self.client.post('/api/indicators/evaluate', json=self.body(**changes))
         self.assertEqual(response.status_code, 200, response.text)
         self.assertEqual(response.headers['cache-control'], 'no-store')
         return response.json()
@@ -55,7 +55,7 @@ class FeatureApiTest(unittest.TestCase):
         result = self.post()
         expected = old.json()
         self.assertEqual(result['schema_version'], 1)
-        self.assertEqual(result['feature_id'], SKEW_FEATURE_ID)
+        self.assertEqual(result['indicator_id'], SKEW_INDICATOR_ID)
         self.assertEqual(result['parameters'], {})
         self.assertEqual(result['value'], expected['skew_25d_vp'])
         self.assertEqual(result['unit'], expected['unit'])
@@ -86,10 +86,10 @@ class FeatureApiTest(unittest.TestCase):
         self.assertIsNone(waiting['value'])
         self.assertIsNone(waiting['sample_key'])
 
-    def test_structure_version_feature_scope_parameters_and_time_are_strict(self):
+    def test_structure_version_indicator_scope_parameters_and_time_are_strict(self):
         invalid = [
             {}, [], self.body(extra=True), self.body(schema_version=2), self.body(schema_version=True),
-            self.body(feature_id='unknown-v1'), self.body(feature_id=1),
+            self.body(indicator_id='unknown-v1'), self.body(indicator_id=1),
             self.body(scope={'exchange': 'CFFEX', 'product': 'MO'}),
             self.body(scope={'exchange': 'CFFEX', 'product': 'MO', 'month': MONTH, 'day': DAY}),
             self.body(scope={'exchange': 'CFFEX', 'product': 'IM', 'month': MONTH}),
@@ -99,59 +99,63 @@ class FeatureApiTest(unittest.TestCase):
         ]
         for body in invalid:
             with self.subTest(body=body):
-                response = self.client.post('/api/features/evaluate', json=body)
+                response = self.client.post('/api/indicators/evaluate', json=body)
                 self.assertEqual(response.status_code, 400, response.text)
                 self.assertEqual(response.headers['cache-control'], 'no-store')
 
     def test_json_query_and_method_failures(self):
         cases = [
-            self.client.post('/api/features/evaluate', content=b'{', headers={'content-type': 'application/json'}),
-            self.client.post('/api/features/evaluate', content=b'', headers={'content-type': 'application/json'}),
-            self.client.post('/api/features/evaluate', data={'schema_version': '1'}),
-            self.client.post('/api/features/evaluate?sql=select', json=self.body()),
-            self.client.post('/api/features/evaluate?x=1&x=2', json=self.body()),
-            self.client.post('/api/features/evaluate',
+            self.client.post('/api/indicators/evaluate', content=b'{', headers={'content-type': 'application/json'}),
+            self.client.post('/api/indicators/evaluate', content=b'', headers={'content-type': 'application/json'}),
+            self.client.post('/api/indicators/evaluate', data={'schema_version': '1'}),
+            self.client.post('/api/indicators/evaluate?sql=select', json=self.body()),
+            self.client.post('/api/indicators/evaluate?x=1&x=2', json=self.body()),
+            self.client.post('/api/indicators/evaluate',
                              content=b'{"schema_version":1,"schema_version":1}',
                              headers={'content-type': 'application/json'}),
-            self.client.post('/api/features/evaluate',
+            self.client.post('/api/indicators/evaluate',
                              content=b'{"schema_version":NaN}',
                              headers={'content-type': 'application/json'}),
         ]
         for response in cases:
             self.assertEqual(response.status_code, 400, response.text)
             self.assertEqual(response.headers['cache-control'], 'no-store')
-        self.assertEqual(self.client.get('/api/features/evaluate').status_code, 405)
+        self.assertEqual(self.client.get('/api/indicators/evaluate').status_code, 405)
+
+    def test_legacy_endpoint_is_not_retained(self):
+        legacy_path = '/api/' + 'fea' + 'tures/evaluate'
+        self.assertEqual(self.client.post(legacy_path, json=self.body()).status_code, 404)
 
     def test_unexpected_provider_error_remains_an_http_failure(self):
         class BrokenProvider:
             def evaluate(self, body):
                 raise RuntimeError('TEST DOUBLE provider failure')
 
-        with TestClient(create_app(self.root, feature_service=BrokenProvider()),
+        with TestClient(create_app(self.root, indicator_service=BrokenProvider()),
                         raise_server_exceptions=False) as client:
-            response = client.post('/api/features/evaluate', json=self.body())
+            response = client.post('/api/indicators/evaluate', json=self.body())
         self.assertEqual(response.status_code, 500)
         self.assertNotIn('value', response.text)
 
-    def test_raw_404_and_503_are_not_wrapped_as_feature_unavailable(self):
+    def test_raw_404_and_503_are_not_wrapped_as_indicator_unavailable(self):
         self.db.close()
         path = self.root / (DAY + '.sqlite')
         saved = path.read_bytes()
         path.unlink()
-        response = self.client.post('/api/features/evaluate', json=self.body())
+        response = self.client.post('/api/indicators/evaluate', json=self.body())
         self.assertEqual(response.status_code, 404)
         self.assertNotIn('status', response.json())
         path.write_bytes(saved)
         with (self.root / '.collector.lock').open('rb') as lock:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            response = self.client.post('/api/features/evaluate', json=self.body())
+            response = self.client.post('/api/indicators/evaluate', json=self.body())
             self.assertEqual(response.status_code, 503)
             self.assertIn('stop Collector', response.json()['error'])
 
     def test_production_registry_rejects_synthetic_reference(self):
         with TestClient(create_app(
                 self.root, reference_directory=self.refs, target_month=MONTH)) as client:
-            response = client.post('/api/features/evaluate', json=self.body())
+            response = client.post('/api/indicators/evaluate', json=self.body())
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()['status'], 'UNAVAILABLE')
         self.assertEqual(response.json()['reasons'], ['REFERENCE_INVALID'])

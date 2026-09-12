@@ -5,9 +5,9 @@
 
 API 按共享 [Raw Boundary](raw-boundary.md) 只读同一份数据，页面独立。当前操作见[Query](../../query/README.md)与[Dashboard](../../dashboard/README.md)。
 
-## Feature 查询扩展（已冻结）
+## Indicator 查询扩展（已冻结）
 
-只读 `POST /api/features/evaluate` 以 JSON body 承载一次无状态的单 Feature 查询。请求/响应、采样身份与 envelope 失败语义唯一由 [Feature Contract](features.md)定义，MO Skew 的字段映射见 [Query Contract](../../query/CONTRACT.md#feature-provider)；沿用本契约本地 HTTP、[Raw 只读保护](raw-boundary.md#只读消费与-wal)和 no-store。既有 Skew GET 与 Dashboard 保持兼容；当前实现与验证程度只见 [Query Acceptance](../../query/ACCEPTANCE.md#query-feature-evidence)。
+只读 `POST /api/indicators/evaluate` 以 JSON body 承载一次无状态的单 Indicator 查询。请求/响应、采样身份与 envelope 失败语义唯一由 [Indicator Contract](indicators.md)定义，MO Skew 的字段映射见 [Query Contract](../../query/CONTRACT.md#indicator-provider)；沿用本契约本地 HTTP、[Raw 只读保护](raw-boundary.md#只读消费与-wal)和 no-store。既有 Skew GET 与 Dashboard 保持兼容；当前实现与验证程度只见 [Query Acceptance](../../query/ACCEPTANCE.md#query-indicator-evidence)。
 
 ## 边界
 

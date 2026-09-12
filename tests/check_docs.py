@@ -17,7 +17,7 @@ REQUIRED_PATHS = (
       ('collector', 'collector/scripts', 'query', 'dashboard')),
     *(f'docs/contracts/{name}.md' for name in
       ('raw-boundary', 'read-path', 'market-session', 'deployment',
-       'developer-runner', 'features')),
+       'developer-runner', 'indicators')),
     *(f'query/contracts/{name}' for name in
       ('market-frame.md', 'analytics-skew.md', 'analytics-skew-v1.json', 'references.md')),
     'query/tests/fixtures/analytics-skew-v1.json',
