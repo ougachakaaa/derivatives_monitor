@@ -1,6 +1,6 @@
 # C++ Data Collector
 
-Collector 接收 CTP 行情，在内存维护最新状态并定期物化到 Raw 日 SQLite。这里提供构建、配置、直接运行和排障入口；本级工作路径见 [AGENTS](AGENTS.md)，内部关系见 [Architecture](ARCHITECTURE.md)，精确采集行为见 [Contract](CONTRACT.md)。共享持久化与读取协议见 [Raw Boundary](../docs/contracts/raw-boundary.md)。
+Collector 接收 CTP 行情，按 event time 聚合自然时间对齐的 15 秒 Market Bar，并将已封口 Bar 写入 Raw 日 SQLite。这里提供构建、配置、直接运行和排障入口；本级工作路径见 [AGENTS](AGENTS.md)，内部关系见 [Architecture](ARCHITECTURE.md)，精确采集行为见 [Contract](CONTRACT.md)。共享持久化与读取协议见 [Raw Boundary](../docs/contracts/raw-boundary.md)，当前代码与目标契约的差距见[根 Acceptance](../docs/acceptance.md)。
 
 相关入口：[Market Session / Universe Contract](../docs/contracts/market-session.md) · [Deployment Contract](../docs/contracts/deployment.md) · [Operations](../docs/operations.md) · [Acceptance](../docs/acceptance.md) · [Verification](../tests/README.md)
 
@@ -37,7 +37,7 @@ collector/build/Release/bin/data_collector --config collector/config.ini --check
 collector/build/Release/bin/data_collector --config collector/config.ini
 ```
 
-`config.ini`、`data/`、`flow/` 和 `build/` 默认被 Git 忽略，真实凭据不得提交。可用键、默认值、相对路径、订阅来源优先级和 CLI 覆盖规则统一见 [Collector Contract](CONTRACT.md#配置接口)；实际模板是 [`config.example.ini`](config.example.ini)。
+`config.ini`、`data/`、`flow/` 和 `build/` 默认被 Git 忽略，真实凭据不得提交。可用键、默认值、相对路径、订阅来源优先级和 CLI 覆盖规则统一见 [Collector Contract](CONTRACT.md#行情接入与配置接口)；实际模板是 [`config.example.ini`](config.example.ini)。
 
 需要手工调整旧配置时先正常停止 Collector，显式修改配置并保留原数据目录；不要把配置变更当作 schema 迁移。Universe、native manager 及镜像辅助命令见 [`collector/scripts` 手册](scripts/README.md)；完整三服务部署、配置准备、更新、停止与恢复步骤见 [Operations](../docs/operations.md)。
 
@@ -50,13 +50,13 @@ collector/build/Release/bin/data_collector --config collector/config.ini
 ./scripts/deploy.sh verify YYYYMMDD
 ```
 
-日志中常用事件包括 `front_connected`、`login_response`、`subscription_response`、`health`、`snapshot_commit`、`persistence_failed` 和 `stop`。连接、订阅、接收、写入和市场时段是不同证据；精确状态含义见 [Collector Contract](CONTRACT.md) 与 [Read Path Contract](../docs/contracts/read-path.md)。
+日志中常用事件包括 `front_connected`、`login_response`、`subscription_response`、`health`、`bar_commit`、`persistence_failed` 和 `stop`。连接、订阅、callback 接收、Bar 写入和市场时段是不同证据；精确状态含义见 [Collector Contract](CONTRACT.md) 与 [Read Path Contract](../docs/contracts/read-path.md)。
 
 可选的只读 SQLite 快速检查：
 
 ```bash
 sqlite3 -readonly collector/data/YYYYMMDD.sqlite \
-  'SELECT TradingDay,InstrumentID,UpdateTime,LastPrice,received_us FROM snapshots ORDER BY id DESC LIMIT 5;'
+  'SELECT TradingDay,InstrumentID,bucket_start_us,bar_close,last_event_us,is_partial FROM market_bars ORDER BY id DESC LIMIT 5;'
 ```
 
 这只是诊断入口，不定义 Raw schema。活跃库、WAL、锁、历史日及备份的安全读取边界见 [Raw Boundary](../docs/contracts/raw-boundary.md)，实际操作见 [Operations](../docs/operations.md)。
@@ -64,7 +64,7 @@ sqlite3 -readonly collector/data/YYYYMMDD.sqlite \
 ## 常见问题
 
 - **配置检查失败**：先运行 `--check-config`，确认前置、凭据、精确合约和相对目录；不要提交真实配置。
-- **已连接但没有数据**：在日志中分别核对登录、订阅响应、接收与 `snapshot_commit`；休市或不活跃合约不能直接判定进程故障。
+- **已连接但没有数据**：在日志中分别核对登录、订阅响应、callback 接收与 `bar_commit`；休市或不活跃合约不能直接判定进程故障。
 - **历史日读取返回错误**：不要删除 WAL 或放宽只读权限；按 [Operations](../docs/operations.md) 正常停采后检查或做隔离恢复。
 - **Docker 命令不可用**：确认 `docker version` 和 `docker compose version` 均能连接 Linux Engine；不要通过清理数据目录修复环境。
 - **需要 AU/AG 夜盘回归**：构建 Collector 并准备 Query 环境后运行：

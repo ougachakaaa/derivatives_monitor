@@ -25,12 +25,12 @@
 - Runner 的 lifecycle ownership 仅覆盖本次调用创建的组件子进程及其受控后代；它随当前 terminal session 工作，不接管其他终端、其他 checkout 或已经存在的进程。不得按进程名、端口或历史 PID 文件取得控制权。
 - Runner 不调用 native/systemd 或 Docker/Compose 管理器来启动、停止、安装、启用、更新或替换部署；不创建持久服务、定时器或可跨会话接管的运行状态，不后台驻留、不自动重启。已有部署占用端口或数据目录时报告冲突，由操作者通过原部署入口处理。
 - Collector、Query、Dashboard 可分别启动。联合启动只协调本次开发会话，不建立组件间启动或健康依赖。启动后的 Query/Dashboard 退出、HTTP 不可达或业务不可用，不触发 Collector 停止或重启；其他组件也不因同伴退出而被自动停止。Runner 保持管理仍存活的子进程并明确记录失败。
-- 用户结束会话，或 runner 收到 SIGINT、SIGTERM、终端 SIGHUP 时，只收尾本次拥有的进程，先发送 SIGTERM 并给予 60 秒正常退出宽限；超时仅可强制结束本次残留进程并明确报告。Collector 正常停止的 SDK 释放与尾部提交仍由 [Collector Contract](../../collector/CONTRACT.md#生命周期与失败语义)定义。SIGKILL、宿主退出或无法送达终端信号不具备正常收尾保证；不得报告尾部已提交。
+- 用户结束会话，或 runner 收到 SIGINT、SIGTERM、终端 SIGHUP 时，只收尾本次拥有的进程，先发送 SIGTERM 并给予 60 秒正常退出宽限；超时仅可强制结束本次残留进程并明确报告。Collector 正常停止的 SDK 释放、grace 与已封口 Bar 提交仍由 [Collector Contract](../../collector/CONTRACT.md#生命周期与失败语义)定义。SIGKILL、宿主退出或无法送达终端信号不具备正常收尾保证；不得报告内存 Bar 已提交。
 - Runner 的异常退出路径应尽力收尾自己已创建的进程；不能因清理失败扩大控制范围或隐瞒残留。非零子进程退出、启动失败和强制终止不得被汇总为会话成功。
 
 ## 开发配置与数据不变量
 
-- Collector 配置、flow、Raw 仍归 Collector；Runner 只消费已有配置，不创建或改写凭据、采样参数、运行时长、订阅配置，不自动刷新 Universe 或导入参考包。原生管理器的配置准备行为不因此改变，其操作见 [Collector 手册](../../collector/README.md)。
+- Collector 配置、flow、Raw 仍归 Collector；Runner 只消费已有配置，不创建或改写凭据、固定 Bar/grace 语义、运行时长、订阅配置，不自动刷新 Universe 或导入参考包。原生管理器的配置准备行为不因此改变，其操作见 [Collector 手册](../../collector/README.md)。
 - 开发入口遵守 [Raw Boundary](raw-boundary.md)：不建立第二套事实、迁移 schema、放宽只读规则，或为启动/停止清理数据、flow、日志及现场证据。跨开发会话、native 和 Docker 的同目录互斥仍由 Raw writer 锁最终保证；预检不能代替该锁。
 - 联合启动时 Query 必须读取本次 Collector 配置指向的同一数据目录；显式输入冲突应在启动前拒绝，不能静默选择不同目录。单独启动 Query 不需要读取 Collector 凭据配置，也不要求 Collector 运行。
 - 配置内相对路径继续以所选配置文件目录为基准，不因统一入口改变含义。Runner 不将 Collector 凭据或 INI 内容传给 Query/Dashboard；诊断不回显凭据或包含凭据的错误原行。
@@ -38,7 +38,7 @@
 
 ## Doctor 的账号字段边界
 
-`doctor` 不将 `UserID` / `Password` 的存在、缺省、空值或非空列为诊断项，不提示填写，不因两者缺省或为空产生 warning/error/unknown，也不探测账号有效性或网络登录。不显示其名称对应的值或配置原行。Collector 整体 `--check-config` 校验继续保留；非空值超过 SDK 字段容量等实际配置错误可以整体校验失败并脱敏报告，不得为隐藏账号诊断而绕过安全校验。字段和 MdApi 协议语义见 [Collector Contract](../../collector/CONTRACT.md#行情接入与可选账号字段)。
+`doctor` 不将 `UserID` / `Password` 的存在、缺省、空值或非空列为诊断项，不提示填写，不因两者缺省或为空产生 warning/error/unknown，也不探测账号有效性或网络登录。不显示其名称对应的值或配置原行。Collector 整体 `--check-config` 校验继续保留；非空值超过 SDK 字段容量等实际配置错误可以整体校验失败并脱敏报告，不得为隐藏账号诊断而绕过安全校验。字段和 MdApi 协议语义见 [Collector Contract](../../collector/CONTRACT.md#行情接入与配置接口)。
 
 ## 启动与健康的证据语义
 

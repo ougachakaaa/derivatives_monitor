@@ -2,46 +2,52 @@
 
 # Minute Market Frame / Latest Market Frame
 
-
-Python 契约 v1；已实现，当前状态见[本级 Acceptance](../ACCEPTANCE.md)，系统收尾门槛见[根验收矩阵](../../docs/acceptance.md)。
+Python 契约 v2；当前实现差距见[本级 Acceptance](../ACCEPTANCE.md)，系统收尾门槛见[根验收矩阵](../../docs/acceptance.md)。
 
 ## 架构位置
 
-Collector 的 callback、采样和物化行为见 [Collector Contract](../../collector/CONTRACT.md#数据与采样不变量)；Raw 所有权、分区身份、只读和 WAL/锁协议见 [Raw Boundary](../../docs/contracts/raw-boundary.md)。Python `Store.connect` 在该共享边界内提供事务和执行预算。`Calendar` 提供版本化产品时段（含竞价），native runtime 管理进程；这些机制不需要改写。
+Collector 的 callback、15 秒聚合和封口行为见 [Collector Contract](../../collector/CONTRACT.md#event-time-与-bucket)；Raw identity、schema、只读和 WAL/锁协议见 [Raw Boundary](../../docs/contracts/raw-boundary.md)。Python `Store.connect` 在该共享边界内提供事务和执行预算。`Calendar` 提供版本化产品时段（含竞价）；这些机制不改写 Raw event time 或 TradingDay。
 
-纯 Python `data_provider/market_frame.py`，复用 Store 和 Calendar，提供可导入的 scope / frame / latest 契约及 JSON CLI。无需新增 HTTP、调度任务或常驻缓存。Analytics 只依赖这个模块的输出，不理解文件路径、表名或 SQL。
+纯 Python `data_provider/market_frame.py` 复用 Store 和 Calendar，提供可导入的 scope/frame/latest 契约及 JSON CLI。Analytics 只依赖本模块输出，不理解文件路径、表名或 SQL；本模块不新增 HTTP、调度任务、常驻缓存或写路径。
 
 ## Scope 与完整性
 
-一个 scope 只含一个 exchange/product，可为 instrument、product、month 或 option_chain。代码解析复用现有 coverage 标识规则。instrument 显式指定一个代码；其他 scope 必须传入带 trading_day、version、完整性声明的显式 Universe，按产品/月筛选并固定排序、去重。可从调用者保存的 manifest 加载清单，但绝不默认读取 universe/current，也不从行情行推断全部上市合约。完整性声明是参考数据来源声明，不声称 Raw 或本模块独立验证了交易所全量上市清单。
+一个 scope 只含一个 exchange/product，可为 instrument、product、month 或 option_chain。instrument 显式指定一个代码；其他 scope 必须传入带 trading_day、version、完整性声明的显式 Universe，按产品/月筛选并固定排序、去重。绝不默认读取 universe/current，也不从 Raw Bar 推断全部上市合约。
 
-Universe 不完整时即使已知代码都有行情，frame 也不能 COMPLETE。输出 expected_count、observed_count、usable_count、missing/stale/invalid 计数；无 observation 为 EMPTY；清单完整且全部成员有有效且不过期 observation 为 COMPLETE；其余 PARTIAL。missing 成员仍占一个输出位置，observation=null。空 scope 也明确 EMPTY。完整链仅指所提供的完整清单中的所有 call/put/strike，不合成缺失行权价。
+Universe 不完整时，即使已知代码都有 Bar，frame 也不能 COMPLETE。输出 expected、observed、usable、missing、stale、invalid、raw_partial 和 quote-continuity-partial 数量；无 observation 为 EMPTY；清单完整且全部成员有有效、不过期 observation 为 COMPLETE；其余为 PARTIAL。missing 成员仍占输出位置且 observation 为 null；空 scope 明确 EMPTY。完整链仅指显式清单，不合成缺失行权价。
 
-## 时间和选择规则（契约 v1）
+## 时间、Bar identity 与选择
 
-- 输入为带时区 datetime，解释时区 Asia/Shanghai；微秒计算使用整数。主 observation 时钟是 Collector 的 received_us，而非不可可靠拼成时间戳的源 UpdateTime。保留 ActionDay、TradingDay、UpdateTime、UpdateMillisec、snapshot_us 和全部报价事实，不伪造交易所时间。
-- point as-of 包含 received_us == as_of；分钟标签必须整分钟，代表 [minute, minute+1min)，在 minute 结束处取严格小于 end 的最后 observation。允许同一个连续区间内使用更早分钟的真实 observation，但必须保留原时间及 age；这是显式 as-of 选择，不是新报价或插值。
-- 每个成员按 received_us DESC, id DESC 选一条。id 是该日唯一且跨 run 稳定的平局裁决，不比较跨 run sequence。最新行 invalid 时保留该行并报告问题，绝不退回较老的有效行。
-- 必须限制在同一个 Calendar period 的 [start,end)，竞价/连续切换、午休、日夜切换均隔离。请求 day 必须匹配该 period 的逻辑交易日；分钟必须全部位于一个 period 中。休市/休息分钟和未知日历不可当作可重建的交易分钟。
-- snapshot_us 可能晚于 minute end：本模型重建当前 Raw 中已保存的接收事实，不声称重现当时可见的数据库，不恢复未被15秒采样保留的 tick。
-- sealed = 显式 evaluated_at >= minute end，仅表示分钟时间已结束。未封口分钟只选择到 evaluated_at（inclusive），age也以 evaluated_at 计算；evaluated_at 早于分钟开始则拒绝。Raw 无最终提交 watermark，sealed 不保证后续 Raw 不变。每次事务读取 max(id) 作为 raw_revision；可传回该上限重建同一 append-only 日文件切片。相同 Raw、scope（含版本）、calendar、时间、策略和 revision 得到相同输出；不读取隐含 now。外部覆写/删除旧行不在 append-only 保证内。
+- 输入必须是带时区 datetime，统一解释到 Asia/Shanghai，微秒运算使用整数。每条 observation 的行情身份固定为 `(TradingDay, InstrumentID, bucket_start_us)`；`id` 只用于 revision/存储顺序，`run_id` 只用于 provenance。
+- canonical 选择时钟是 `bucket_end_us` 和 `last_event_us`。point as-of 只允许 `bucket_end_us <= as_of_us` 的已结束 Bar，等号包含；不会选当前未结束 bucket。分钟标签必须整分钟，代表 `[minute,minute+1min)`，在 minute end 选择 `bucket_end_us <= minute_end_us` 的最近 Bar。
+- 未封口分钟以 `min(evaluated_at, minute_end)` 为选择上限；`evaluated_at` 早于 minute start 拒绝。`sealed = evaluated_at >= minute_end` 只表示分钟时间结束，不声称当时数据库已经看见所有将在 grace 后提交的 Bar。
+- 每个成员按 `bucket_end_us DESC,id DESC` 选一条。目标 bucket 没有行时，允许在同一个 Calendar period 内选择更早的真实 Bar并保留其三元 identity、event time 和 age；这是只读 as-of，不是 Raw forward-fill、插值或新报价。不得跨竞价/连续切换、午休、日夜 period 或 TradingDay 继承。
+- `ActionDay` 跨午夜但 `TradingDay` 不变不会切断同一 Calendar period；Calendar 仍决定 period 边界。请求 day 必须匹配 period 的逻辑 TradingDay，休市/休息分钟和未知日历不可当作可重建交易分钟。
+- 每次 frame 在一个只读事务开始时读取 `max(id)` 作为 `raw_revision`，所有查询限制 `id <= raw_revision`；可传回该上限重建相同 append-only 切片。相同 Raw、scope/Universe、Calendar、时间、策略和 revision 产生相同输出，不读取隐含 now。
 
-## 质量与 Latest
+## Observation timing、质量与 partial
 
-quote_age_us = age_reference_us - received_us；stale 当 age > 显式 stale_after_us（默认60秒）。MISSING、STALE、INVALID 独立表达；invalid 包括缺失/非有限/非正的一级买卖价、非正挂量、买价大于卖价以及不一致的行身份/物化时间。原值保留，不修改价格、不算 mid、不筛选出“好看的”旧行。LastPrice 可缺失，一级双边报价质量是本模块默认可用标准，不等于可计算 IV 的承诺。
+- observation 保留 bucket start/end、bar OHLCV、callback counts、`last_event_us`、首末/close receive 时间、commit 时间、完整 bucket-close CTP state、partial reasons、`id` 和 `run_id`。接收/提交时间只作诊断，不参与 bucket、as-of、age 或跨合约同步选择。
+- `quote_age_us = age_reference_us - last_event_us`；stale 当 age 严格大于显式 `stale_after_us`（默认 60 秒）。未来 event、identity/bucket 不一致、时间不在 bucket、commit 早于必要接收证据，或一级买卖价/量非有限、价格非正、挂量非正、买价大于卖价均为 invalid。最新 Bar invalid 时保留并报告，不退回较老的好看 Bar。
+- `LastPrice` 或 Bar OHLC 可为空，不影响一级双边报价质量。Market Frame 不计算 mid，也不把 `bar_volume`/`bar_turnover` NULL 当作 Bid/Ask invalid。
+- counter-only reasons 为 `volume_baseline_missing`、`turnover_baseline_missing`、`volume_counter_invalid`、`turnover_counter_invalid`、`volume_counter_reset`、`turnover_counter_reset`；它们增加 raw_partial 诊断，但不降低 Bid/Ask usability。
+- quote-continuity reasons 为 `collector_start`、`trading_day_init`、`reconnect`、`invalid_event_time`、`event_time_regression`、`late_event`。它们不删除实际观察到的 close state，也不阻止下游保留计算值，但必须作为机器可读 quality/reason 传给 Analytics，使使用该 observation 的当前业务结果不可判为 current usable。
+- `first_received_us`、`last_received_us`、`close_received_us`、`committed_us` 不得替代 `last_event_us` 计算 age；较晚 commit 不会把旧行情变新。
 
-Latest 必须传入 at。OPEN 使用当前 period 截至 at；刚开盘没有新 observation 就 MISSING，不继承上一段。BREAK/CLOSED 只返回最近已经结束的 period 的历史 frame，标记 historical=true、effective_as_of 为该 period end（exclusive），age_reference 仍是请求 at，因此休市时间会增加 age。不是把历史价格重新盖上当前时间；最新竞价也可作为历史 period，不误用 Calendar.latest_session 的仅连续时段定义。
+## Latest 与失败
 
-Latest 分开报告 calendar_trading_day（CLOSED 常为下一交易日）和 frame 的实际 trading_day，调用方 Universe 必须匹配后者。UNKNOWN 不猜测时段，返回无 frame 的明确状态。缺文件抛 `DataNotFoundError`，不可读抛 `DataUnavailableError`；Query 分别映射为 404/503，不能伪装 EMPTY，也不跨库搜索“有数据的旧日”。
+Latest 必须传入 `at`。OPEN 使用当前 period 截至 at 已结束的 Bar；刚开盘没有已结束 observation 就 MISSING，不继承上一段。BREAK/CLOSED 只返回最近已经结束 period 的历史 frame，标记 `historical=true`、`effective_as_of` 为该 period end（exclusive），age reference 仍是请求 at。最新竞价也可作为历史 period，不误用 Calendar.latest_session 的仅连续时段定义。
 
-## SQL、部署与不可破坏边界
+Latest 分开报告 `calendar_trading_day` 和 frame 实际 TradingDay，调用方 Universe 必须匹配后者。UNKNOWN 不猜测时段，返回无 frame 的明确状态。缺文件抛 `DataNotFoundError`，不可读或非 schema v2 抛 `DataUnavailableError`；Query 分别映射为 404/503，不伪装 EMPTY，也不跨库搜索旧日。
 
-一帧一个 Store.connect 只读事务，先读取 max(id)，逐成员用已有 snapshots_instrument_time 索引做有界 top-1 查询；绑定所有参数，不加 Raw 索引或表。清单最多10000成员，沿用3秒 SQL预算；超时明确失败。不建立 Derived SQLite，不写缓存/Raw/sidecar，不改变 Collector、runtime、日历规则或部署读写挂载。模块随 Query 镜像复制，不新增第三方依赖。
+## SQL、部署与下游边界
 
-下游 IV Chain → Skew 获得有序 scope、原始 observation、时间、session、revision、quality、completeness；MO Skew v1按[已冻结下游契约](../../analytics/contracts/analytics-skew.md)筛选PARTIAL、age和报价有效性，不直接回到 SQLite；其他派生业务不得默认沿用为通用口径。本模块不实现 IV、Skew、Basis、定价或 Analytics；这些属于独立下游。
+一帧一个 `Store.connect` 只读事务，使用 `market_bars(InstrumentID,bucket_end_us,id)` 索引做有界 top-1 查询；绑定全部参数。清单最多 10000 成员，沿用 3 秒 SQL 预算，超时明确失败。不建立 Derived SQLite，不写缓存、Raw 或 sidecar，不改变 Collector、日历或部署挂载。
 
-## 验证
+下游 IV Chain → Skew 获得有序 scope、canonical Bar observation、session、revision、quality、completeness 与 partial reasons。MO Skew v1 按[下游契约](../../analytics/contracts/analytics-skew.md)选择 age、同步和报价；其他派生业务不得默认沿用为通用口径。本模块不实现 IV、Skew、Basis、定价或 Analytics。
 
-使用临时真实 SQLite/WAL、固定时间及受控 writer，覆盖分钟、完整链、平局、质量、跨 session、夜盘、迟到/revision、只读和错误。入口为 `python3 tests/run.py offline`；业务计算另按[MVP 验收条件](../../docs/acceptance.md)验证。
+## 验证语义
 
-审核 Skew 读取上下文可显式传 `MarketFrameReader(..., calendar=已加载Calendar)`；一旦提供即固定使用该对象，默认目录读取行为不变。Calendar 支持从已核对哈希的原字节初始化。该注入只固定参考身份，不改变 as-of/minute/latest、session、age 或 revision 规则。
+目标回归必须使用临时 schema v2 SQLite/WAL、固定时钟及受控 writer，覆盖四个 bucket 边界、分钟封口、同 period as-of、缺 bucket、平局、partial reason 分类、跨 session、ActionDay 午夜、迟到/revision、只读和错误。测试输入必须标记 TEST DOUBLE；其他 schema 的 fixture 不能证明本契约。
+
+审核 Skew 读取上下文可显式注入已加载 Calendar；一旦提供即固定该对象。该注入只固定参考 identity，不改变 Bar as-of、session、age 或 revision 规则。

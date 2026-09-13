@@ -8,7 +8,7 @@
 - Git commit、dirty 补丁身份、镜像/构建身份：待填
 - 机器/OS/CPU/内存/磁盘、原生或 Docker、依赖版本：待填
 - 数据目录与证据归档目录（不得只用 /tmp）：待填
-- 非敏感配置：采样间隔、产品/月/精确清单、Universe generation 和哈希、Calendar 版本：待填
+- 非敏感配置：固定 15 秒 Bar/1 秒 grace、产品/月/精确清单、Universe generation 和哈希、Calendar 版本：待填
 - 数据来源：REAL_CTP 或 TEST_DOUBLE（分别记录，不混用）；SDK 版本/run ID：待填
 - 脱敏说明及原件访问位置：待填；不记录密码
 
@@ -16,7 +16,7 @@
 
 记录三个完整交易日的起止、服务重启/断线原因、行情空洞解释。AU/AG 至少覆盖 21:00、23:59、00:00、02:30、次日日盘及下一真实 TradingDay；每个时点保存以下记录。交易时段以当次审核日历为准。
 
-| 检查时刻 | 源 TradingDay / ActionDay / UpdateTime | received_us / snapshot_us | 日文件身份 / run | 订阅/接收/提交计数 | 质量/缺口与原因 | 原件路径/SHA-256 |
+| 检查时刻 | TradingDay / bucket / last event | receive / committed time | 日文件 schema / Bar identity / run | 订阅/callback/Bar/partial/late 计数 | 质量/缺口与原因 | 原件路径/SHA-256 |
 |---|---|---|---|---|---|---|
 | 待填 | | | | | | |
 
@@ -59,7 +59,7 @@
 - 一天真实库：交易日/字节/行数/完整目标月成员数/副本身份，冷热条件及并发=1：待填
 - ≥100 次核心业务请求的原始耗时、成功/失败/超时总数及 P95（nearest-rank，排序第 ceil(0.95*n) 项）：待填
 - 要求成功请求 P95 ≤2秒，同时报告全部失败，不能隐藏失败来达标；业务不可用需另行判失败。
-- 活跃有效报价 observation ID 对应源时间/received_us/snapshot_us/浏览器显示时间、时钟同步依据、延迟与最大值：待填
+- 活跃有效报价 canonical Bar identity 对应 bucket/last-event/receive/commit/浏览器显示时间、时钟同步依据、延迟与最大值：待填
 - 接收至显示目标 ≤30秒，陈旧输入需标不可用；不以休市无行情评价延迟：待填
 
 结论：NOT_RUN。

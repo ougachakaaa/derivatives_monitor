@@ -20,8 +20,8 @@ API 按共享 [Raw Boundary](raw-boundary.md) 只读同一份数据，页面独�
 - `GET /healthz`：Python HTTP 服务自身存活，与 Collector/行情是否可用独立。
 - `GET /api/health`：Python 状态、共享目录可读性、Collector 心跳/进程状态、CTP 连接登录、接收及写入计数和最后时间。
 - `GET /api/days`：可用交易日及文件占用字节（主文件与 WAL），只接受真实合法日期文件名。
-- `GET /api/summary?day=YYYYMMDD`：该日确切 snapshot 总行数、逐合约行数/最后接收时间、文件占用字节。
-- `GET /api/snapshots?day=YYYYMMDD&instrument=CODE&limit=50`：返回最近行情事实；instrument 可省略，limit 限制 1–200，不允许任意 SQL/路径。
+- `GET /api/summary?day=YYYYMMDD`：该日确切 Market Bar 总行数、逐合约 Bar/partial/late 计数、最后 event/接收/提交时间和文件占用字节。
+- `GET /api/market-bars?day=YYYYMMDD&instrument=CODE&limit=50`：按 `bucket_start_us DESC,id DESC` 返回最近 canonical Raw Market Bar；instrument 可省略，limit 限制 1–200，不允许任意 SQL/路径，不提供其他行情事实路径的兼容别名。
 - 非法参数返回 400，缺失日文件 404，数据库不可读/不兼容/查询超时返回 503；空目录和空数据明确显示，不能伪造成“采集失败”。
 
 Dashboard 如何轮询、布局和清理显示状态由[页面契约](../../dashboard/CONTRACT.md)定义；本契约不从消费者实现反推 HTTP 行为。
@@ -59,7 +59,7 @@ WAL、sidecar、immutable、共享锁、复制和 backup 的唯一约束见 [Raw
 
 最新分钟选择、封口、BREAK/CLOSED/竞价、缺数据不回退和 current usability 统一由 [Skew Contract](../../analytics/contracts/analytics-skew.md#时间入口)定义；本 HTTP contract 只投影其结果。
 
-单点响应是 [Skew Contract §7 逻辑输出](../../analytics/contracts/analytics-skew.md#7-输出错误及当日变化)的 JSON 投影（含 `skew_25d_vp`、`unit=vol_point`、`status/reasons`、quality 与 eligible/excluded 计数），字段语义不在本契约重复；HTTP 呈现另加 `schema_version=1`、`session`、`display_age_us` 等协议字段。原始 Raw rows、内部 scope 清单、表结构和本地路径不公开。
+单点响应是 [Skew Contract §7 逻辑输出](../../analytics/contracts/analytics-skew.md#7-输出错误及当日变化)的 JSON 投影（含 `skew_25d_vp`、`unit=vol_point`、`status/reasons`、quality 与 eligible/excluded 计数），字段语义不在本契约重复；HTTP 呈现另加 `schema_version=1`、`session`、`display_age_us` 等协议字段。provenance 使用 canonical Bar identity、bucket/last-event/receive/commit 时间及 partial reasons。原始 Raw rows、内部 scope 清单、表结构和本地路径不公开。
 
 追溯字段与 provenance 内容沿用 [Skew Contract §7 与 §10](../../analytics/contracts/analytics-skew.md#7-输出错误及当日变化)，本契约只固定 HTTP 命名差异：Market Frame 的四个 `invalid_BidPrice1/AskPrice1/BidVolume1/AskVolume1` 原因在 HTTP 中对应 `invalid_bid/invalid_ask/invalid_bid_size/invalid_ask_size`，其余质量语义不变。源时间保留原值，不拼造交易所时间戳；完整数值不按页面显示精度舍入。
 

@@ -3,7 +3,7 @@
 # Market Calendar / Session 共享契约
 
 
-Calendar 和 Universe 是独立参考能力，不进入 C++ callback 或 Raw 写入链路；采集侧的精确代码、分区与采样规则见 [Collector Contract](../../collector/CONTRACT.md)。采集范围由 [MVP](../mvp.md)定义。
+Calendar 和 Universe 是独立参考能力，不进入 C++ callback 或 Raw 写入链路；采集侧的精确代码、TradingDay 分区与 event-time 15 秒聚合规则见 [Collector Contract](../../collector/CONTRACT.md)。采集范围由 [MVP](../mvp.md)定义。
 
 Data Provider 的 Calendar 适配见 [Data Provider Contract](../../data_provider/CONTRACT.md#data-provider-calendar-contract)；独立 universe 工具使用同一共享日历协议选择来源日期。官方来源与年历维护见[参考年历说明](../../data_provider/calendars/README.md)。
 

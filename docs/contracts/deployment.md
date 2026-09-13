@@ -17,7 +17,7 @@ Skew 审核参考包可保存在数据目录的 `references/analytics/`，由独
 ## 生命周期
 
 - Collector 无 Query/Dashboard 启动依赖。API 不调用管理器；日历不触发开收盘启停。
-- 仓库级 `scripts/deploy.sh up` 是唯一正式 Docker system deployment 入口，首次交互配置、后续复用。它协调三服务构建、预检、启动、状态、日志和停止，但 Collector 的配置与 runtime state 仍归 `collector/`。固定 `DataDirectory=data`、`FlowPath=flow`、`RunSeconds=0`；首次默认连接超时 120 秒、采样 15000ms、状态日志 10 秒。构建、测试和权限/配置预检在更新现有容器前完成；固定 Compose 项目禁止另一 checkout 接管原实例。
+- 仓库级 `scripts/deploy.sh up` 是唯一正式 Docker system deployment 入口，首次交互配置、后续复用。它协调三服务构建、预检、启动、状态、日志和停止，但 Collector 的配置与 runtime state 仍归 `collector/`。固定 `DataDirectory=data`、`FlowPath=flow`、`RunSeconds=0`；首次默认连接超时 120 秒、状态日志 10 秒，Market Bar 固定为 15 秒且封口 grace 固定为 1 秒，不是部署配置。构建、测试和权限/配置预检在更新现有容器前完成；固定 Compose 项目禁止另一 checkout 接管原实例。
 - Docker 使用 `unless-stopped`，Collector 直接接收 SIGTERM，停止宽限 60 秒。`stop` 保留数据；故障可能反复重启，必须通过日志/退出码/重启计数判断，不把 running 当成功行情。
 - Docker 日志每份 10MB、保留三份。`logs` 的退出不停止采集；更新前按需要导出旧容器日志。
 - 原生管理器使用三个用户 systemd 服务及 universe 定时器，并按 [Universe Tool Contract](../../collector/scripts/CONTRACT.md#保留发布与失败)的发布结果决定是否正常重启活跃 Collector；手工 `up` 则启用并重启三个服务。08:45/09:00/09:15 与 20:40/21:00/21:15 为更新/重试点。此 Python 管理工具不进入 C++ 采集运行时。

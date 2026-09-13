@@ -5,13 +5,13 @@
 | 门槛 | 当前状态 | 剩余缺口 |
 |---|---|---|
 | G1 连续真实运行 | 待验 | 固定环境连续三个完整交易日，含 AU/AG 夜盘、跨午夜及交易日切换 |
-| G2 可信数据 | 读取、质量及失败语义已实现；真实业务待验 | 完整 MO 月链分钟质量与异常验证 |
-| G3 正确指标 | Skew 数值核心、JSON 与参考适配已实现；真实对账待验 | 审核官方日参考包，至少十个真实时点独立对账，覆盖正常与异常 |
+| G2 可信数据 | 新 15 秒 Market Bar 语义已冻结；producer 与 read path 尚未实现 | Collector 仍写 Raw v1 `snapshots`，Data Provider/Query 仍读取旧 schema；完成 schema v2、partial/continuity 与真实 MO 月链验证 |
+| G3 正确指标 | Skew 数值核心已实现于旧 observation 输入；新 Bar provenance/时钟尚未实现 | 先完成 Market Frame/Analytics 的 bucket/event-time 接入，再审核官方日参考包并完成至少十个真实时点独立对账 |
 | G4 可用页面 | 汇报首页已实现；人工使用待验 | 真实输入上三次日常使用，验证三十秒理解且无需 SQL/日志 |
 | G5 恢复可靠 | 恢复机制有工程回归；现场待验 | 最终部署版本回归及真实数据隔离备份恢复验证 |
 | G6 可以交付 | 开发、原生与 Docker 入口已提供；最终交付待验 | 固定版本可复现部署，审核限制和阻断项 |
 | P1 查询性能 | 未验 | 真实一天完整目标链，至少一百次核心查询，P95 ≤ 2 秒并记录错误 |
-| P2 显示延迟 | 未验 | 配对同一 observation 的源、接收、物化和显示时间，实测 ≤ 30 秒目标 |
+| P2 显示延迟 | 未验 | 配对同一 Bar 的 bucket、最后 event、接收、提交和显示时间，实测 ≤ 30 秒目标 |
 
 模块状态：[Data Provider](../data_provider/ACCEPTANCE.md) · [Analytics](../analytics/ACCEPTANCE.md) · [Query](../query/ACCEPTANCE.md) · [Dashboard](../dashboard/ACCEPTANCE.md)。
 

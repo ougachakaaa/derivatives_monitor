@@ -23,8 +23,8 @@ flowchart LR
 | 组件 | 当前职责 | 边界 |
 |---|---|---|
 | CTP Market Data SDK | 提供外部行情回调与连接生命周期 | 是 Collector 的上游外部依赖，不是下游应用接口 |
-| `collector/` 的 C++ runtime | 接收行情、维护最新内存状态并物化 Raw；管理采集侧连接、订阅和运行诊断 | Raw 的唯一 writer；不计算业务指标，不依赖 Query 或 Dashboard runtime |
-| Raw 日 SQLite | 保存 Collector 实际物化的行情事实、运行身份与时间来源 | 由 Collector 拥有；所有下游只读，不为页面或算法建立第二套事实 |
+| `collector/` 的 C++ runtime | 接收行情、按 CTP event time 聚合自然时间对齐的 15 秒 Market Bar，并管理连接、订阅和运行诊断 | Raw 的唯一 writer；不计算业务指标，不依赖 Query 或 Dashboard runtime |
+| Raw 日 SQLite | 保存不可变 15 秒聚合事实、bucket-close CTP 市场状态、运行来源与观察时间 | 由 Collector 拥有；所有下游只读，不为页面或算法建立第二套事实 |
 | `collector/scripts/universe.py` | 通过 Data Provider 的纯 Calendar 模块选择来源日，生成和发布版本化合约清单参考 | 是工具依赖，不进入 C++ runtime；不写行情，清单不替代 CTP 行情事实 |
 | `data_provider/market_calendar.py` | 提供版本化交易日历、产品时段和逻辑交易日解释 | 是 Query 进程内源码模块；不改写源 TradingDay，不控制采集启停 |
 | `data_provider/` | 只读访问 Raw，将显式 Universe/Calendar 组合为 Market Frame，并解释 data availability/coverage | Query 进程内源码模块；不写 Raw，不计算金融指标 |
@@ -36,7 +36,7 @@ flowchart LR
 
 ## 数据流与依赖方向
 
-1. Collector 从 SDK 接收行情并把实际物化结果写入按源交易日组织的 Raw 日库。
+1. Collector 从 SDK 接收 `DepthMarketData`，以 `ActionDay + UpdateTime + UpdateMillisec` 归入固定自然 15 秒 bucket，将已封口的 canonical Market Bar 写入按源 `TradingDay` 组织的 Raw 日库。
 2. Data Provider 的只读 Store 从同一 Raw 目录取得事实；Market Frame 再结合显式 Universe 与 Calendar 形成稳定的下游读取模型。
 3. Analytics 只消费 Market Frame 和独立审核参考包。业务 service 负责时间切片、读取身份固定及 JSON 投影。
 4. FastAPI 提供 JSON；Dashboard 通过 API 展示业务结果和诊断，不跨过 API 访问数据文件。

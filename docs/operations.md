@@ -44,7 +44,7 @@ docker stop --time 60 "$(docker ps -q --filter label=com.docker.compose.project=
 
 恢复采集仍执行 `./scripts/deploy.sh up`。Compose、镜像输入、挂载和停止宽限的精确约束见 [Deployment Contract](contracts/deployment.md)。
 
-日常分别检查主循环心跳、连接/登录、逐合约订阅、最后接收/提交、源交易日和清单/日历版本；查看 `snapshot_commit` 与两次只读行数/最近时间确认推进。市场 CLOSED/BREAK、不活跃合约无推送、订阅失败与进程健康是不同状态，计数与证据口径见 [Raw Boundary](contracts/raw-boundary.md#collector-运行诊断协议)，不要在它们之间直接互推。
+日常分别检查主循环心跳、连接/登录、逐合约订阅、最后 callback 接收/Bar 提交、源 TradingDay 和清单/日历版本；查看 `bar_commit` 与两次只读 Bar 行数/最近 bucket 和 event time 确认推进。市场 CLOSED/BREAK、不活跃合约无推送、订阅失败与进程健康是不同状态，计数与证据口径见 [Raw Boundary](contracts/raw-boundary.md#collector-运行诊断协议)，不要在它们之间直接互推。
 
 ## 前台开发会话
 
@@ -78,7 +78,7 @@ QUERY_URL=http://127.0.0.1:8000 ./dev up dashboard --dashboard-port 8101
 
 - 原生 `update` 获取并发布公开清单，可能正常重启 Collector；不要把维护命令当成只读检查。具体失败、旧清单保留和发布判定见 [Universe Tool Contract](../collector/scripts/CONTRACT.md)，Docker/手工入口不自动提供相同的 universe 定时器。
 - 日历当前覆盖 2026，跨年前按[年历维护规则](../data_provider/calendars/README.md)审核并发布新版本；发布后的生效行为与 UNKNOWN 语义见 [Data Provider Contract](../data_provider/CONTRACT.md#data-provider-calendar-contract)及共享 [Market Session Contract](contracts/market-session.md#market-session-shared-contract)。
-- 软件更新前保留版本、日志和数据。构建与配置预检成功后部署，使用正常 SIGTERM 尾部提交。已有采样配置不自动改写；显式 `1000` 仍为一秒，需要改成 `15000` 时由操作人明确配置。
+- 软件更新前保留版本、日志和数据。构建与配置预检成功后部署，使用正常 SIGTERM 提交已封口 Bar；当前未结束 bucket 不持久化。Bar 周期固定为 15 秒，不存在运行时采样周期配置。
 - 不删除运行依赖的 `collector/build/` 工具、不清理配置/data/flow；Raw、universe 原响应与 generations 暂不自动轮转，观察剩余磁盘并制定保留策略。磁盘故障时优先保留证据，不能删库换取“健康”。
 
 ## 故障处理
@@ -93,7 +93,7 @@ Collector 活跃但所查历史日已关闭且缺 sidecar 时，Query 按 [Read 
 
 推荐 MVP 使用计划停机备份，步骤可审查且不引入第二个 Raw writer：
 
-1. 记录版本、数据目录、实际日文件、采样参数、run ID 和清单/Calendar 版本；选定不覆盖已有文件的备份目的目录。
+1. 记录版本、数据目录、实际日文件、Raw schema、固定 Bar/grace 参数、run ID 和清单/Calendar 版本；选定不覆盖已有文件的备份目的目录。
 2. 正常停止 Collector；关闭读连接。确认服务已终止且目录 writer 锁已释放。若是异常退出先完成正常恢复，不删除 WAL；存在非空 WAL 时不能只复制主文件。
 3. 对已正常关闭、无非空 WAL 的日库逐个执行只读 `integrity_check` 和 `foreign_key_check`，记录 dataset 身份、行数、run 来源、最大 id、文件 SHA-256。复制日库及重放所需的不可变 Universe generation、Calendar、已审核 ReferenceBundle 和来源原件，记录对应算法版本。配置备份单独以受限权限保存，不进 Git。
 4. 把备份复制到全新的隔离恢复目录。比较 SHA-256 和只读完整性、dataset、行数/最大 id；不要覆盖实际 `collector/data/`。按[Query 手册](../query/README.md)使用 `--data-dir` 指向恢复目录，读取样本分钟并比较固定 revision 输出；通过现有离线参考包导入与 Skew API，对相同 Raw revision、ReferenceBundle 和算法版本执行指标重放对账，业务判定仍以 [Analytics / Skew Contract](../analytics/contracts/analytics-skew.md)为准。若没有已审核的生产参考包，将指标重放记为未执行，不得用 TEST DOUBLE 代替 live recovery evidence。

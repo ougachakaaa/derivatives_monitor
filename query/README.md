@@ -47,7 +47,7 @@ Query 不需要 CTP 凭据。生产挂载、只读权限、端口和服务生命
 | `GET /api/sessions` | 交易所/品种的 Market Session 查询 |
 | `GET /api/days` | 可用 Raw 日文件 |
 | `GET /api/summary?day=YYYYMMDD` | 指定日汇总 |
-| `GET /api/snapshots?day=YYYYMMDD&instrument=CODE&limit=50` | 最近 Raw snapshot |
+| `GET /api/market-bars?day=YYYYMMDD&instrument=CODE&limit=50` | 最近 canonical Raw Market Bar |
 | `GET /api/skew/latest?month=YYMM` | 最近可展示的 MO Skew |
 | `GET /api/skew/series?day=YYYYMMDD&month=YYMM` | 当日分钟序列和变化 |
 | `GET /api/skew/minute?day=YYYYMMDD&minute=ISO&month=YYMM` | 指定分钟回看 |

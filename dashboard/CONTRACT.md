@@ -23,7 +23,7 @@
 
 ## 诊断与市场时段
 
-- 健康、coverage、日列表、summary/snapshots 和 sessions 各自失败时清除相应健康/新鲜证据；如保留旧数据，必须明确标为旧值，不能继续显示绿色成功。诊断失败不清除本次成功的 Skew 业务结果，Skew 失败也不把诊断状态改写为失败。
+- 健康、coverage、日列表、summary/market-bars 和 sessions 各自失败时清除相应健康/新鲜证据；如保留旧数据，必须明确标为旧值，不能继续显示绿色成功。诊断失败不清除本次成功的 Skew 业务结果，Skew 失败也不把诊断状态改写为失败。
 - 页面提供独立市场时段表，允许同时显示例如 CFFEX `CLOSED` 与 SHFE `OPEN`，且不重新解释 API 返回的 session 状态。sessions 请求失败时清空旧时段状态并显示未知，绝不改变 Collector 健康的定义。
 
 ## 边界

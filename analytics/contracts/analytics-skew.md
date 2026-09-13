@@ -2,7 +2,7 @@
 
 # MVP Analytics / Skew contract v1
 
-状态：**FROZEN**，2026-09-08；契约 ID `mo-skew-25d-v1`。本文件冻结七项设计，机器常量见[策略文件](analytics-skew-v1.json)。这是当前单月 Skew MVP 的唯一 Analytics 定义；实现与验证状态见 [Analytics Acceptance](../ACCEPTANCE.md)，系统门槛见[根 Acceptance](../../docs/acceptance.md)。共享 [Indicator 查询](../../docs/contracts/indicators.md)复用本契约，不改变任何冻结数值或质量要求。
+状态：**FROZEN**，2026-09-13；契约 ID `mo-skew-25d-v1`。本文件冻结七项设计，机器常量见[策略文件](analytics-skew-v1.json)。这是当前单月 Skew MVP 的唯一 Analytics 定义；实现与验证状态见 [Analytics Acceptance](../ACCEPTANCE.md)，系统门槛见[根 Acceptance](../../docs/acceptance.md)。共享 [Indicator 查询](../../docs/contracts/indicators.md)复用本契约，不改变任何冻结数值或质量要求。
 
 | 决定 | v1 选择 |
 |---|---|
@@ -10,7 +10,7 @@
 | Pricing model | 无 displacement 的 Black-76；年化 lognormal IV；European premium-style 折现价格 |
 | Underlying semantics | 同一 MO 到期月三个近 ATM C/P 对的平价隐含远期，中位数聚合；不是现货或 IM 报价 |
 | Reference parameters | 官方已验证合约/到期日与产品规则；前一 CFFEX 交易日 3M Shibor；显式版本化日参考包 |
-| Quote synchronization | 已封口的连续交易分钟；最新真实 bid/ask midpoint；age≤30秒；C/P差≤5秒；最终所有输入跨度≤15秒 |
+| Quote synchronization | 已封口的连续交易分钟；最新真实 Bar close bid/ask midpoint；以 `last_event_us` 判断 age≤30秒、C/P差≤5秒及最终输入跨度≤15秒 |
 | IV solver contract | 有界二分法，σ∈[0.0001,5]、最多128轮，同时满足σ区间和回代价格精度；失败不夹值 |
 | Independent validation | 固定 QuantLib 1.40 外部 oracle、mpmath 1.3.0 高精度价格对照、入库数值向量；生产后续另做真实10时点对账 |
 
@@ -18,7 +18,7 @@
 
 仅 `CFFEX / MO / 一个显式 YYMM`，同一 expiry 的完整上市清单。用户显式选月，v1 不自动换月、不混月、不拼期限曲面。清单须完整且当天已验证；Raw frame 可以 PARTIAL，只有本契约所需输入全部合格才产出 Skew。缺失其他合约仍报告缺口，不能将 PARTIAL 改为 COMPLETE。
 
-只消费 [Market Frame v1](../../data_provider/contracts/market-frame.md) 的 `option_chain` frame 与独立参考包；不直接访问 SQLite，不改变 Collector、Raw schema、15秒物化、日历、部署或 `experiments/`。派生值按请求在 Python 计算，不写 Raw 或 Derived SQLite，不把计算放进浏览器。现有 Market Frame 的 `usable` 不是 IV 保证。
+只消费 [Market Frame v2](../../data_provider/contracts/market-frame.md) 的 `option_chain` frame 与独立参考包；不直接访问 SQLite，不改变 Collector、Raw schema、15 秒 Bar、日历或部署。派生值按请求在 Python 计算，不写 Raw 或 Derived SQLite，不把计算放进浏览器。Market Frame 的 `usable` 不是 IV 保证。
 
 ## 2. 数学定义与单位
 
@@ -68,11 +68,11 @@ sigma_25 = (1-alpha)*sigma_lo + alpha*sigma_hi
 
 MO 的法律标的是中证1000指数；v1 的估值输入是该到期月的**期权平价隐含远期**。它是派生估计，包含市场 carry/供需/报价误差，不声称观测到现货、真实无套利远期或可交易期货价。
 
-1. 从同一个 frame 的 latest observations 中组成同 K、同到期日的 C/P 对。两条都须满足 §5 的基础报价条件，且 received_us 差≤5,000,000。
+1. 从同一个 frame 的 latest Bar observations 中组成同 K、同到期日的 C/P 对。两条都须满足 §5 的基础报价条件，且 `last_event_us` 差≤5,000,000。
 2. 按 `(abs(C_mid−P_mid), K, call_id, put_id)` 升序选 **前三个不同 K**；不足三个返回 `FORWARD_PAIRS_MISSING`。这是确定的近 ATM 代理选择，不需要先有现货或 IM。
-3. 六条报价整体 received_us 跨度须≤15,000,000，否则 `FORWARD_UNSYNCHRONIZED`。不更换旧 observation 或搜索其他三元组来掩盖失败。
+3. 六条报价整体 `last_event_us` 跨度须≤15,000,000，否则 `FORWARD_UNSYNCHRONIZED`。不更换旧 observation 或搜索其他三元组来掩盖失败。
 4. 各对 `F_i=K+(C_mid−P_mid)/D`。三个 F_i 均须正且有限；`F=median(F_i)`。每个 `abs(F_i−F)/F≤0.001`，否则 `FORWARD_INCONSISTENT`。阈值是项目质量策略，不是交易所规则。
-5. 输出三个 K、六个 observation ID、mid、F_i、选取排序依据、最大偏差和时间跨度。三个对可能与最终翼节点重合，来源按 observation ID 去重。
+5. 输出三个 K、六个 canonical Bar identity、mid、F_i、选取排序依据、最大偏差和时间跨度。三个对可能与最终翼节点重合，来源按三元 Bar identity 去重。
 
 不回退到 IM、其他月份、LastPrice、现货猜值或昨日 F；不同时估计 D 与 F，不增加平价回归模型。选用同一 MO frame 避免跨产品读取混合 revision，也不受 IM 与 MO 挂牌月份不完全重合的限制。平价计算不需要先求 IV，不形成循环依赖。
 
@@ -111,17 +111,17 @@ MO 的法律标的是中证1000指数；v1 的估值输入是该到期月的**�
 
 每个合约只使用 frame 已选择的真实 observation，不回查更老报价。以下全部满足才可作为平价或翼候选：
 
-- observation 存在，Raw/Market Frame 身份正确、invalid=false；`0≤minute_end_us−received_us≤30,000,000`。不修改 frame.quality，也不把比30秒宽的通用 usable 当通过。
+- observation 存在，Raw/Market Frame 三元 Bar identity 正确、invalid=false；`0≤minute_end_us−last_event_us≤30,000,000`。不修改 frame.quality，也不把比 30 秒宽的通用 usable 当通过。
 - bid/ask 正数且有限、bid≤ask，BidVolume1/AskVolume1 是正整数（至少1手）；不使用 LastPrice、结算价或挂量加权价。
 - 报价符合0.2点格：`abs(price−round(price/0.2)*0.2)≤1e−8` 点；不替原报价取整。源 null、NaN/Inf、极大无效值仍无效。
 - `mid=(bid+ask)/2≥1.0` 点，`(ask−bid)/mid≤0.20+1e−12`。mid 可为0.1点格，不强行按交易tick取整；不要求盘口每分钟有新 callback。
 - 所有参考身份/期权类型/strike/expiry 与 bundle、scope 一致，revision 来自同一 frame。
 
-基础剔除原因固定为 `MISSING, INVALID_IDENTITY, INVALID_BOOK, INVALID_TICK, PRICE_TOO_SMALL, SPREAD_TOO_WIDE, NEGATIVE_AGE, STALE_QUOTE`，一条可有多个原因，按上述阶段检查并输出去重排序结果；Market Frame原始flags/reasons另字段保留。
+基础剔除原因固定为 `MISSING, INVALID_IDENTITY, INVALID_BOOK, INVALID_TICK, PRICE_TOO_SMALL, SPREAD_TOO_WIDE, NEGATIVE_AGE, STALE_QUOTE`，一条可有多个原因，按上述阶段检查并输出去重排序结果；Market Frame 原始 flags/reasons 另字段保留。counter-only partial reasons 不剔除报价；使用带 quote-continuity reason 的真实 observation 仍可计算数值，但结果必须包含 `PARTIAL_INPUT`、原始原因且 `current_usable=false`。
 
-平价三对冻结后，对其余翼候选增加“该 observation 与平价六条合并跨度≤15秒”的筛选。最终实际使用的平价六条和左右翼插值端点（去重后最多10条）仍须整体跨度≤15秒；失败 `INPUTS_UNSYNCHRONIZED`，不重新选另一组。边界30秒/5秒/15秒均包含等号，使用整数 received_us 判断；不拿 snapshot_us/source UpdateTime 代替。
+平价三对冻结后，对其余翼候选增加“该 observation 与平价六条合并跨度≤15秒”的筛选。最终实际使用的平价六条和左右翼插值端点（去重后最多10条）仍须整体跨度≤15秒；失败 `INPUTS_UNSYNCHRONIZED`，不重新选另一组。边界30秒/5秒/15秒均包含等号，使用整数 `last_event_us` 判断；不拿 receive/commit 时间或 bucket-close `UpdateTime` 字符串代替。
 
-以上只保证**本地接收时间上的有界同步**，15秒采样无法恢复完整 tick，也无法证明交易所层面同时报价。输出 observation_clock、每条 received/snapshot/source时间和最终跨度。单翼 IV 失败可以保留诊断，但不产出 Skew；缺不相关成员可以产出明确 `PARTIAL_INPUT` 的合格 Skew。
+以上只保证 **CTP event time 上的有界同步**；15 秒 Bar 无法恢复完整 tick，也无法证明交易所层面同时报价。输出 `observation_clock=ctp_event_time`、每条 bucket/last-event/receive/commit 时间和最终跨度。单翼 IV 失败可以保留诊断，但不产出 Skew；缺不相关成员或仅 counter-only partial 可以产出明确 `PARTIAL_INPUT` 的合格 Skew。
 
 ## 6. IV solver
 
@@ -135,7 +135,7 @@ MO 的法律标的是中证1000指数；v1 的估值输入是该到期月的**�
 
 ## 7. 输出、错误及当日变化
 
-逻辑输出契约（HTTP 入口与投影另见 Read Path）：`schema_version=1, contract_id, algorithm_version, status, reasons[], scope, valuation_at, requested_at, historical, current_usable, reconstructed, display_age_us, raw_revision, universe/calendar/reference身份, input_completeness, expected/observed/eligible counts, F及三对明细, L/T/D/r_eff, wings, skew_25d_vp, provenance[]`。每个 provenance 含 day/id/run_id/received_us/snapshot_us/source time、mid、剔除原因或使用角色；不可计算为 JSON null，禁止 NaN/Inf、空字符串或0冒充失败。
+逻辑输出契约（HTTP 入口与投影另见 Read Path）：`schema_version=1, contract_id, algorithm_version, status, reasons[], scope, valuation_at, requested_at, historical, current_usable, reconstructed, display_age_us, raw_revision, universe/calendar/reference身份, input_completeness, expected/observed/eligible counts, F及三对明细, L/T/D/r_eff, wings, skew_25d_vp, provenance[]`。每个 provenance 含 TradingDay/InstrumentID/bucket_start、id/run_id、bucket end、last event、receive/commit 时间、partial reasons、mid、剔除原因或使用角色；不可计算为 JSON null，禁止 NaN/Inf、空字符串或0冒充失败。
 
 `status=OK` 或 `UNAVAILABLE`；OK 仍可带 PARTIAL_INPUT，历史标识单独保留。参数类型/必需结构缺失或非MO scope 抛 `ValueError`（HTTP适配为400）；结构完整但参考缺失/不匹配、质量或业务前提不满足时返回 UNAVAILABLE 与对应reason，不另造成功结果；Data Provider 的缺失/不可用错误继续由 Query 映射为 404/503，不转成 EMPTY 或普通缺翼。
 
@@ -163,10 +163,10 @@ MO 的法律标的是中证1000指数；v1 的估值输入是该到期月的**�
 
 ## 10. 数值核心接口
 
-`calculate_skew(frame, reference_bundle, requested_at, historical=...)` 的依赖只有单个 Market Frame v1 MO option-chain minute frame、显式日参考包、请求时间与调用方按 Calendar 判定的历史标志；它不打开 Raw SQLite、不读取可变 `current`、不联网、不写 Derived SQLite，也不启动后台任务。
+`calculate_skew(frame, reference_bundle, requested_at, historical=...)` 的依赖只有单个 Market Frame v2 MO option-chain minute frame、显式日参考包、请求时间与调用方按 Calendar 判定的历史标志；它不打开 Raw SQLite、不读取可变 `current`、不联网、不写 Derived SQLite，也不启动后台任务。
 
 参考包的对象字段按§4表格落为：顶层 `schema_version/bundle_id/bundle_sha256/valid_trading_day/exchange/product/month/reviewed_at/review/source_kind/expiry_at`；`universe.version/sha256/instruments[]`，每个合约含 `id/side/strike/expiry`；`calendar.version/sha256/previous_cffex_trading_day`；`product_rules` 含产品事实、`source_url/source_version/source_sha256`；`rate` 含原始 `percent`、换算后 `decimal`、fixing/publish/retrieve/source 身份及计息元数据。必需结构缺失抛 `ValueError`，完整但不匹配返回 `UNAVAILABLE`。`SYNTHETIC` 只在 review 明确含 `TEST DOUBLE` 时接受。
 
-结果除§7字段外，将冻结的模型、delta、插值、报价阈值和 solver 常量放入 `algorithm`，并在 `reference` 给出 bundle、Universe、Calendar、产品规则与利率来源哈希。`provenance` 为每个 scope 成员保留 TradingDay、observation/run ID、received/snapshot/source time、bid/ask/mid、原 Market Frame quality、剔除原因、使用角色与 solver 详情；`excluded_count` 与 `eligible_count` 分开。错误不复用旧报价、旧 IV 或旧 Skew。
+结果除§7字段外，将冻结的模型、delta、插值、报价阈值和 solver 常量放入 `algorithm`，并在 `reference` 给出 bundle、Universe、Calendar、产品规则与利率来源哈希。`provenance` 为每个 scope 成员保留 canonical Bar identity、存储 id/run ID、bucket/last-event/receive/commit 时间、partial reasons、bid/ask/mid、原 Market Frame quality、剔除原因、使用角色与 solver 详情；`excluded_count` 与 `eligible_count` 分开。错误不复用旧报价、旧 IV 或旧 Skew。
 
 实现和回归证据只见[本级 Acceptance](../ACCEPTANCE.md)，不能由本接口规范推断生产或实盘验收状态。
