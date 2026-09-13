@@ -4,14 +4,14 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from query.indicator_service import (IndicatorRegistry, IndicatorRequestError, IndicatorService,
+from analytics.indicator_service import (IndicatorRegistry, IndicatorRequestError, IndicatorService,
                              SkewIndicatorProvider, SKEW_INDICATOR_ID, indicator_envelope,
                              skew_indicator_service)
 from data_provider.market_calendar import DEFAULT_DIRECTORY
 from analytics.skew_references import ReferenceRepository
 from analytics.skew_service import SkewService
 from data_provider.storage import Store
-from query.tests.test_skew_api import DAY, MONTH, START, append_chain, make_database, write_package
+from analytics.tests.support import DAY, MONTH, START, append_chain, make_database, write_package
 
 
 class IndicatorServiceTest(unittest.TestCase):

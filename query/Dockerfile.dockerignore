@@ -9,7 +9,6 @@ query/**
 !query/__init__.py
 !query/app.py
 !query/errors.py
-!query/indicator_service.py
 !query/tests/
 query/tests/**
 !query/tests/__init__.py
@@ -17,7 +16,6 @@ query/tests/**
 !query/tests/test_coverage_api.py
 !query/tests/test_sessions_api.py
 !query/tests/test_skew_api.py
-!query/tests/test_indicator_service.py
 !query/tests/test_indicators_api.py
 
 !data_provider/
@@ -46,6 +44,7 @@ analytics/**
 !analytics/skew.py
 !analytics/skew_service.py
 !analytics/skew_references.py
+!analytics/indicator_service.py
 !analytics/contracts/
 analytics/contracts/**
 !analytics/contracts/analytics-skew-v1.json
@@ -54,6 +53,9 @@ analytics/tests/**
 !analytics/tests/__init__.py
 !analytics/tests/test_skew.py
 !analytics/tests/test_skew_service.py
+!analytics/tests/test_indicator_service.py
+!analytics/tests/test_skew_references.py
+!analytics/tests/support.py
 !analytics/tests/analytics_contract.py
 !analytics/tests/test_analytics_contract.py
 !analytics/tests/fixtures/

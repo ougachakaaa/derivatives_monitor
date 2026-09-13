@@ -47,6 +47,8 @@ def profiles(profile):
         return checks + analytics_contract_steps() + [
                          step('analytics-production', [PYTHON, '-m', 'unittest',
                               'analytics.tests.test_skew', 'analytics.tests.test_skew_service',
+                              'analytics.tests.test_indicator_service',
+                              'analytics.tests.test_skew_references',
                               'query.tests.test_skew_api', '-v'])]
     if profile in ('docker', 'packaging'):
         checks += [step('docker-engine', ['docker', 'version'], timeout=30),

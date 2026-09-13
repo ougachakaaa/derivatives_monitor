@@ -36,7 +36,7 @@ python3 tests/run.py docker
 
 - `collector/tests/`：Collector runtime、配置、SDK、存储、部署替身与容器生命周期。
 - `data_provider/tests/`：Raw read、Calendar、coverage 与 Market Frame owner 行为。
-- `analytics/tests/`：Skew 数值/service、冻结 fixture、contract checker 与独立 oracle；`query/tests/`：HTTP adapter 与当前 Market Indicator integration。
+- `analytics/tests/`：Skew 与 Indicator service、冻结 fixture、contract checker 与独立 oracle；`query/tests/`：HTTP adapter 与 composition integration。
 - `dashboard/tests/`：React 组件和浏览器交互。
 - `tests/`：runner、文档与 repository invariants、developer runner、跨进程和 Docker 闭环。
 

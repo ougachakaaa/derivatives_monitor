@@ -4,83 +4,17 @@ import fcntl
 import json
 import math
 from pathlib import Path
-import sqlite3
-import subprocess
-import sys
 import tempfile
 import unittest
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 from query.app import create_app
-from data_provider.market_calendar import Calendar, DEFAULT_DIRECTORY, parse_at
-from data_provider.market_frame import MarketFrameReader, OBSERVATION_COLUMNS, micros
-from analytics.skew_references import ReferenceRepository, ReferenceUnavailable, digest, load_package
-from data_provider.storage import Store
-from analytics.tests.test_skew import CHAIN, reference
-
-DAY = '20260916'
-MONTH = '2610'
-START = parse_at('2026-09-16T09:30:00+08:00')
-
-
-def write_package(root):
-    bundle = reference()
-    bundle.pop('bundle_sha256')
-    rows = [dict(id=r['instrument'], month=MONTH, side=r['side'], strike=r['strike'],
-                 expiry='20261016') for r in CHAIN['rows']]
-    universe = {'schema_version': 1, 'requested_day': DAY, 'products': {'MO': {
-        'exchange': 'CFFEX', 'requested_day': DAY, 'verified': True, 'stale': False,
-        'data_date': DAY, 'source': 'fixture://TEST-DOUBLE', 'instruments': rows}}}
-    content = {'calendar.json': (DEFAULT_DIRECTORY / '2026.json').read_bytes(),
-               'universe.json': json.dumps(universe).encode()}
-    bundle['calendar']['version'] = json.loads(content['calendar.json'])['version']
-    for name in ('universe', 'calendar'):
-        bundle[name]['sha256'] = digest(content[name + '.json'])
-    content['bundle.json'] = json.dumps(bundle).encode()
-    content['manifest.json'] = json.dumps({'schema_version': 1, 'bundle_id': bundle['bundle_id'],
-        'sha256': {name: digest(value) for name, value in content.items()}}).encode()
-    package = root / DAY / bundle['bundle_id']
-    package.mkdir(parents=True)
-    for name, value in content.items():
-        (package / name).write_bytes(value)
-    (root / DAY / (MONTH + '.json')).write_text(json.dumps({'bundle_id': bundle['bundle_id']}))
-    return package
-
-
-def make_database(root):
-    db = sqlite3.connect(root / (DAY + '.sqlite'), check_same_thread=False)
-    db.executescript('''PRAGMA application_id=1145914161; PRAGMA user_version=1;
-        CREATE TABLE dataset(singleton INTEGER PRIMARY KEY, trading_day TEXT, schema_version INTEGER);
-        INSERT INTO dataset VALUES(1,'20260916',1);''')
-    definitions = []
-    for name in OBSERVATION_COLUMNS:
-        if name == 'id':
-            definitions.append('id INTEGER PRIMARY KEY')
-        elif name in ('sequence', 'received_us', 'snapshot_us', 'UpdateMillisec', 'BidVolume1', 'AskVolume1'):
-            definitions.append(name + ' INTEGER')
-        elif name in ('TradingDay', 'ExchangeID', 'InstrumentID', 'ExchangeInstID', 'ActionDay', 'UpdateTime', 'run_id'):
-            definitions.append(name + ' TEXT')
-        else:
-            definitions.append(name + ' REAL')
-    db.execute('CREATE TABLE snapshots(' + ','.join(definitions) + ')')
-    db.execute('CREATE INDEX snapshots_instrument_time ON snapshots(InstrumentID,received_us,id)')
-    db.commit()
-    (root / '.collector.lock').touch()
-    return db
-
-
-def append_chain(db, end, *, invalid=False):
-    for row in CHAIN['rows']:
-        received = micros(end) - row['age_us']
-        values = dict(run_id='TEST_DOUBLE_RUN', sequence=row['id'], received_us=received,
-                      snapshot_us=micros(end) + 1_000_000, TradingDay=DAY, ExchangeID='CFFEX',
-                      InstrumentID=row['instrument'], ActionDay=DAY, UpdateTime='09:30:40',
-                      UpdateMillisec=0, BidPrice1=row['bid'], AskPrice1=row['ask'],
-                      BidVolume1=0 if invalid else row['bid_volume'], AskVolume1=row['ask_volume'])
-        db.execute('INSERT INTO snapshots(' + ','.join(values) + ') VALUES('
-                   + ','.join('?' for _ in values) + ')', tuple(values.values()))
-    db.commit()
+from data_provider.market_calendar import Calendar, parse_at
+from data_provider.market_frame import MarketFrameReader, micros
+from analytics.skew_references import ReferenceRepository, digest
+from analytics.tests.support import DAY, MONTH, START, append_chain, make_database, write_package
+from analytics.tests.test_skew import CHAIN
 
 
 class SkewApiTest(unittest.TestCase):
@@ -274,78 +208,6 @@ class SkewApiTest(unittest.TestCase):
         self.assertEqual({p['raw_revision'] for p in result['points']}, {result['raw_revision']})
         self.assertEqual(self.get('minute', minute='2026-09-16T09:31:00+08:00',
                                   at='2026-09-16T09:32:00+08:00')['status'], 'UNAVAILABLE')
-
-    def test_reference_context_pinned_to_loaded_bytes(self):
-        context = self.repository.load(DAY, MONTH)
-        (self.package / 'calendar.json').write_text('{}')
-        frame = MarketFrameReader(Store(self.root),
-                                  calendar=context.calendar).minute(context.scope, START,
-                                  evaluated_at=START + timedelta(minutes=1), stale_after_us=30_000_000)
-        self.assertEqual(frame['calendar_version'], context.bundle['calendar']['version'])
-        with self.assertRaises(ReferenceUnavailable):
-            self.repository.load(DAY, MONTH)
-
-    def test_reference_wrong_previous_day_and_metadata_rejected(self):
-        for field in ('previous_day', 'expiry', 'hash', 'version'):
-            with tempfile.TemporaryDirectory() as temporary:
-                path = write_package(Path(temporary))
-                bundle = json.loads((path / 'bundle.json').read_bytes())
-                if field == 'previous_day':
-                    bundle['calendar']['previous_cffex_trading_day'] = '20260914'
-                    bundle['rate']['fixing_date'] = '20260914'
-                elif field == 'expiry':
-                    bundle['universe']['instruments'][0]['expiry'] = '20261015'
-                elif field == 'hash':
-                    bundle['universe']['sha256'] = 'b' * 64
-                else:
-                    bundle['calendar']['version'] = 'different'
-                raw = json.dumps(bundle).encode()
-                (path / 'bundle.json').write_bytes(raw)
-                manifest = json.loads((path / 'manifest.json').read_bytes())
-                manifest['sha256']['bundle.json'] = digest(raw)
-                (path / 'manifest.json').write_text(json.dumps(manifest))
-                with self.assertRaises(ReferenceUnavailable):
-                    load_package(path, DAY, MONTH, bundle['bundle_id'], allow_synthetic=True)
-
-    def test_offline_import_verifies_source_archives_and_never_overwrites(self):
-        # TEST DOUBLE official-format envelope: URLs are never fetched and these
-        # temporary bytes are not real official publications or live evidence.
-        bundle = json.loads((self.package / 'bundle.json').read_bytes())
-        bundle['source_kind'] = 'OFFICIAL'
-        bundle['product_rules']['source_url'] = 'https://www.cffex.com.cn/TEST_DOUBLE'
-        bundle['rate']['source_url'] = 'https://www.chinamoney.com.cn/TEST_DOUBLE'
-        manifest = json.loads((self.package / 'manifest.json').read_bytes())
-        for name, field in (('rules.source', 'product_rules'), ('rate.source', 'rate'),
-                            ('listing.source', None)):
-            content = ('TEST DOUBLE source: ' + name).encode()
-            (self.package / name).write_bytes(content)
-            manifest['sha256'][name] = digest(content)
-            if field:
-                bundle[field]['source_sha256'] = digest(content)
-        universe = json.loads((self.package / 'universe.json').read_bytes())
-        universe['products']['MO']['source'] = 'https://www.cffex.com.cn/TEST_DOUBLE'
-        raw = json.dumps(universe).encode()
-        (self.package / 'universe.json').write_bytes(raw)
-        bundle['universe']['sha256'] = manifest['sha256']['universe.json'] = digest(raw)
-        raw = json.dumps(bundle).encode()
-        (self.package / 'bundle.json').write_bytes(raw)
-        manifest['sha256']['bundle.json'] = digest(raw)
-        (self.package / 'manifest.json').write_text(json.dumps(manifest))
-        destination = self.root / 'imported'
-        command = [sys.executable, '-m', 'analytics.skew_references',
-                   str(self.package), '--directory', str(destination)]
-        first = subprocess.run(command, capture_output=True, text=True, timeout=10)
-        self.assertEqual(first.returncode, 0, first.stderr)
-        self.assertFalse((destination / DAY / (MONTH + '.json')).exists())
-        imported = ReferenceRepository(destination).load(DAY, MONTH, bundle['bundle_id'])
-        self.assertEqual(imported.bundle['bundle_sha256'], digest(raw))
-        again = subprocess.run(command, capture_output=True, text=True, timeout=10)
-        self.assertNotEqual(again.returncode, 0)
-        self.assertIn('immutable package already exists', again.stderr)
-        (self.package / 'rate.source').write_text('TEST DOUBLE damaged source')
-        with self.assertRaises(ReferenceUnavailable):
-            load_package(self.package, DAY, MONTH, bundle['bundle_id'])
-
 
 if __name__ == '__main__':
     unittest.main()

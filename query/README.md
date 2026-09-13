@@ -1,6 +1,6 @@
 # 只读查询后端
 
-Query 是 Python 3.12 / FastAPI 服务：读取 Collector 的 Raw 数据，提供诊断、Market Session、Market Frame、MO Skew 与 Market Indicator JSON。这里提供安装、启动、调用和排障方法；内部设计与结构见本级 [Design](DESIGN.md)和 [Architecture](ARCHITECTURE.md)，共享 Raw 与 HTTP 分别见 [Raw Boundary](../docs/contracts/raw-boundary.md)和 [Read Path](../docs/contracts/read-path.md)。
+Query 是 Python 3.12 / FastAPI 服务：组合 Data Provider 与 Analytics，提供诊断、Market Session、MO Skew 与 Market Indicator JSON。这里提供安装、启动、调用和排障方法；内部结构见本级 [Architecture](ARCHITECTURE.md)，设计原则见[根 Design](../DESIGN.md)，共享 Raw 与 HTTP 分别见 [Raw Boundary](../docs/contracts/raw-boundary.md)和 [Read Path](../docs/contracts/read-path.md)。
 
 本级契约与状态：[组件 Contract](CONTRACT.md) · [Query Acceptance](ACCEPTANCE.md)。Data Provider 用法与 Market Frame 见 [Data Provider README](../data_provider/README.md)，Skew 与参考包见 [Analytics README](../analytics/README.md)。共享协议：[Market Session](../docs/contracts/market-session.md) · [Market Indicator](../docs/contracts/indicators.md)。系统状态与验证入口见[根 Acceptance](../docs/acceptance.md)和 [Repository Verification](../tests/README.md)。
 
@@ -118,7 +118,7 @@ curl -X POST http://127.0.0.1:8000/api/indicators/evaluate \
   -d '{"schema_version":1,"indicator_id":"mo-skew-25d-v1","scope":{"exchange":"CFFEX","product":"MO","month":"2610"},"parameters":{},"requested_at":"2026-09-16T09:31:00+08:00"}'
 ```
 
-共享 request/envelope、sample key 与错误语义见 [Market Indicator Contract](../docs/contracts/indicators.md)；注册表和 provider 约束见[本级 Contract](CONTRACT.md#query-indicator-provider-contract)。
+共享 request/envelope、sample key 与错误语义见 [Market Indicator Contract](../docs/contracts/indicators.md)；注册表和 provider 约束见 [Analytics Contract](../analytics/CONTRACT.md#analytics-indicator-provider-contract)。
 
 ## 审核参考包的离线导入
 

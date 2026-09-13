@@ -8,7 +8,7 @@ from fastapi.responses import JSONResponse
 from data_provider.contract_coverage import coverage
 from data_provider.errors import (DataNotFoundError, DataProviderError,
                                   DataProviderInputError, DataUnavailableError)
-from query.indicator_service import IndicatorRequestError, skew_indicator_service
+from analytics.indicator_service import skew_indicator_service
 from data_provider.market_calendar import sessions, DEFAULT_DIRECTORY
 from data_provider.storage import Store
 from analytics.errors import AnalyticsError, AnalyticsRequestError
@@ -139,10 +139,7 @@ def create_app(directory=None, calendar_directory=None, *, reference_directory=N
                               parse_constant=reject_constant)
         except (ValueError, UnicodeDecodeError):
             raise QueryError(400, 'Invalid Indicator request JSON') from None
-        try:
-            return indicators.evaluate(body)
-        except IndicatorRequestError as error:
-            raise QueryError(400, str(error)) from None
+        return indicators.evaluate(body)
 
     @app.get("/api/summary")
     def summary(request: Request, day: str):

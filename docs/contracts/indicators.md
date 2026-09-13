@@ -2,7 +2,7 @@
 
 # Market Indicator 查询契约 v1
 
-状态：**FROZEN**，2026-09-13。本文定义共享 Market Indicator 的语义、查询接口及失败边界；实现与验证状态唯一见 [Query Acceptance](../../query/ACCEPTANCE.md#query-indicator-evidence)。产品范围见 [MVP](../mvp.md)，物理归属与依赖见 [Architecture](../../ARCHITECTURE.md)。
+状态：**FROZEN**，2026-09-13。本文定义共享 Market Indicator 的语义、查询接口及失败边界；实现与验证状态见 [Analytics Acceptance](../../analytics/ACCEPTANCE.md)与 [Query Acceptance](../../query/ACCEPTANCE.md#query-indicator-evidence)。产品范围见 [MVP](../mvp.md)，物理归属与依赖见 [Architecture](../../ARCHITECTURE.md)。
 
 ## 1. 语义边界
 
@@ -13,7 +13,7 @@
 
 Market Frame 的精确行为沿用 [Market Frame Contract](../../data_provider/contracts/market-frame.md)。Indicator 的公式、输入质量、时间选择、窗口和参考要求由对应指标 Contract 决定；通用层不把某个金融指标的口径推广为全部指标的默认口径。
 
-Query 的注册表、provider 与内部依赖规则见 [Query Contract](../../query/CONTRACT.md#query-indicator-provider-contract)。
+Analytics 的注册表、provider 与内部依赖规则见 [Analytics Contract](../../analytics/CONTRACT.md#analytics-indicator-provider-contract)。
 
 ## 2. 只读 HTTP 接口
 
@@ -51,7 +51,7 @@ UNAVAILABLE 仍保留已经知道的时间/身份/原因，未知身份保持 nu
 
 ## 3. MO Skew provider 映射
 
-首个生产 provider 为 `mo-skew-25d-v1`；其字段映射、采样键身份与投影边界属于 provider 级细节，唯一见 [Query Contract](../../query/CONTRACT.md#query-indicator-provider-contract)。本文只冻结通用 envelope、消费者边界与错误/版本规则。
+首个生产 provider 为 `mo-skew-25d-v1`；其字段映射、采样键身份与投影边界属于 provider 级细节，唯一见 [Analytics Contract](../../analytics/CONTRACT.md#analytics-indicator-provider-contract)。本文只冻结通用 envelope、消费者边界与错误/版本规则。
 
 ## 4. Rolling window 与后续指标
 
@@ -59,8 +59,8 @@ UNAVAILABLE 仍保留已经知道的时间/身份/原因，未知身份保持 nu
 
 窗口必须由对应指标 Contract 冻结长度、采样时钟、session 边界、缺口、参考身份和读取一致性；同一 Raw 日内固定 revision，多输入的实际身份必须显式保留，不能假称跨库原子快照。当前不新增窗口库或通用窗口框架。需要缓存时保持可重建、可失效，不能获得 Market Facts 写所有权。
 
-新 provider 需有明确指标定义及证据；注册要求见 [Query Contract](../../query/CONTRACT.md#query-indicator-provider-contract)。拆包条件属于 [Design](../../DESIGN.md)，实现位置属于 [Architecture](../../ARCHITECTURE.md)。拆分前后相同输入必须保持数值、时间、质量和追溯语义一致。
+新 provider 需有明确指标定义及证据；注册要求见 [Analytics Contract](../../analytics/CONTRACT.md#analytics-indicator-provider-contract)。模块演进原则属于 [Design](../../DESIGN.md)，实现位置属于 [Architecture](../../ARCHITECTURE.md)。调整边界前后相同输入必须保持数值、时间、质量和追溯语义一致。
 
 ## 5. 兼容与变更
 
-新增指标可以增加 provider；改变已有指标业务含义必须遵守其版本规则。通用接口发生不兼容变更需新 schema_version，不能以迁移模块名静默改变业务含义。provider 的等价性、回归覆盖与容差要求见 [Query Contract](../../query/CONTRACT.md#query-indicator-provider-contract)；接口工程通过不代表实盘参考或数据已验收，当前证据见 [Query Acceptance](../../query/ACCEPTANCE.md#query-indicator-evidence)。
+新增指标可以增加 provider；改变已有指标业务含义必须遵守其版本规则。通用接口发生不兼容变更需新 schema_version，不能以迁移模块名静默改变业务含义。provider 的等价性、回归覆盖与容差要求见 [Analytics Contract](../../analytics/CONTRACT.md#analytics-indicator-provider-contract)；接口工程通过不代表实盘参考或数据已验收，当前证据见 [Analytics Acceptance](../../analytics/ACCEPTANCE.md)与 [Query Acceptance](../../query/ACCEPTANCE.md#query-indicator-evidence)。

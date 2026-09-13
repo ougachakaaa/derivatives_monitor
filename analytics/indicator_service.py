@@ -1,10 +1,11 @@
-"""Versioned Indicator envelopes over existing Query business services."""
+"""Versioned Indicator envelopes over Analytics business services."""
 from hashlib import sha256
 import json
 import math
 import re
 
 from data_provider.market_calendar import parse_at
+from analytics.errors import AnalyticsRequestError
 
 
 SCHEMA_VERSION = 1
@@ -13,7 +14,7 @@ SKEW_SCOPE_KEYS = frozenset(('exchange', 'product', 'month'))
 MONTH = re.compile(r'[0-9]{2}(?:0[1-9]|1[0-2])')
 
 
-class IndicatorRequestError(ValueError):
+class IndicatorRequestError(AnalyticsRequestError):
     """The caller supplied a request outside the frozen Indicator v1 contract."""
 
 
