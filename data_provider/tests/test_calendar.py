@@ -6,7 +6,7 @@ import sys
 import tempfile
 import unittest
 
-from query.market_calendar import Calendar, CalendarError, DEFAULT_DIRECTORY, PRODUCTS, sessions
+from data_provider.market_calendar import Calendar, CalendarError, DEFAULT_DIRECTORY, PRODUCTS, sessions
 
 
 class CalendarTest(unittest.TestCase):

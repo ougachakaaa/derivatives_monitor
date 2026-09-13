@@ -5,7 +5,7 @@ import re
 import time
 from zoneinfo import ZoneInfo
 
-from query.market_calendar import CFFEX_PRODUCTS, SHFE_PRODUCTS, sessions, DEFAULT_DIRECTORY
+from data_provider.market_calendar import CFFEX_PRODUCTS, SHFE_PRODUCTS, sessions, DEFAULT_DIRECTORY
 
 PRODUCTS = CFFEX_PRODUCTS + SHFE_PRODUCTS
 ID = re.compile(r'^(IF|IH|IC|IM|TS|TF|TL|T|IO|HO|MO|au|ag)(\d{2}(?:0[1-9]|1[0-2]))(?:-[CP]-\d+(?:\.\d+)?)?$')

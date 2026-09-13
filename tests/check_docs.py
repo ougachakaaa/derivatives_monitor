@@ -14,7 +14,7 @@ REQUIRED_PATHS = (
     'tests/README.md', 'tests/run.py', 'compose.yaml', 'dev',
     'scripts/deploy.sh', 'scripts/dev.py',
     *(f'{module}/CONTRACT.md' for module in
-      ('collector', 'collector/scripts', 'query', 'dashboard')),
+      ('collector', 'collector/scripts', 'data_provider', 'query', 'dashboard')),
     *(f'docs/contracts/{name}.md' for name in
       ('raw-boundary', 'read-path', 'market-session', 'deployment',
        'developer-runner', 'indicators')),
@@ -25,7 +25,7 @@ REQUIRED_PATHS = (
 EXCLUDED_DIRS = {'.git', '.venv', 'venv', 'node_modules', '__pycache__',
                  'build', 'dist', 'artifacts', 'data', 'flow', 'logs',
                  'third_party', 'experiments', '.cache'}
-MAINTAINED_FOLDERS = {'collector', 'query', 'dashboard', 'docs', 'tests'}
+MAINTAINED_FOLDERS = {'collector', 'data_provider', 'query', 'dashboard', 'docs', 'tests'}
 TEXT_SUFFIXES = {'.md', '.py', '.js', '.jsx', '.cpp', '.hpp', '.h', '.sh', '.cmake', '.txt', '.yaml', '.yml'}
 TEXT_NAMES = {'Dockerfile', 'Dockerfile.dockerignore', 'compose.yaml', 'dev'}
 LEGACY_PATHS = (

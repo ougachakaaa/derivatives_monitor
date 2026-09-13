@@ -8,7 +8,7 @@ from fastapi.responses import JSONResponse
 from query.storage import QueryError, Store
 from query.contract_coverage import coverage
 from query.indicator_service import IndicatorRequestError, skew_indicator_service
-from query.market_calendar import sessions, DEFAULT_DIRECTORY
+from data_provider.market_calendar import sessions, DEFAULT_DIRECTORY
 from query.skew_references import ReferenceRepository
 from query.skew_service import SkewService
 

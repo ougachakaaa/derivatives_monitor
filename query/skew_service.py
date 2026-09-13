@@ -5,7 +5,7 @@ import re
 import time
 
 from query.analytics import ALGORITHM_VERSION, CONTRACT_ID, calculate_skew
-from query.market_calendar import Calendar, CalendarError, parse_at, parse_day
+from data_provider.market_calendar import Calendar, CalendarError, parse_at, parse_day
 from query.market_frame import MarketFrameReader, micros
 from query.skew_references import IDENTIFIER, ReferenceUnavailable, read_bytes
 from query.storage import QueryError

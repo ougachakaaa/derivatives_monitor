@@ -77,7 +77,7 @@ QUERY_URL=http://127.0.0.1:8000 ./dev up dashboard --dashboard-port 8101
 ## 更新参考与软件
 
 - 原生 `update` 获取并发布公开清单，可能正常重启 Collector；不要把维护命令当成只读检查。具体失败、旧清单保留和发布判定见 [Universe Tool Contract](../collector/scripts/CONTRACT.md)，Docker/手工入口不自动提供相同的 universe 定时器。
-- 日历当前覆盖 2026，跨年前按[年历维护规则](../query/calendars/README.md)审核并发布新版本；发布后的生效行为与 UNKNOWN 语义见 [Query Contract](../query/CONTRACT.md#calendar-与-coverage-适配)及共享 [Market Session Contract](contracts/market-session.md#market-session-shared-contract)。
+- 日历当前覆盖 2026，跨年前按[年历维护规则](../data_provider/calendars/README.md)审核并发布新版本；发布后的生效行为与 UNKNOWN 语义见 [Data Provider Contract](../data_provider/CONTRACT.md#data-provider-calendar-contract)及共享 [Market Session Contract](contracts/market-session.md#market-session-shared-contract)。
 - 软件更新前保留版本、日志和数据。构建与配置预检成功后部署，使用正常 SIGTERM 尾部提交。已有采样配置不自动改写；显式 `1000` 仍为一秒，需要改成 `15000` 时由操作人明确配置。
 - 不删除运行依赖的 `collector/build/` 工具、不清理配置/data/flow；Raw、universe 原响应与 generations 暂不自动轮转，观察剩余磁盘并制定保留策略。磁盘故障时优先保留证据，不能删库换取“健康”。
 

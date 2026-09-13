@@ -14,7 +14,7 @@ Query 按共享 Raw Boundary 打开日库，查询使用参数绑定，不接受
 
 ## Calendar 与 coverage 适配
 
-`market_calendar.py` 是纯标准库模块，加载随 Query 发布的版本化年历；可从已核对哈希的原字节初始化。UNKNOWN 的触发条件与消费者边界由共享 [Market Session Contract](../docs/contracts/market-session.md#market-session-shared-contract)拥有，模块按该契约返回 UNKNOWN 和原因。JSON 更新在下次请求生效，profile 代码变化才需重启 Query。
+Data Provider Calendar 是纯标准库模块，加载随 Query 镜像发布的版本化年历；其精确加载行为见 [Data Provider Contract](../data_provider/CONTRACT.md#data-provider-calendar-contract)。UNKNOWN 的触发条件与消费者边界由共享 [Market Session Contract](../docs/contracts/market-session.md#market-session-shared-contract)拥有。
 
 `/api/sessions` 和 Calendar CLI 使用同一解释结果；CLI 同时提供 `--validate`。Query coverage 按 exchange/product 分组，并按共享 Universe manifest 中各产品的目标日期核对清单；它分别表达订阅、接收、缺口、stale/error 与进程健康，不以 Calendar 状态改写 Collector 事实或控制 Collector。
 

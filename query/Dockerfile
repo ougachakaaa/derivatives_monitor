@@ -7,17 +7,22 @@ WORKDIR /app
 RUN pip install --no-cache-dir poetry==2.2.1
 COPY query/pyproject.toml query/poetry.lock ./
 RUN poetry sync --no-interaction
-COPY query/__init__.py query/app.py query/storage.py query/contract_coverage.py query/market_calendar.py query/market_frame.py query/analytics.py query/skew_service.py query/skew_references.py query/indicator_service.py ./query/
-COPY query/calendars/ ./query/calendars/
+COPY query/__init__.py query/app.py query/storage.py query/contract_coverage.py query/market_frame.py query/analytics.py query/skew_service.py query/skew_references.py query/indicator_service.py ./query/
+COPY data_provider/__init__.py data_provider/market_calendar.py ./data_provider/
+COPY data_provider/calendars/ ./data_provider/calendars/
+COPY data_provider/tests/ ./data_provider/tests/
 COPY query/tests/ ./query/tests/
-RUN poetry run python -m unittest discover -s query/tests -t . -v && poetry sync --only main --no-interaction
+RUN poetry run python -m unittest discover -s data_provider/tests -t . -v \
+ && poetry run python -m unittest discover -s query/tests -t . -v \
+ && poetry sync --only main --no-interaction
 
 FROM python:3.12-slim-bookworm AS runtime
 ENV PATH="/app/.venv/bin:$PATH" PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 DATA_DIR=/data
 WORKDIR /app
 COPY --from=build /app/.venv /app/.venv
-COPY query/__init__.py query/app.py query/storage.py query/contract_coverage.py query/market_calendar.py query/market_frame.py query/analytics.py query/skew_service.py query/skew_references.py query/indicator_service.py ./query/
-COPY query/calendars/ ./query/calendars/
+COPY query/__init__.py query/app.py query/storage.py query/contract_coverage.py query/market_frame.py query/analytics.py query/skew_service.py query/skew_references.py query/indicator_service.py ./query/
+COPY data_provider/__init__.py data_provider/market_calendar.py ./data_provider/
+COPY data_provider/calendars/ ./data_provider/calendars/
 USER 65532:65532
 EXPOSE 8000
 STOPSIGNAL SIGTERM

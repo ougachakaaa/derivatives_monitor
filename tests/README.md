@@ -35,7 +35,8 @@ python3 tests/run.py docker
 ## Ownership
 
 - `collector/tests/`：Collector runtime、配置、SDK、存储、部署替身与容器生命周期。
-- `query/tests/`：Query/Market Frame/Analytics/Market Indicator 行为，以及冻结 Analytics fixture、contract checker 和独立 oracle。
+- `data_provider/tests/`：Calendar 及后续 Data Provider owner 行为。
+- `query/tests/`：当前 Query/Market Frame/Analytics/Market Indicator 行为，以及冻结 Analytics fixture、contract checker 和独立 oracle。
 - `dashboard/tests/`：React 组件和浏览器交互。
 - `tests/`：runner、文档与 repository invariants、developer runner、跨进程和 Docker 闭环。
 

@@ -6,7 +6,7 @@ from pathlib import Path
 import re
 
 ROOT = Path(__file__).resolve().parents[1]
-MODULES = {'collector', 'query', 'dashboard'}
+MODULES = {'collector', 'data_provider', 'query', 'dashboard'}
 EXCLUDED_DIRS = {'.git', '.venv', 'venv', 'node_modules', '__pycache__',
                  'build', 'dist', 'artifacts', 'data', 'flow', 'logs',
                  'third_party', 'experiments', '.cache'}
@@ -79,12 +79,12 @@ def module_dependency_errors(root=ROOT):
                     errors.append(f'{relative}: production imports repository verification: {target} '
                                   '(ARCHITECTURE.md)')
                     continue
-                if target == 'market_calendar' and owner != 'query':
-                    other = 'query'
                 if other not in MODULES or other == owner:
                     continue
-                if relative.as_posix() == 'collector/scripts/universe.py' and target in (
-                        'market_calendar', 'query.market_calendar'):
+                if owner == 'query' and other == 'data_provider':
+                    continue
+                if relative.as_posix() == 'collector/scripts/universe.py' \
+                        and target == 'data_provider.market_calendar':
                     continue
                 errors.append(f'{relative}: forbidden module dependency: {target} (ARCHITECTURE.md)')
         elif (path.suffix in {'.c', '.cc', '.cpp', '.h', '.hpp', '.cmake'}
@@ -115,8 +115,9 @@ def packaging_policy_errors(root=ROOT):
             if not rule.startswith('!'):
                 continue
             allowed = rule[1:].lstrip('/')
-            if '..' in Path(allowed).parts or not (
-                    allowed == service or allowed.startswith(service + '/')):
+            roots = {service, 'data_provider'} if service == 'query' else {service}
+            if '..' in Path(allowed).parts or not any(
+                    allowed == root or allowed.startswith(root + '/') for root in roots):
                 errors.append(f'{service}: Docker allow rule crosses owner boundary: {rule}')
             if 'experiments/' in allowed:
                 errors.append(f'{service}: Docker allow rule exposes experiments: {rule}')

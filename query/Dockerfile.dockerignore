@@ -10,21 +10,16 @@ query/**
 !query/app.py
 !query/storage.py
 !query/contract_coverage.py
-!query/market_calendar.py
 !query/market_frame.py
 !query/analytics.py
 !query/skew_service.py
 !query/skew_references.py
 !query/indicator_service.py
-!query/calendars/
-query/calendars/**
-!query/calendars/2026.json
 !query/tests/
 query/tests/**
 !query/tests/__init__.py
 !query/tests/test_analytics.py
 !query/tests/test_api.py
-!query/tests/test_calendar.py
 !query/tests/test_coverage.py
 !query/tests/test_market_frame.py
 !query/tests/test_sessions_api.py
@@ -37,6 +32,18 @@ query/tests/**
 !query/tests/fixtures/
 query/tests/fixtures/**
 !query/tests/fixtures/analytics-skew-v1.json
+
+!data_provider/
+data_provider/**
+!data_provider/__init__.py
+!data_provider/market_calendar.py
+!data_provider/calendars/
+data_provider/calendars/**
+!data_provider/calendars/2026.json
+!data_provider/tests/
+data_provider/tests/**
+!data_provider/tests/__init__.py
+!data_provider/tests/test_calendar.py
 
 # Defense in depth for secrets and runtime state.
 **/.env

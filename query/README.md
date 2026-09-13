@@ -61,12 +61,12 @@ Query 不需要 CTP 凭据。生产挂载、只读权限、端口和服务生命
 无需启动 HTTP 即可查询或验证 Calendar：
 
 ```bash
-python3 -m query.market_calendar --exchange SHFE --product AU --at '2026-09-07T23:30:00+08:00'
+python3 -m data_provider.market_calendar --exchange SHFE --product AU --at '2026-09-07T23:30:00+08:00'
 
-python3 -m query.market_calendar --validate query/calendars/2026.json
+python3 -m data_provider.market_calendar --validate data_provider/calendars/2026.json
 ```
 
-输入需使用带时区时间。Calendar 的交易日、OPEN/BREAK/CLOSED/UNKNOWN、夜盘归属和 source TradingDay 边界由 [Market Session Contract](../docs/contracts/market-session.md) 定义；参考文件维护见 [Calendar README](calendars/README.md)。
+输入需使用带时区时间。Calendar 的交易日、OPEN/BREAK/CLOSED/UNKNOWN、夜盘归属和 source TradingDay 边界由 [Market Session Contract](../docs/contracts/market-session.md) 定义；参考文件维护见 [Calendar README](../data_provider/calendars/README.md)。
 
 ## Market Frame Python / CLI
 

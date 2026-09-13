@@ -9,7 +9,7 @@ import math
 import re
 
 from query.contract_coverage import match_id
-from query.market_calendar import Calendar, CalendarError, DEFAULT_DIRECTORY, ZONE, selected_products
+from data_provider.market_calendar import Calendar, CalendarError, DEFAULT_DIRECTORY, ZONE, selected_products
 from query.storage import Store, QueryError, validate_day
 
 EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
@@ -319,7 +319,7 @@ def main(argv=None):
     import argparse
     import json
     from pathlib import Path
-    from query.market_calendar import parse_at
+    from data_provider.market_calendar import parse_at
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('mode', choices=('minute', 'as-of', 'latest'))

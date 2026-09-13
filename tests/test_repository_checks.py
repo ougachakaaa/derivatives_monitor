@@ -81,8 +81,9 @@ class RepositoryChecksTest(unittest.TestCase):
         self.assertIn('repository verification', errors[0])
 
     def test_legal_calendar_tool_and_local_imports(self):
-        self.write('collector/scripts/universe.py', 'from market_calendar import Calendar\n')
-        self.write('query/service.py', 'from query import analytics\nfrom market_calendar import Calendar\n')
+        self.write('collector/scripts/universe.py', 'from data_provider.market_calendar import Calendar\n')
+        self.write('data_provider/market_calendar.py', 'class Calendar: pass\n')
+        self.write('query/service.py', 'from query import analytics\nfrom data_provider.market_calendar import Calendar\n')
         self.write('query/tests/test_fake.py', 'import dashboard\n')
         self.assertEqual(module_dependency_errors(self.root), [])
 
@@ -90,7 +91,7 @@ class RepositoryChecksTest(unittest.TestCase):
         for path, source in {
             'query/service.py': 'import dashboard\n',
             'dashboard/service.py': 'from query import analytics\n',
-            'collector/runtime.py': 'from market_calendar import Calendar\n',
+            'collector/runtime.py': 'from data_provider.market_calendar import Calendar\n',
             'collector/scripts/universe.py': 'from query import analytics\n',
             'collector/src/main.cpp': '#include "../../query/private.h"\n',
         }.items():

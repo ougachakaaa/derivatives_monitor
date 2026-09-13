@@ -22,9 +22,9 @@ import uuid
 import xml.etree.ElementTree as ET
 from zoneinfo import ZoneInfo
 
-# Reference calendar is a pure stdlib module; this helper does not start Query.
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'query'))
-from market_calendar import sessions
+# Reference calendar is a pure stdlib Data Provider module; this helper does not start Query.
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from data_provider.market_calendar import sessions
 
 ZONE = ZoneInfo('Asia/Shanghai')
 CFFEX_PRODUCTS = ('IF', 'IH', 'IC', 'IM', 'TS', 'TF', 'T', 'TL', 'IO', 'HO', 'MO')

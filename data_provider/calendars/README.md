@@ -1,6 +1,6 @@
 # Reviewed market reference calendars
 
-本目录保存随 Query 发布、经过审核的版本化交易日历。它是参考输入，不是行情来源；交易日、夜盘归属、Session 状态、UNKNOWN 和 source TradingDay 的精确语义只由 [Market Session Contract](../../docs/contracts/market-session.md) 定义，Query 加载与 coverage 适配见[组件 Contract](../CONTRACT.md#calendar-与-coverage-适配)。
+本目录保存随 Query 镜像发布、经过审核的版本化交易日历。它是参考输入，不是行情来源；交易日、夜盘归属、Session 状态、UNKNOWN 和 source TradingDay 的精确语义只由 [Market Session Contract](../../docs/contracts/market-session.md) 定义，加载行为见 [Data Provider Contract](../CONTRACT.md#data-provider-calendar-contract)。
 
 ## 更新日历
 
@@ -9,8 +9,8 @@
 3. 验证候选文件：
 
    ```bash
-   python3 query/market_calendar.py --validate /path/to/candidate.json
-   query/.venv/bin/python -m unittest discover -s query/tests -p 'test_calendar.py' -v
+   python3 -m data_provider.market_calendar --validate /path/to/candidate.json
+   query/.venv/bin/python -m unittest data_provider.tests.test_calendar -v
    ```
 
 4. 审核通过后随普通代码发布提交。若维护独立 Calendar 目录，先在同一目录暂存并验证，再原子替换；验证失败时保留当前文件不动。
@@ -25,4 +25,4 @@
 - [SHFE 连续交易说明](https://www.shfe.com.cn/docview/docview_35218417.htm)：周一至周五晚间开始；普通周五夜盘延续至周六凌晨，归属下一个交易日，并非周日夜盘。
 - [CFFEX IF](https://www.cffex.com.cn/hs300/)、[TL](https://www.cffex.com.cn/30tl/)、[股指期权细则](https://www.cffex.com.cn/ssxz/20221214/43100.html)：股指期货13:00–15:00、国债13:00–15:15；期权连续竞价截至14:57，之后收盘集合竞价。产品级会话不是单合约到期日交易资格，国债到期日仅上午交易的例外不应由产品状态替代合约元数据。
 
-查询示例与 `MARKET_CALENDAR_DIR` 配置见 [Query README](../README.md)。日历更新不会启动、停止或修改 Collector；系统操作见 [Operations](../../docs/operations.md)。
+查询示例见 [Data Provider README](../README.md)，`MARKET_CALENDAR_DIR` 的 HTTP runtime 配置见 [Query README](../../query/README.md)。日历更新不会启动、停止或修改 Collector；系统操作见 [Operations](../../docs/operations.md)。

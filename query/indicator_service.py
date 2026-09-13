@@ -4,7 +4,7 @@ import json
 import math
 import re
 
-from query.market_calendar import parse_at
+from data_provider.market_calendar import parse_at
 
 
 SCHEMA_VERSION = 1

@@ -65,6 +65,7 @@ def profiles(profile):
                                   PYTHON, 'node', ROOT / 'dashboard/node_modules/vite/bin/vite.js'],
                         timeout=180),
                    step('query', [PYTHON, '-m', 'unittest', 'discover', '-s', 'query/tests', '-t', '.', '-v']),
+                   step('data-provider', [PYTHON, '-m', 'unittest', 'discover', '-s', 'data_provider/tests', '-t', '.', '-v']),
                    step('universe', [sys.executable, '-m', 'unittest', 'discover', '-s', 'collector/tests', '-p', 'test_*.py', '-v']),
                    step('deploy', [sys.executable, 'collector/tests/deploy_test.py']),
                    step('verify', [sys.executable, 'collector/tests/verify_test.py'], requires=['sqlite3']),

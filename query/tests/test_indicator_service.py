@@ -7,7 +7,7 @@ import unittest
 from query.indicator_service import (IndicatorRegistry, IndicatorRequestError, IndicatorService,
                              SkewIndicatorProvider, SKEW_INDICATOR_ID, indicator_envelope,
                              skew_indicator_service)
-from query.market_calendar import DEFAULT_DIRECTORY
+from data_provider.market_calendar import DEFAULT_DIRECTORY
 from query.skew_references import ReferenceRepository
 from query.skew_service import SkewService
 from query.storage import Store
