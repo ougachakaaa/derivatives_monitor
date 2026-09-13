@@ -39,7 +39,7 @@ collector/build/Release/bin/data_collector --config collector/config.ini
 
 `config.ini`、`data/`、`flow/` 和 `build/` 默认被 Git 忽略，真实凭据不得提交。可用键、默认值、相对路径、订阅来源优先级和 CLI 覆盖规则统一见 [Collector Contract](CONTRACT.md#行情接入与配置接口)；实际模板是 [`config.example.ini`](config.example.ini)。
 
-需要手工调整旧配置时先正常停止 Collector，显式修改配置并保留原数据目录；不要把配置变更当作 schema 迁移。Universe、native manager 及镜像辅助命令见 [`collector/scripts` 手册](scripts/README.md)；完整三服务部署、配置准备、更新、停止与恢复步骤见 [Operations](../docs/operations.md)。
+需要手工调整旧配置时先正常停止 Collector，删除已退役的 `SnapshotIntervalMs`，显式修改配置并保留原数据目录；不要把配置变更当作 schema 迁移。Universe、native manager 及镜像辅助命令见 [`collector/scripts` 手册](scripts/README.md)；完整三服务部署、配置准备、更新、停止与恢复步骤见 [Operations](../docs/operations.md)。
 
 ## 查看数据与运行状态
 
@@ -60,6 +60,8 @@ sqlite3 -readonly collector/data/YYYYMMDD.sqlite \
 ```
 
 这只是诊断入口，不定义 Raw schema。活跃库、WAL、锁、历史日及备份的安全读取边界见 [Raw Boundary](../docs/contracts/raw-boundary.md)，实际操作见 [Operations](../docs/operations.md)。
+
+日库只发布 Raw schema v2 `market_bars`；不存在运行时采样间隔配置，也不兼容或迁移旧 `snapshots` 日库。精确物理 schema 与拒绝规则由 [Raw Boundary](../docs/contracts/raw-boundary.md#sqlite-v2-物理契约)冻结。
 
 ## 常见问题
 

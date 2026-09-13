@@ -64,7 +64,7 @@ create_config() {
     {
         printf '[config]\nFrontMdAddr=%s\nBrokerID=%s\nUserID=%s\nPassword=%s\n' "${front:-$default_front}" "${broker:-$default_broker}" "$user" "$password"
         printf 'UserProductInfo=DM-Linux\nInstruments=%s\n' "$instruments"
-        printf 'DataDirectory=data\nFlowPath=flow\nSnapshotIntervalMs=15000\nStatusIntervalSeconds=10\nConnectTimeoutSeconds=120\nRetryIntervalSeconds=5\nSubscriptionBatchSize=100\nRunSeconds=0\n'
+        printf 'DataDirectory=data\nFlowPath=flow\nStatusIntervalSeconds=10\nConnectTimeoutSeconds=120\nRetryIntervalSeconds=5\nSubscriptionBatchSize=100\nRunSeconds=0\n'
     } > "$temp_config"
     unset password
     ln -T -- "$temp_config" "$config_path" || die '配置已存在，未覆盖；请检查后重新运行。'
@@ -79,12 +79,17 @@ check_config() {
     awk '
         function trim(s) { sub(/^[ \t\r\n]+/, "", s); sub(/[ \t\r\n]+$/, "", s); return s }
         function fail(message) { print "Error: " message > "/dev/stderr"; bad=1 }
+        BEGIN {
+            split("FrontMdAddr BrokerID UserID Password UserProductInfo Instruments InstrumentsFile FlowPath DataDirectory StatusIntervalSeconds ConnectTimeoutSeconds RetryIntervalSeconds SubscriptionBatchSize RunSeconds", keys)
+            for (i in keys) allowed[keys[i]]=1
+        }
         { line=trim($0) }
         line == "" || line ~ /^[#;]/ { next }
         line ~ /^\[.*\]$/ { section=trim(substr(line,2,length(line)-2)); next }
         section == "config" {
             p=index(line,"="); if (!p) { fail("INI syntax error at line " NR); next }
-            values[trim(substr(line,1,p-1))]=trim(substr(line,p+1))
+            key=trim(substr(line,1,p-1)); values[key]=trim(substr(line,p+1))
+            if (!(key in allowed)) fail("unknown Collector config key at line " NR)
         }
         END {
             if (values["FrontMdAddr"]=="") fail("FrontMdAddr is required")
@@ -92,7 +97,6 @@ check_config() {
             if (values["DataDirectory"]!="" && values["DataDirectory"]!="data") fail("Docker requires DataDirectory=data")
             if (values["FlowPath"]!="" && values["FlowPath"]!="flow") fail("Docker requires FlowPath=flow")
             if (values["RunSeconds"]!="" && values["RunSeconds"]!="0") fail("Docker requires RunSeconds=0")
-            if (values["CsvOutputPath"]!="") fail("Collector does not accept CsvOutputPath")
             exit bad ? 1 : 0
         }
     ' "$config_path"

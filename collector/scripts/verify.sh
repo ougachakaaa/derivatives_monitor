@@ -22,22 +22,30 @@ result=$(sqlite3 -readonly -batch -bail "$database" <<SQL
 .timeout 1000
 PRAGMA query_only=ON;
 BEGIN;
-SELECT CASE WHEN (SELECT user_version FROM pragma_user_version)=1
+SELECT CASE WHEN (SELECT user_version FROM pragma_user_version)=2
  AND (SELECT application_id FROM pragma_application_id)=1145914161
  THEN 'schema_ok' ELSE 'schema_invalid' END;
-SELECT CASE WHEN COUNT(*)=1 AND MIN(trading_day)='$day' AND MIN(schema_version)=1
+SELECT CASE WHEN COUNT(*)=1 AND MIN(trading_day)='$day' AND MIN(schema_version)=2
+ AND MIN(bar_interval_us)=15000000 AND MIN(close_grace_us)=1000000
  THEN 'dataset_ok' ELSE 'dataset_invalid' END FROM dataset;
 SELECT CASE WHEN COUNT(*)>0 AND COUNT(TradingDay)=COUNT(*)
  AND MIN(TradingDay)='$day' AND MAX(TradingDay)='$day'
+ AND COUNT(DISTINCT TradingDay||':'||InstrumentID||':'||bucket_start_us)=COUNT(*)
+ AND COUNT(*)=SUM(bucket_end_us=bucket_start_us+15000000)
+ AND COUNT(*)=SUM(bucket_start_us%15000000=0)
+ AND COUNT(*)=SUM(callback_count>0 AND valid_last_price_count BETWEEN 0 AND callback_count)
+ AND COUNT(*)=SUM(first_event_us>=bucket_start_us AND first_event_us<=last_event_us AND last_event_us<bucket_end_us)
+ AND COUNT(*)=SUM((is_partial=0 AND partial_reasons='[]') OR (is_partial=1 AND partial_reasons!='[]'))
  AND NOT EXISTS(SELECT 1 FROM pragma_foreign_key_check)
- THEN 'snapshots_ok' ELSE 'snapshots_invalid_or_empty' END FROM snapshots;
+ THEN 'market_bars_ok' ELSE 'market_bars_invalid_or_empty' END FROM market_bars;
 PRAGMA integrity_check;
 .headers on
 .mode column
 SELECT trading_day, schema_version FROM dataset;
-SELECT InstrumentID, COUNT(*) AS rows,
- datetime(MAX(received_us)/1000000.0,'unixepoch','+8 hours') AS last_received_beijing
- FROM snapshots GROUP BY InstrumentID;
+SELECT InstrumentID, COUNT(*) AS bars, SUM(is_partial) AS partial_bars,
+ datetime(MAX(last_event_us)/1000000.0,'unixepoch','+8 hours') AS last_event_beijing,
+ datetime(MAX(committed_us)/1000000.0,'unixepoch','+8 hours') AS last_commit_beijing
+ FROM market_bars GROUP BY InstrumentID;
 SELECT run_id, source, started_us, stopped_us FROM runs ORDER BY started_us;
 COMMIT;
 SQL
@@ -48,7 +56,7 @@ SQL
 }
 
 checks=$(printf '%s\n' "$result" | head -n 4)
-expected=$(printf 'schema_ok\ndataset_ok\nsnapshots_ok\nok')
+expected=$(printf 'schema_ok\ndataset_ok\nmarket_bars_ok\nok')
 if [ "$checks" != "$expected" ]; then
     printf 'Daily SQLite verification failed:\n%s\n' "$checks" >&2
     exit 1

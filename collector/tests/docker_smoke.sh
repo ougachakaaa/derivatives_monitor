@@ -21,6 +21,8 @@ export COLLECTOR_DIR="$work/collector"
 COLLECTOR_UID=$(id -u); COLLECTOR_GID=$(id -g)
 export COLLECTOR_UID COLLECTOR_GID
 mkdir -p "$COLLECTOR_DIR/data" "$COLLECTOR_DIR/flow" "$work/timeout-data" "$work/timeout-flow"
+day1=$(TZ=Asia/Shanghai date +%Y%m%d)
+day2=$(TZ=Asia/Shanghai date -d tomorrow +%Y%m%d)
 
 compose() { docker compose --project-name "$test_name" --file "$repo_dir/compose.yaml" --file "$work/override.yaml" "$@"; }
 cleanup() {
@@ -63,7 +65,6 @@ FrontMdAddr=tcp://127.0.0.1:1
 Instruments=IF2609
 DataDirectory=data
 FlowPath=flow
-SnapshotIntervalMs=100
 StatusIntervalSeconds=1
 ConnectTimeoutSeconds=20
 RunSeconds=0
@@ -75,6 +76,8 @@ services:
     image: $runtime_image
     environment:
       LD_PRELOAD: /opt/test/libfake_md.so
+      DM_TEST_DAY1: "$day1"
+      DM_TEST_DAY2: "$day2"
     volumes:
       - type: bind
         source: $work/libfake_md.so
@@ -111,11 +114,12 @@ wait_for_rows() {
 compose config --quiet
 compose up --detach --no-build --pull never collector
 cid=$(compose ps --all --quiet collector)
-wait_for_rows 20260907 'SELECT COUNT(*) FROM snapshots' 3
-before=$(query 20260907 'SELECT COUNT(*) FROM snapshots')
-wait_for_rows 20260907 'SELECT COUNT(*) FROM snapshots' "$((before + 2))"
-readonly_run /opt/collector/verify.sh 20260907
-[[ $(query 20260907 "SELECT COUNT(*) FROM runs WHERE source LIKE '%TEST DOUBLE%'") -ge 1 ]]
+wait_for_rows "$day1" 'SELECT COUNT(*) FROM market_bars' 1
+wait_for_rows "$day2" 'SELECT COUNT(*) FROM market_bars' 2
+before=$(query "$day2" 'SELECT COUNT(*) FROM market_bars')
+wait_for_rows "$day2" 'SELECT COUNT(*) FROM market_bars' "$((before + 1))"
+readonly_run /opt/collector/verify.sh "$day2"
+[[ $(query "$day2" "SELECT COUNT(*) FROM runs WHERE source LIKE '%TEST DOUBLE%'") -ge 1 ]]
 compose logs --no-color > "$work/live.log"
 grep -q 'event=front_disconnected' "$work/live.log"
 grep -q 'connections=2' "$work/live.log"
@@ -135,22 +139,22 @@ for ((attempt=0; attempt<45; attempt++)); do
     sleep 1
 done
 [[ "$restarted" == true ]]
-wait_for_rows 20260907 'SELECT COUNT(*) FROM runs' 2
+wait_for_rows "$day2" 'SELECT COUNT(*) FROM runs' 2
 compose stop --timeout 60 collector
 [[ $(docker inspect --format '{{.State.ExitCode}}' "$cid") == 0 ]]
 sleep 2
 [[ $(docker inspect --format '{{.State.Status}}' "$cid") == exited ]]
-readonly_run /opt/collector/verify.sh 20260904
-readonly_run /opt/collector/verify.sh 20260907
-[[ $(query 20260907 'SELECT COUNT(*) FROM runs WHERE stopped_us IS NULL') == 0 ]]
-before=$(query 20260907 'SELECT COUNT(*) FROM snapshots')
+readonly_run /opt/collector/verify.sh "$day1"
+readonly_run /opt/collector/verify.sh "$day2"
+[[ $(query "$day2" 'SELECT COUNT(*) FROM runs WHERE stopped_us IS NULL') == 0 ]]
+before=$(query "$day2" 'SELECT COUNT(*) FROM market_bars')
 
 compose up --detach --no-build --pull never --force-recreate collector
-wait_for_rows 20260907 'SELECT COUNT(*) FROM snapshots' "$((before + 2))"
-wait_for_rows 20260907 'SELECT COUNT(*) FROM runs' 3
+wait_for_rows "$day2" 'SELECT COUNT(*) FROM market_bars' "$((before + 1))"
+wait_for_rows "$day2" 'SELECT COUNT(*) FROM runs' 3
 compose stop --timeout 60 collector
-[[ $(stat -c '%u:%g' "$COLLECTOR_DIR/data/20260907.sqlite") == "$COLLECTOR_UID:$COLLECTOR_GID" ]]
-if readonly_run -ec 'sqlite3 -readonly "file:/app/data/20260907.sqlite?immutable=1" "DELETE FROM snapshots"'; then
+[[ $(stat -c '%u:%g' "$COLLECTOR_DIR/data/$day2.sqlite") == "$COLLECTOR_UID:$COLLECTOR_GID" ]]
+if readonly_run -ec "sqlite3 -readonly 'file:/app/data/$day2.sqlite?immutable=1' 'DELETE FROM market_bars'"; then
     echo 'Readonly SQLite unexpectedly accepted a write' >&2; exit 1
 fi
 

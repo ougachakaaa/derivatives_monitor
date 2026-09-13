@@ -1,21 +1,33 @@
 #pragma once
+
 #include "client_support.hpp"
+
 #include <algorithm>
 #include <cctype>
+#include <set>
 
 namespace collector {
+
 struct Config : ctp::Config {
     std::filesystem::path data_directory;
-    int snapshot_interval_ms = 15000;
     int status_interval_seconds = 10;
     int retry_interval_seconds = 5;
     int subscription_batch_size = 100;
 };
 
 inline Config LoadConfig(const std::filesystem::path& path, bool read_instruments_file = true) {
+    static const std::set<std::string> allowed = {
+        "FrontMdAddr", "BrokerID", "UserID", "Password", "UserProductInfo", "Instruments",
+        "InstrumentsFile", "FlowPath", "DataDirectory", "StatusIntervalSeconds",
+        "ConnectTimeoutSeconds", "RetryIntervalSeconds", "SubscriptionBatchSize", "RunSeconds"
+    };
+    auto values = ctp::ReadConfigValues(path);
+    for (const auto& item : values) {
+        if (!allowed.count(item.first)) throw std::runtime_error("unknown Collector config key: " + item.first);
+    }
+
     Config config;
     static_cast<ctp::Config&>(config) = ctp::LoadConfig(path);
-    auto values = ctp::ReadConfigValues(path);
     if (read_instruments_file && !values["InstrumentsFile"].empty()) {
         std::filesystem::path file = values["InstrumentsFile"];
         if (file.is_relative()) file = std::filesystem::absolute(path).parent_path() / file;
@@ -34,14 +46,11 @@ inline Config LoadConfig(const std::filesystem::path& path, bool read_instrument
         config.data_directory = std::filesystem::absolute(path).parent_path() / config.data_directory;
     const auto positive = [&](const char* key, int& target, int maximum) {
         if (!values[key].empty()) target = ctp::ParseNonNegativeInt(values[key], key);
-        if (target <= 0 || target > maximum)
-            throw std::runtime_error(std::string(key) + " out of range");
+        if (target <= 0 || target > maximum) throw std::runtime_error(std::string(key) + " out of range");
     };
-    positive("SnapshotIntervalMs", config.snapshot_interval_ms, 60000);
     positive("StatusIntervalSeconds", config.status_interval_seconds, 3600);
     positive("RetryIntervalSeconds", config.retry_interval_seconds, 300);
     positive("SubscriptionBatchSize", config.subscription_batch_size, 100);
-    if (!config.csv_output_path.empty()) throw std::runtime_error("Collector does not accept CsvOutputPath");
     return config;
 }
 
@@ -59,4 +68,5 @@ inline void ValidateConfig(Config& config) {
     config.instruments.erase(std::unique(config.instruments.begin(), config.instruments.end()), config.instruments.end());
     if (config.instruments.size() > 10000) throw std::runtime_error("at most 10000 instruments supported");
 }
+
 } // namespace collector

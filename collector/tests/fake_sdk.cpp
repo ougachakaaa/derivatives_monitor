@@ -1,9 +1,23 @@
 #include "fake_api.hpp"
 #include <atomic>
 #include <cstdlib>
+#include <ctime>
 #include <thread>
 
 namespace {
+void UseCurrentEventTime(CThostFtdcDepthMarketDataField& tick, const char* trading_day, int step) {
+    const auto now = std::time(nullptr) + 8 * 60 * 60;
+    std::tm local{};
+    gmtime_r(&now, &local);
+    char action_day[9] = {}, clock[9] = {};
+    std::strftime(action_day, sizeof(action_day), "%Y%m%d", &local);
+    std::strftime(clock, sizeof(clock), "%H:%M:%S", &local);
+    ctp::CopyField(tick.TradingDay, trading_day && *trading_day ? trading_day : action_day);
+    ctp::CopyField(tick.ActionDay, action_day);
+    ctp::CopyField(tick.UpdateTime, clock);
+    tick.UpdateMillisec = (step * 50) % 1000;
+}
+
 class StreamingApi final : public FakeApi {
 public:
     ~StreamingApi() override { running_ = false; if (worker_.joinable()) worker_.join(); }
@@ -36,8 +50,11 @@ public:
                                     spi->OnRtnDepthMarketData(&tick);
                                 }
                             } else {
-                                auto tick = Tick(step < 20 ? "20260904" : "20260907");
+                                const char* day = step < 20 ? std::getenv("DM_TEST_DAY1") : std::getenv("DM_TEST_DAY2");
+                                auto tick = Tick();
+                                UseCurrentEventTime(tick, day, step);
                                 tick.Volume = step;
+                                tick.Turnover = step * 100.0;
                                 spi->OnRtnDepthMarketData(&tick);
                             }
                         }

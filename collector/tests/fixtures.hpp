@@ -1,5 +1,5 @@
 #pragma once
-#include "market.hpp"
+#include "domain/market.hpp"
 inline CThostFtdcDepthMarketDataField Tick(const std::string& day = "20260904", const std::string& id = "IF2609") {
     CThostFtdcDepthMarketDataField tick{};
     ctp::CopyField(tick.TradingDay, day);
@@ -10,6 +10,7 @@ inline CThostFtdcDepthMarketDataField Tick(const std::string& day = "20260904", 
     tick.UpdateMillisec = 500;
     tick.LastPrice = 4000.2;
     tick.Volume = 23;
+    tick.Turnover = 2300;
     tick.AskPrice5 = std::numeric_limits<double>::max();
     return tick;
 }

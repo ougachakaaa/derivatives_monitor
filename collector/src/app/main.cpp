@@ -1,4 +1,4 @@
-#include "runtime.hpp"
+#include "app/runtime.hpp"
 
 namespace {
 volatile std::sig_atomic_t stop_requested = 0;
@@ -32,14 +32,15 @@ int main(int argc, char** argv) {
         if (run_seconds >= 0) config.run_seconds = run_seconds;
         collector::ValidateConfig(config);
         if (check) {
-            ctp::Log("event=config_valid instruments=", config.instruments.size(), " data_directory=", config.data_directory.string());
+            ctp::Log("event=config_valid instruments=", config.instruments.size(),
+                     " data_directory=", config.data_directory.string());
             return 0;
         }
         std::signal(SIGINT, HandleSignal);
         std::signal(SIGTERM, HandleSignal);
         return collector::RunCollector(config, stop_requested);
-    } catch (const std::exception& e) {
-        std::cerr << "event=fatal message=\"" << e.what() << "\"\n";
+    } catch (const std::exception& error) {
+        std::cerr << "event=fatal message=\"" << error.what() << "\"\n";
         return 1;
     }
 }

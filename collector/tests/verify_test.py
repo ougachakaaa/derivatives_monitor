@@ -36,13 +36,18 @@ class VerifyTest(unittest.TestCase):
         db.executescript('''
             PRAGMA journal_mode=WAL;
             PRAGMA application_id=1145914161;
-            PRAGMA user_version=1;
-            CREATE TABLE dataset(trading_day TEXT, schema_version INTEGER);
-            INSERT INTO dataset VALUES('20260907',1);
+            PRAGMA user_version=2;
+            CREATE TABLE dataset(trading_day TEXT, schema_version INTEGER, bar_interval_us INTEGER, close_grace_us INTEGER);
+            INSERT INTO dataset VALUES('20260907',2,15000000,1000000);
             CREATE TABLE runs(run_id TEXT PRIMARY KEY, source TEXT, started_us INTEGER, stopped_us INTEGER);
             INSERT INTO runs VALUES('test','TEST DOUBLE - verifier fixture',1,NULL);
-            CREATE TABLE snapshots(TradingDay TEXT, InstrumentID TEXT, received_us INTEGER, run_id TEXT REFERENCES runs(run_id));
-            INSERT INTO snapshots VALUES('20260907','IF2609',1788750000000000,'test');
+            CREATE TABLE market_bars(id INTEGER PRIMARY KEY, run_id TEXT REFERENCES runs(run_id),
+                TradingDay TEXT, InstrumentID TEXT, bucket_start_us INTEGER, bucket_end_us INTEGER,
+                callback_count INTEGER, valid_last_price_count INTEGER, first_event_us INTEGER,
+                last_event_us INTEGER, committed_us INTEGER, is_partial INTEGER, partial_reasons TEXT,
+                UNIQUE(TradingDay,InstrumentID,bucket_start_us));
+            INSERT INTO market_bars VALUES(1,'test','20260907','IF2609',1788750000000000,1788750015000000,
+                1,1,1788750001000000,1788750001000000,1788750016000000,0,'[]');
         ''' + extra)
         db.commit()
         return db
@@ -67,7 +72,8 @@ class VerifyTest(unittest.TestCase):
     def test_active_writer_reads_wal_not_stale_main_file(self):
         db = self.create()
         db.execute('PRAGMA wal_checkpoint(TRUNCATE)')
-        db.execute("INSERT INTO snapshots VALUES('20260907','WAL_ONLY',1788750001000000,'test')")
+        db.execute("INSERT INTO market_bars VALUES(2,'test','20260907','WAL_ONLY',1788750015000000,1788750030000000,"
+                   "1,1,1788750016000000,1788750016000000,1788750031000000,0,'[]')")
         db.commit()
         with self.lock.open('r') as lock:
             fcntl.flock(lock, fcntl.LOCK_EX)
@@ -77,11 +83,13 @@ class VerifyTest(unittest.TestCase):
         self.data.chmod(0o700); db.close()
 
     def test_empty_wrong_day_schema_and_broken_reference(self):
-        for sql in ('DELETE FROM snapshots;',
+        for sql in ('DELETE FROM market_bars;',
                     "UPDATE dataset SET trading_day='20260904';",
-                    "UPDATE snapshots SET TradingDay='20260904';",
+                    "UPDATE market_bars SET TradingDay='20260904';",
                     'PRAGMA user_version=99;',
-                    "UPDATE snapshots SET run_id='missing';"):
+                    "UPDATE market_bars SET run_id='missing';",
+                    "UPDATE market_bars SET bucket_end_us=bucket_start_us+1;",
+                    "UPDATE market_bars SET partial_reasons='[\"late_event\"]';"):
             with self.subTest(sql=sql):
                 self.create(sql).close()
                 before = self.path.read_bytes()

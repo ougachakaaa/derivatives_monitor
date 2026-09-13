@@ -128,7 +128,7 @@ class DeployTest(unittest.TestCase):
         path = self.collector / 'config.ini'
         self.assertEqual(path.stat().st_mode & 0o777, 0o600)
         self.assertIn('ConnectTimeoutSeconds=120', path.read_text())
-        self.assertIn('SnapshotIntervalMs=15000', path.read_text())
+        self.assertNotIn('SnapshotIntervalMs', path.read_text())
         self.assertIn(secret.decode(), path.read_text())
         self.assertNotIn(secret, transcript)
         self.assertFalse((self.root / 'NEVER_EXECUTE').exists())
@@ -136,10 +136,10 @@ class DeployTest(unittest.TestCase):
         self.assertEqual(self.run_script('up').returncode, 0)
         self.assertEqual(path.read_bytes(), before)
 
-    def test_existing_snapshot_interval_is_preserved(self):
+    def test_retired_snapshot_interval_is_rejected(self):
         path = self.config('SnapshotIntervalMs=1000\n')
         before = path.read_bytes()
-        self.assertEqual(self.run_script('up').returncode, 0)
+        self.assertNotEqual(self.run_script('up').returncode, 0)
         self.assertEqual(path.read_bytes(), before)
 
     def test_unsafe_config_rejected_without_leaking_raw_line(self):

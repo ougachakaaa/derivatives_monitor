@@ -34,6 +34,18 @@
 - 同日重启可以追加新的、尚不存在的 canonical Bar。只有成功 commit 的行和 durable `bars_written` 才是已发布事实；内存 bucket、日志和诊断 JSON 不是行情 Source of Truth。
 - 数据目录、flow 和配置有独立的挂载与保留规则，见 [Deployment Contract](deployment.md#数据与隔离)；移除服务、镜像、构建或项目文件不能作为删除 Raw 的手段。
 
+<a id="sqlite-v2-物理契约"></a>
+
+### SQLite v2 物理契约
+
+- 文件头必须为 `PRAGMA application_id=1145914161`、`PRAGMA user_version=2`。日库只含 v2 事实；`snapshots` 不是 v2 的表、视图或兼容别名。
+- `dataset` 的固定列为 `singleton INTEGER PRIMARY KEY`、`trading_day TEXT NOT NULL`、`schema_version INTEGER NOT NULL`、`bar_interval_us INTEGER NOT NULL`、`close_grace_us INTEGER NOT NULL`。唯一行固定 `singleton=1`，并由 CHECK 冻结 schema、周期和 grace。
+- `runs` 的固定列为 `run_id TEXT PRIMARY KEY`、`started_us INTEGER NOT NULL`、`stopped_us INTEGER`、`last_commit_us INTEGER`、`instruments TEXT NOT NULL`、`source TEXT NOT NULL`。
+- `market_bars` 的 Bar 固定列为 `id, run_id, TradingDay, InstrumentID, bucket_start_us, bucket_end_us, bar_open, bar_high, bar_low, bar_close, bar_volume, bar_turnover, callback_count, valid_last_price_count, first_event_us, last_event_us, first_received_us, last_received_us, close_received_us, committed_us, is_partial, partial_reasons`，随后保存下面的 CTP close-state 列；同名 `TradingDay` / `InstrumentID` 不重复建列。
+- SQLite affinity 固定为：identity、所有 `*_us`、计数、`is_partial`、`bar_volume` 和 CTP 整数字段使用 `INTEGER`；`bar_open, bar_high, bar_low, bar_close, bar_turnover` 及 CTP 浮点字段使用 `REAL`；run、原因和 CTP 字符数组使用 `TEXT`。NULL 只用于契约明确允许未知的聚合数值及归一化后的 CTP 浮点值。
+- CTP 字符列固定为 `TradingDay, ExchangeID, InstrumentID, ExchangeInstID, ActionDay, UpdateTime`；整数列固定为 `UpdateMillisec, Volume, BidVolume1, AskVolume1, BidVolume2, AskVolume2, BidVolume3, AskVolume3, BidVolume4, AskVolume4, BidVolume5, AskVolume5`；浮点列固定为 `LastPrice, PreSettlementPrice, PreClosePrice, PreOpenInterest, OpenPrice, HighestPrice, LowestPrice, Turnover, OpenInterest, ClosePrice, SettlementPrice, UpperLimitPrice, LowerLimitPrice, PreDelta, CurrDelta, BidPrice1, AskPrice1, BidPrice2, AskPrice2, BidPrice3, AskPrice3, BidPrice4, AskPrice4, BidPrice5, AskPrice5, AveragePrice, BandingUpperPrice, BandingLowerPrice`。升级 SDK 若改变该字段集合，必须先发布新 Raw schema 版本，不能静默改变 v2。
+- 数据库 CHECK 必须执行日身份、15 秒 bucket 宽度与对齐、event time 范围、callback/有效价格计数、OHLC 全空或全有、partial flag/reasons 一致性；外键执行 `market_bars.run_id → runs.run_id`，唯一约束执行 canonical identity。writer 打开已有 v2 时还要核对 dataset 固定值；表缺失或形状不兼容在准备普通 INSERT 时明确失败。
+
 ## Writer 协调与持久性
 
 - 每个 Raw 数据目录使用进程锁排除第二个 Collector writer。SQLite 使用单连接单 writer、WAL、`synchronous=FULL`、有界 busy timeout 和逐日事务；不承诺跨 TradingDay 原子提交。

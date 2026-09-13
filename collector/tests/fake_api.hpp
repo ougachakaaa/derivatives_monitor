@@ -10,6 +10,11 @@ struct FakeApi : CThostFtdcMdApi {
     bool auto_respond = false, delete_on_release = false, subscribed = false;
     bool* released = nullptr;
     std::vector<std::string> requested;
+    static CThostFtdcDepthMarketDataField HistoricalTick(const std::string& id = "IF2609") {
+        auto tick = Tick("20000103", id);
+        ctp::CopyField(tick.ActionDay, "20000102");
+        return tick;
+    }
     void Release() override { if (released) *released = spi == nullptr; if (delete_on_release) delete this; }
     void Init() override { if (spi) spi->OnFrontConnected(); }
     int Join() override { return 0; }
@@ -19,7 +24,7 @@ struct FakeApi : CThostFtdcMdApi {
     void RegisterFensUserInfo(CThostFtdcFensUserInfoField*) override {}
     void RegisterSpi(CThostFtdcMdSpi* value) override {
         if (!value && spi && auto_respond && subscribed) {
-            auto tail = Tick(); tail.Volume = 99;
+            auto tail = HistoricalTick(); tail.Volume = 99;
             spi->OnRtnDepthMarketData(&tail); // Last accepted callback before unregister.
         }
         spi = value;
@@ -44,7 +49,7 @@ struct FakeApi : CThostFtdcMdApi {
         for (int i = 0; i < count; ++i) {
             requested.emplace_back(ids[i]);
             if (auto_respond && subscribe_result == 0) {
-                SubscriptionReply(ids[i]); auto tick = Tick("20260904", ids[i]); spi->OnRtnDepthMarketData(&tick);
+                SubscriptionReply(ids[i]); auto tick = HistoricalTick(ids[i]); spi->OnRtnDepthMarketData(&tick);
                 subscribed = true;
             }
         }

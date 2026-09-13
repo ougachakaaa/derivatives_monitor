@@ -5,7 +5,7 @@
 | 门槛 | 当前状态 | 剩余缺口 |
 |---|---|---|
 | G1 连续真实运行 | 待验 | 固定环境连续三个完整交易日，含 AU/AG 夜盘、跨午夜及交易日切换 |
-| G2 可信数据 | 新 15 秒 Market Bar 语义已冻结；producer 与 read path 尚未实现 | Collector 仍写 Raw v1 `snapshots`，Data Provider/Query 仍读取旧 schema；完成 schema v2、partial/continuity 与真实 MO 月链验证 |
+| G2 可信数据 | Collector 已实现并离线验证 Raw v2 `market_bars`、event-time bucket、partial/continuity、累计 baseline、唯一写入与 WAL；read path 尚未适配 | Data Provider/Query 仍读取旧 schema；完成下游 v2 只读适配及真实 MO 月链验证 |
 | G3 正确指标 | Skew 数值核心已实现于旧 observation 输入；新 Bar provenance/时钟尚未实现 | 先完成 Market Frame/Analytics 的 bucket/event-time 接入，再审核官方日参考包并完成至少十个真实时点独立对账 |
 | G4 可用页面 | 汇报首页已实现；人工使用待验 | 真实输入上三次日常使用，验证三十秒理解且无需 SQL/日志 |
 | G5 恢复可靠 | 恢复机制有工程回归；现场待验 | 最终部署版本回归及真实数据隔离备份恢复验证 |

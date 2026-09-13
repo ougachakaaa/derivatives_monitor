@@ -1,11 +1,11 @@
-#pragma once
-#include "session.hpp"
-#include "storage.hpp"
+#include "observability/health.hpp"
+
+#include <fstream>
 #include <sstream>
 
 namespace collector {
-enum class ProcessState { Starting, Running, Stopped, Failed };
-inline const char* ProcessStateName(ProcessState state) {
+
+const char* ProcessStateName(ProcessState state) {
     switch (state) {
         case ProcessState::Starting: return "starting";
         case ProcessState::Running: return "running";
@@ -15,9 +15,8 @@ inline const char* ProcessStateName(ProcessState state) {
     return "failed";
 }
 
-// Diagnostic only: failure must never make the ingestion path depend on its reader.
-inline bool PublishHealth(const std::filesystem::path& directory, const SessionStatus& session,
-                          const SnapshotBufferStats& buffer, const DailyStore& store, ProcessState state) {
+bool PublishHealth(const std::filesystem::path& directory, const SessionStatus& session,
+                   const AggregationStats& aggregation, const DailyBarStore& store, ProcessState state) {
     const auto temporary = directory / ".collector-status.tmp";
     const auto coverage_temporary = directory / ".collector-coverage.tmp";
     try {
@@ -27,11 +26,11 @@ inline bool PublishHealth(const std::filesystem::path& directory, const SessionS
             failed += item.second.subscription == Subscription::Failed;
         }
         const bool alive = state == ProcessState::Starting || state == ProcessState::Running;
+        const auto updated_us = NowUs();
         std::ostringstream json;
-        // All strings here are fixed enum labels or the Collector-generated hex run ID.
         json << std::boolalpha
-             << "{\n  \"schema_version\": 1,\n  \"run_id\": \"" << store.RunId()
-             << "\",\n  \"updated_us\": " << NowUs()
+             << "{\n  \"schema_version\": 2,\n  \"run_id\": \"" << store.RunId()
+             << "\",\n  \"updated_us\": " << updated_us
              << ",\n  \"process_state\": \"" << ProcessStateName(state)
              << "\",\n  \"connected\": " << (alive && session.connected)
              << ",\n  \"logged_in\": " << (alive && session.logged_in)
@@ -40,37 +39,53 @@ inline bool PublishHealth(const std::filesystem::path& directory, const SessionS
              << ",\n  \"expected\": " << session.instruments.size()
              << ",\n  \"subscribed\": " << subscribed
              << ",\n  \"subscription_failed\": " << failed
-             << ",\n  \"accepted\": " << buffer.accepted
-             << ",\n  \"written\": " << store.Written()
-             << ",\n  \"last_received_us\": " << buffer.last_received_us
+             << ",\n  \"callbacks_accepted\": " << aggregation.callbacks_accepted
+             << ",\n  \"bars_written\": " << store.BarsWritten()
+             << ",\n  \"partial_bars\": " << store.PartialBars()
+             << ",\n  \"late_callbacks\": " << aggregation.late_callbacks
+             << ",\n  \"invalid_trading_day\": " << aggregation.invalid_trading_day
+             << ",\n  \"invalid_event_time\": " << aggregation.invalid_event_time
+             << ",\n  \"last_received_us\": " << aggregation.last_received_us
              << ",\n  \"last_commit_us\": " << store.LastCommitUs() << "\n}\n";
         std::ofstream output(temporary, std::ios::trunc);
-        output << json.str(); output.close();
+        output << json.str();
+        output.close();
         if (!output) throw std::runtime_error("cannot write diagnostic heartbeat");
         std::filesystem::rename(temporary, directory / ".collector-status.json");
-        // Kept separate so the small heartbeat remains bounded for existing readers.
+
         std::ofstream coverage(coverage_temporary, std::ios::trunc);
-        coverage << "{\"schema_version\":1,\"run_id\":\"" << store.RunId()
-                 << "\",\"updated_us\":" << NowUs() << ",\"instruments\":[";
+        coverage << "{\"schema_version\":2,\"run_id\":\"" << store.RunId()
+                 << "\",\"updated_us\":" << updated_us << ",\"instruments\":[";
         bool first = true;
         for (const auto& item : session.instruments) {
             if (!first) coverage << ',';
             first = false;
-            // Instrument IDs have already passed the restricted ASCII config validation.
+            const auto aggregation_it = aggregation.instruments.find(item.first);
+            const auto store_it = store.InstrumentStats().find(item.first);
+            const InstrumentAggregationStats empty_aggregation{};
+            const InstrumentStoreStats empty_store{};
+            const auto& a = aggregation_it == aggregation.instruments.end() ? empty_aggregation : aggregation_it->second;
+            const auto& s = store_it == store.InstrumentStats().end() ? empty_store : store_it->second;
             coverage << "{\"id\":\"" << item.first << "\",\"subscription\":\""
                      << SubscriptionName(item.second.subscription) << "\",\"error_id\":" << item.second.error_id
-                     << ",\"received\":" << item.second.received
-                     << ",\"last_received_us\":" << item.second.last_received_us << '}';
+                     << ",\"callbacks_accepted\":" << a.callbacks_accepted
+                     << ",\"last_received_us\":" << a.last_received_us
+                     << ",\"bars_written\":" << s.bars_written
+                     << ",\"partial_bars\":" << s.partial_bars
+                     << ",\"late_callbacks\":" << a.late_callbacks << '}';
         }
-        coverage << "]}\n"; coverage.close();
+        coverage << "]}\n";
+        coverage.close();
         if (!coverage) throw std::runtime_error("cannot write coverage diagnostic");
         std::filesystem::rename(coverage_temporary, directory / ".collector-coverage.json");
         return true;
     } catch (const std::exception& error) {
-        std::error_code ignored; std::filesystem::remove(temporary, ignored);
+        std::error_code ignored;
+        std::filesystem::remove(temporary, ignored);
         std::filesystem::remove(coverage_temporary, ignored);
         ctp::Log("event=status_write_failed run_id=", store.RunId(), " message=\"", error.what(), "\"");
         return false;
     }
 }
+
 } // namespace collector
