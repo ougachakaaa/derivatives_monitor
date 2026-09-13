@@ -99,6 +99,14 @@ class RepositoryChecksTest(unittest.TestCase):
             self.write(path, source)
         self.assertEqual(len(module_dependency_errors(self.root)), 5)
 
+    def test_source_packages_enforce_downstream_only_dependencies(self):
+        self.write('data_provider/store.py', 'import analytics\n')
+        self.write('analytics/skew.py', 'import query\n')
+        self.write('collector/scripts/other.py', 'from data_provider.market_calendar import Calendar\n')
+        errors = module_dependency_errors(self.root)
+        self.assertEqual(len(errors), 3, errors)
+        self.assertTrue(all('forbidden module dependency' in error for error in errors))
+
     def test_packaging_policy_is_deny_first_and_owner_local(self):
         for service in ('collector', 'query', 'dashboard'):
             self.write(f'{service}/Dockerfile.dockerignore', f'**\n!{service}/\n!{service}/main.py\n')
@@ -109,6 +117,9 @@ class RepositoryChecksTest(unittest.TestCase):
         self.write('query/Dockerfile.dockerignore', '!query/main.py\n')
         self.assertTrue(any('deny-by-default' in error
                             for error in packaging_policy_errors(self.root)))
+        self.write('query/Dockerfile.dockerignore',
+                   '**\n!query/main.py\n!data_provider/storage.py\n!analytics/skew.py\n')
+        self.assertEqual(packaging_policy_errors(self.root), [])
 
     def test_packaging_expected_files_come_from_literal_owner_policy(self):
         self.write('query/Dockerfile.dockerignore',
@@ -122,6 +133,13 @@ class RepositoryChecksTest(unittest.TestCase):
                 validate_declared('query', {'docs/private.txt'}, self.root)
             with self.assertRaisesRegex(AssertionError, 'sensitive/runtime'):
                 validate_declared('query', {'query/.env'}, self.root)
+        self.write('data_provider/storage.py', '# TEST DOUBLE\n')
+        self.write('analytics/skew.py', '# TEST DOUBLE\n')
+        with mock.patch('check_docker_context.subprocess.check_output',
+                        return_value=('query/main.py\ndata_provider/storage.py\n'
+                                      'analytics/skew.py\n')):
+            validate_declared('query', {'query/main.py', 'data_provider/storage.py',
+                                        'analytics/skew.py'}, self.root)
 
 
 if __name__ == '__main__':

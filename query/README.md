@@ -31,7 +31,7 @@ Docker 构建使用同一 `poetry.lock` 并执行测试；系统级启动使用�
 | 环境变量 | 用途 |
 |---|---|
 | `DATA_DIR` | Raw 数据目录；本地示例为 `../collector/data`，容器默认 `/data` |
-| `MARKET_CALENDAR_DIR` | 可选 Calendar 目录；默认使用随 Query 发布的 `calendars/` |
+| `MARKET_CALENDAR_DIR` | 可选 Calendar 目录；默认使用随 Query 镜像发布的 `data_provider/calendars/` |
 | `SKEW_REFERENCE_DIR` | 可选审核参考包目录；默认 `${DATA_DIR}/references/analytics` |
 | `SKEW_TARGET_MONTH` | 可选默认 MO 月；请求仍可显式传 `month` |
 

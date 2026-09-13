@@ -41,9 +41,9 @@ flowchart LR
 3. Analytics 只消费 Market Frame 和独立审核参考包。业务 service 负责时间切片、读取身份固定及 JSON 投影。
 4. FastAPI 提供 JSON；Dashboard 通过 API 展示业务结果和诊断，不跨过 API 访问数据文件。
 
-正式依赖只沿图中箭头向下游移动。Dashboard、Analytics、Query 或参考数据故障不会形成反向调用来控制 Collector；部署工具协调生命周期，但不进入行情 callback 或 Raw 写入路径。
+Python 源码依赖固定为 `data_provider → analytics → query`：Data Provider 不依赖下游，Analytics 只可依赖 Data Provider，Query 可组合二者。唯一跨层工具例外是 `collector/scripts/universe.py` 直接复用 `data_provider.market_calendar`；C++ Collector runtime 不增加 Python 依赖。Dashboard、Analytics、Query 或参考数据故障不会形成反向调用来控制 Collector；部署工具协调生命周期，但不进入行情 callback 或 Raw 写入路径。
 
-这里的 runtime 依赖不等于目录内所有工具的依赖：`collector/scripts/universe.py` 实际导入 `data_provider/market_calendar.py`，但 C++ Collector 不导入或启动 Python 模块；`collector/scripts/native.py` 虽位于 Collector 目录，却作为 repository integration 工具管理三个服务。两者均不改变采集 runtime 的故障隔离或 Raw 写所有权。
+这里的 runtime 依赖不等于目录内所有工具的依赖：Universe 工具的上述 Calendar 例外不推广到其他 Collector 脚本；`collector/scripts/native.py` 虽位于 Collector 目录，却作为 repository integration 工具管理三个服务。两者均不改变采集 runtime 的故障隔离或 Raw 写所有权。
 
 ## 数据所有权
 

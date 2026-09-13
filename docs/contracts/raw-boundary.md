@@ -2,7 +2,7 @@
 
 # Raw Market Facts 共享边界
 
-本契约只定义 Collector producer 与只读消费者共同遵守的 Raw 所有权、发布、锁、WAL 和运行诊断协议。Collector 如何接收、采样和提交见 [Collector Contract](../../collector/CONTRACT.md)；Query 内部查询及公共 HTTP 见 [Read Path](read-path.md)；挂载、目录生命周期和服务管理见 [Deployment](deployment.md)。
+本契约只定义 Collector producer 与只读消费者共同遵守的 Raw 所有权、发布、锁、WAL 和运行诊断协议。Collector 如何接收、采样和提交见 [Collector Contract](../../collector/CONTRACT.md)；Data Provider 读取见其 [Contract](../../data_provider/CONTRACT.md)，公共 HTTP 见 [Read Path](read-path.md)；挂载、目录生命周期和服务管理见 [Deployment](deployment.md)。
 
 ## 所有权与已发布事实
 

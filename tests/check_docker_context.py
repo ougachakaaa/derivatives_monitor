@@ -29,11 +29,12 @@ def declared_files(service, root=ROOT):
 
 
 def validate_declared(service, expected, root=ROOT):
+    allowed_roots = {service, 'data_provider', 'analytics'} if service == 'query' else {service}
     tracked = set(subprocess.check_output(
-        ['git', 'ls-files', '--', service], cwd=root, text=True).splitlines())
+        ['git', 'ls-files', '--', *sorted(allowed_roots)], cwd=root, text=True).splitlines())
     for relative in expected:
         path = Path(relative)
-        if path.parts[0] != service:
+        if path.parts[0] not in allowed_roots:
             raise AssertionError(f'{service} context crosses owner boundary: {relative}')
         if relative not in tracked:
             raise AssertionError(f'{service} context input is not version controlled: {relative}')
