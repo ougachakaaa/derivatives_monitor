@@ -12,7 +12,7 @@ API 按共享 [Raw Boundary](raw-boundary.md) 只读同一份数据，页面独�
 ## 边界
 
 - Query 使用 FastAPI/Uvicorn 提供 JSON，Dashboard 通过同源 `/api/` 消费；系统组件与依赖方向见 [Architecture](../../ARCHITECTURE.md)，镜像、挂载及 lifecycle 见 [Deployment](deployment.md)。
-- Query 的日库适配遵守 [Raw Boundary](raw-boundary.md#只读消费与-wal)，内部读取与错误适配见 [Query Contract](../../query/CONTRACT.md#只读数据适配)；公共接口不接受任意 SQL 或文件路径。
+- Data Provider 的日库适配遵守 [Raw Boundary](raw-boundary.md#只读消费与-wal)，内部读取见 [Data Provider Contract](../../data_provider/CONTRACT.md#raw-只读适配)，HTTP 错误映射由 [Query Contract](../../query/CONTRACT.md)拥有；公共接口不接受任意 SQL 或文件路径。
 - 服务用于本地观察，不引入认证、外网部署、交易或 WebSocket；浏览器通过前端同源 `/api/` 查询，无需宽泛 CORS，开发时 Vite 使用相同代理。监听与发布地址、端口及代理实现由 [Deployment Contract](deployment.md#数据与隔离)定义。
 
 ## 最小接口
@@ -43,7 +43,7 @@ WAL、sidecar、immutable、共享锁、复制和 backup 的唯一约束见 [Raw
 
 ## 市场时段与覆盖
 
-`GET /api/sessions?exchange=SHFE&product=AU&at=<带时区ISO时间>` 独立读取审核后的交易日历，按 exchange/product 回答交易日、时段与连续交易状态；每个 `markets[]` 成员以 `session_state=OPEN/BREAK/CLOSED/UNKNOWN` 表达该状态。接口不读取/改写行情，也不控制采集进程。exchange/product 可省略以返回全部/某交易所，product 单独给出非法，默认当前时刻；非法参数 400，日历不可用在 200 响应中明确 UNKNOWN。`/api/coverage` 的分组、目标日核对及订阅/接收/缺口/stale/进程健康区分见 [Query Contract](../../query/CONTRACT.md#calendar-与-coverage-适配)，本契约只定义其 HTTP 入口。Query 模块及参考年历随 Docker 镜像发布，Collector 没有新增依赖。
+`GET /api/sessions?exchange=SHFE&product=AU&at=<带时区ISO时间>` 独立读取审核后的交易日历，按 exchange/product 回答交易日、时段与连续交易状态；每个 `markets[]` 成员以 `session_state=OPEN/BREAK/CLOSED/UNKNOWN` 表达该状态。接口不读取/改写行情，也不控制采集进程。exchange/product 可省略以返回全部/某交易所，product 单独给出非法，默认当前时刻；非法参数 400，日历不可用在 200 响应中明确 UNKNOWN。`/api/coverage` 的分组、目标日核对及订阅/接收/缺口/stale/进程健康区分见 [Data Provider Contract](../../data_provider/CONTRACT.md#coverage)，本契约只定义其 HTTP 入口。Data Provider 模块及参考年历随 Query Docker 镜像发布，Collector 没有新增 runtime 依赖。
 
 ## MVP MO Skew JSON 业务查询
 

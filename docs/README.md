@@ -7,6 +7,6 @@
 | 模块 | 使用入口 | 修改时读取 |
 |---|---|---|
 | Collector | [README](../collector/README.md) | [Contract](../collector/CONTRACT.md)、[工具 Contract](../collector/scripts/CONTRACT.md) |
-| Data Provider | [README](../data_provider/README.md) | [Contract](../data_provider/CONTRACT.md)、[Market Session](contracts/market-session.md) |
-| Query | [README](../query/README.md) | [Contract](../query/CONTRACT.md)、[Market Frame](../query/contracts/market-frame.md)、[Skew](../query/contracts/analytics-skew.md)、[参考适配](../query/contracts/references.md) |
+| Data Provider | [README](../data_provider/README.md) | [Contract](../data_provider/CONTRACT.md)、[Market Frame](../data_provider/contracts/market-frame.md)、[Market Session](contracts/market-session.md) |
+| Query | [README](../query/README.md) | [Contract](../query/CONTRACT.md)、[Skew](../query/contracts/analytics-skew.md)、[参考适配](../query/contracts/references.md) |
 | Dashboard | [README](../dashboard/README.md) | [Contract](../dashboard/CONTRACT.md) |

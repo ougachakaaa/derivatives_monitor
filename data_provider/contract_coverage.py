@@ -6,6 +6,7 @@ import time
 from zoneinfo import ZoneInfo
 
 from data_provider.market_calendar import CFFEX_PRODUCTS, SHFE_PRODUCTS, sessions, DEFAULT_DIRECTORY
+from data_provider.errors import DataUnavailableError
 
 PRODUCTS = CFFEX_PRODUCTS + SHFE_PRODUCTS
 ID = re.compile(r'^(IF|IH|IC|IM|TS|TF|TL|T|IO|HO|MO|au|ag)(\d{2}(?:0[1-9]|1[0-2]))(?:-[CP]-\d+(?:\.\d+)?)?$')
@@ -27,20 +28,25 @@ def read_json(path, limit=8 * 1024 * 1024):
 
 
 def coverage(store, calendar_directory=DEFAULT_DIRECTORY):
-    from query.storage import QueryError
     store.check_directory()
     try:
         manifest = read_json(store.directory / 'universe/current/manifest.json')
     except FileNotFoundError:
         manifest = dict(products={}, complete=False)
+    except (OSError, ValueError, TypeError, KeyError):
+        raise DataUnavailableError('Invalid Universe diagnostic') from None
     try:
         update = read_json(store.directory / '.universe-status.json')
     except FileNotFoundError:
         update = {}
+    except (OSError, ValueError, TypeError, KeyError):
+        raise DataUnavailableError('Invalid Universe update diagnostic') from None
     try:
         snapshot = read_json(store.directory / '.collector-coverage.json')
     except FileNotFoundError:
         snapshot = {}
+    except (OSError, ValueError, TypeError, KeyError):
+        raise DataUnavailableError('Invalid Collector coverage diagnostic') from None
     heartbeat = store.heartbeat()
     alive = heartbeat['process_alive']
     hb = heartbeat.get('heartbeat') or {}
@@ -48,14 +54,14 @@ def coverage(store, calendar_directory=DEFAULT_DIRECTORY):
     current = alive and snapshot.get('run_id') == hb.get('run_id') and 0 <= age <= 10
     items = snapshot.get('instruments', [])
     if not isinstance(items, list) or len(items) > 10000:
-        raise QueryError(503, 'Invalid Collector coverage diagnostic')
+        raise DataUnavailableError('Invalid Collector coverage diagnostic')
     statuses = {}
     for item in items:
         if (not isinstance(item, dict) or not isinstance(item.get('id'), str)
                 or item.get('subscription') not in ('not_sent', 'pending', 'subscribed', 'failed')
                 or type(item.get('received')) is not int or item['received'] < 0
                 or type(item.get('error_id')) is not int):
-            raise QueryError(503, 'Invalid instrument diagnostic')
+            raise DataUnavailableError('Invalid instrument diagnostic')
         statuses[item['id']] = item
     current = current and len(statuses) == hb.get('expected')
     now = datetime.now(ZoneInfo('Asia/Shanghai'))
@@ -73,7 +79,7 @@ def coverage(store, calendar_directory=DEFAULT_DIRECTORY):
         if entry.get('exchange', exchange) != exchange or any(
                 not match_id(code) or match_id(code)[1].upper() != product
                 or row['month'] != match_id(code)[2] for code, row in targets.items()):
-            raise QueryError(503, 'Invalid universe product identity')
+            raise DataUnavailableError('Invalid universe product identity')
         declared_day = entry.get('requested_day', manifest.get('requested_day'))
         fresh_listing = bool(target_day and targets and entry.get('verified')) and not entry.get('stale') \
             and entry.get('data_date') == target_day and declared_day == target_day

@@ -8,9 +8,11 @@ from datetime import datetime, timedelta, timezone
 import math
 import re
 
-from query.contract_coverage import match_id
+from data_provider.contract_coverage import match_id
+from data_provider.errors import (DataNotFoundError, DataProviderError,
+                                  DataUnavailableError)
 from data_provider.market_calendar import Calendar, CalendarError, DEFAULT_DIRECTORY, ZONE, selected_products
-from query.storage import Store, QueryError, validate_day
+from data_provider.storage import Store, validate_day
 
 EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
 MAX_MEMBERS = 10000
@@ -366,9 +368,10 @@ def main(argv=None):
             result = reader.latest(scope, at, **policy)
         print(json.dumps(result, ensure_ascii=False, sort_keys=True))
         return 0
-    except (ValueError, TypeError, KeyError, OSError, QueryError) as error:
-        message = error.message if isinstance(error, QueryError) else str(error)
-        print(json.dumps(dict(error=message, status=error.status if isinstance(error, QueryError) else 400)))
+    except (ValueError, TypeError, KeyError, OSError, DataProviderError) as error:
+        status = (404 if isinstance(error, DataNotFoundError) else 503
+                  if isinstance(error, DataUnavailableError) else 400)
+        print(json.dumps(dict(error=str(error), status=status)))
         return 2
 
 

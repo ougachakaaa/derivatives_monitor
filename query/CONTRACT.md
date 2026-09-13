@@ -2,21 +2,9 @@
 
 # Query 组件契约
 
-本文件定义 Query 内部读取、Calendar/coverage 适配与 Market Indicator provider 规则。共享 Raw、HTTP、Market Indicator envelope 及 Calendar/Universe protocol 分别见 [Raw Boundary](../docs/contracts/raw-boundary.md)、[Read Path](../docs/contracts/read-path.md)、[Market Indicator](../docs/contracts/indicators.md)和 [Market Session](../docs/contracts/market-session.md)。
+本文件定义 Query 的 HTTP 适配与当前 Market Indicator provider 规则。Raw read、Calendar、coverage 与 Market Frame 由 [Data Provider](../data_provider/CONTRACT.md)拥有；共享 HTTP 与 Market Indicator envelope 分别见 [Read Path](../docs/contracts/read-path.md)和 [Market Indicator](../docs/contracts/indicators.md)。
 
-## 只读数据适配
-
-Query 按共享 Raw Boundary 打开日库，查询使用参数绑定，不接受任意 SQL 或文件路径。`Store.connect` 使用只读事务与既有执行预算，并将缺失日库与不可读、不兼容、锁/WAL 条件不成立或查询超时分成明确的 `QueryError`；公开 404/503 映射只由 repository [Read Path](../docs/contracts/read-path.md#sqlite-只读限制)定义。Query 不写 Raw、WAL/sidecar、参考包或派生数据库。
-
-`GET /api/health` 的公共语义与只读投影边界唯一见 [Read Path](../docs/contracts/read-path.md#健康证据)。Query 侧的日文件、summary 与 snapshot 读取不跨库猜测数据；参数和公开响应同样以 repository HTTP contract 为准。
-
-<a id="query-calendar-contract"></a>
-
-## Calendar 与 coverage 适配
-
-Data Provider Calendar 是纯标准库模块，加载随 Query 镜像发布的版本化年历；其精确加载行为见 [Data Provider Contract](../data_provider/CONTRACT.md#data-provider-calendar-contract)。UNKNOWN 的触发条件与消费者边界由共享 [Market Session Contract](../docs/contracts/market-session.md#market-session-shared-contract)拥有。
-
-`/api/sessions` 和 Calendar CLI 使用同一解释结果；CLI 同时提供 `--validate`。Query coverage 按 exchange/product 分组，并按共享 Universe manifest 中各产品的目标日期核对清单；它分别表达订阅、接收、缺口、stale/error 与进程健康，不以 Calendar 状态改写 Collector 事实或控制 Collector。
+Query 将 Data Provider 的无效输入、缺失数据和不可用错误分别映射为 400、404、503，并保持公共 `{"error": ...}` wire。HTTP 参数、方法、JSON 和 no-store 由 Query 与共享 Read Path 拥有；Query 不解释 SQLite、Calendar、Market Frame 或 coverage 内部规则。
 
 <a id="query-indicator-provider-contract"></a>
 

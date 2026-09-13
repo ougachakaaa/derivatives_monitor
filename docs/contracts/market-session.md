@@ -20,7 +20,7 @@ Data Provider 的 Calendar 适配见 [Data Provider Contract](../../data_provide
 
 - Universe manifest v1 的字段、生成与发布由 [Universe Tool Contract](../../collector/scripts/CONTRACT.md)定义；消费者只使用其中精确订阅代码与审核元数据，按各产品 requested day 与完整性状态交接，不把来源价格转成 Raw 行情，也不改写 CTP `TradingDay`。
 - Universe 工具使用本 Calendar 的逻辑交易日选择 SHFE 来源日；显式日期同时作为两交易所 requested day。Calendar 无法确认时必须以未知/失败交接，不能由消费者按自然日期补猜。具体来源抓取、字段校验、旧代码保留、generation 发布与可选重启归 [Universe Tool Contract](../../collector/scripts/CONTRACT.md)。
-- Query coverage 的分组、目标日核对与订阅/接收/缺口/stale/进程健康语义见 [Query Contract](../../query/CONTRACT.md#calendar-与-coverage-适配)；页面如何并列展示各市场及在请求失败时清理状态由 [Dashboard Contract](../../dashboard/CONTRACT.md#dashboard-session-contract)定义。
+- Data Provider coverage 的分组、目标日核对与订阅/接收/缺口/stale/进程健康语义见 [Data Provider Contract](../../data_provider/CONTRACT.md#coverage)；页面如何并列展示各市场及在请求失败时清理状态由 [Dashboard Contract](../../dashboard/CONTRACT.md#dashboard-session-contract)定义。
 - Market Session 只解释市场时段，不据此启动或停止 Collector，也不新增 Runtime Scheduler。repository manager 的三服务生命周期见 [Deployment Contract](deployment.md)。
 
 ## 维护与验收

@@ -1,4 +1,4 @@
-<a id="query-market-frame-contract"></a>
+<a id="data-provider-market-frame-contract"></a>
 
 # Minute Market Frame / Latest Market Frame
 
@@ -9,7 +9,7 @@ Python 契约 v1；已实现，当前状态见[本级 Acceptance](../ACCEPTANCE.
 
 Collector 的 callback、采样和物化行为见 [Collector Contract](../../collector/CONTRACT.md#数据与采样不变量)；Raw 所有权、分区身份、只读和 WAL/锁协议见 [Raw Boundary](../../docs/contracts/raw-boundary.md)。Python `Store.connect` 在该共享边界内提供事务和执行预算。`Calendar` 提供版本化产品时段（含竞价），native runtime 管理进程；这些机制不需要改写。
 
-纯 Python `query/market_frame.py`，复用 Store 和 Calendar，提供可导入的 scope / frame / latest 契约及 JSON CLI。无需新增 HTTP、调度任务或常驻缓存。Analytics 只依赖这个模块的输出，不理解文件路径、表名或 SQL。
+纯 Python `data_provider/market_frame.py`，复用 Store 和 Calendar，提供可导入的 scope / frame / latest 契约及 JSON CLI。无需新增 HTTP、调度任务或常驻缓存。Analytics 只依赖这个模块的输出，不理解文件路径、表名或 SQL。
 
 ## Scope 与完整性
 
@@ -32,13 +32,13 @@ quote_age_us = age_reference_us - received_us；stale 当 age > 显式 stale_aft
 
 Latest 必须传入 at。OPEN 使用当前 period 截至 at；刚开盘没有新 observation 就 MISSING，不继承上一段。BREAK/CLOSED 只返回最近已经结束的 period 的历史 frame，标记 historical=true、effective_as_of 为该 period end（exclusive），age_reference 仍是请求 at，因此休市时间会增加 age。不是把历史价格重新盖上当前时间；最新竞价也可作为历史 period，不误用 Calendar.latest_session 的仅连续时段定义。
 
-Latest 分开报告 calendar_trading_day（CLOSED 常为下一交易日）和 frame 的实际 trading_day，调用方 Universe 必须匹配后者。UNKNOWN 不猜测时段，返回无 frame 的明确状态。缺文件/不可读沿用 QueryError 404/503，不能伪装 EMPTY，也不跨库搜索“有数据的旧日”。
+Latest 分开报告 calendar_trading_day（CLOSED 常为下一交易日）和 frame 的实际 trading_day，调用方 Universe 必须匹配后者。UNKNOWN 不猜测时段，返回无 frame 的明确状态。缺文件抛 `DataNotFoundError`，不可读抛 `DataUnavailableError`；Query 分别映射为 404/503，不能伪装 EMPTY，也不跨库搜索“有数据的旧日”。
 
 ## SQL、部署与不可破坏边界
 
 一帧一个 Store.connect 只读事务，先读取 max(id)，逐成员用已有 snapshots_instrument_time 索引做有界 top-1 查询；绑定所有参数，不加 Raw 索引或表。清单最多10000成员，沿用3秒 SQL预算；超时明确失败。不建立 Derived SQLite，不写缓存/Raw/sidecar，不改变 Collector、runtime、日历规则或部署读写挂载。模块随 Query 镜像复制，不新增第三方依赖。
 
-下游 IV Chain → Skew 获得有序 scope、原始 observation、时间、session、revision、quality、completeness；MO Skew v1按[已冻结下游契约](analytics-skew.md)筛选PARTIAL、age和报价有效性，不直接回到 SQLite；其他派生业务不得默认沿用为通用口径。本模块不实现 IV、Skew、Basis、定价或 Analytics；这些属于独立下游。
+下游 IV Chain → Skew 获得有序 scope、原始 observation、时间、session、revision、quality、completeness；MO Skew v1按[已冻结下游契约](../../query/contracts/analytics-skew.md)筛选PARTIAL、age和报价有效性，不直接回到 SQLite；其他派生业务不得默认沿用为通用口径。本模块不实现 IV、Skew、Basis、定价或 Analytics；这些属于独立下游。
 
 ## 验证
 

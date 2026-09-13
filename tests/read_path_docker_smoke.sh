@@ -111,7 +111,7 @@ compose exec -T dashboard wget -q -O - http://127.0.0.1:8080/ | tee "$work/index
 grep -q '/assets/' "$work/index.html"
 compose exec -T query python -c '
 from pathlib import Path
-from query.storage import Store
+from data_provider.storage import Store
 assert not Path("/app/config.ini").exists()
 try: Path("/data/SHOULD_NOT_EXIST").write_text("bad")
 except OSError: pass

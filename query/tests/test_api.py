@@ -8,14 +8,12 @@ import time
 import unittest
 from fastapi.testclient import TestClient
 from query.app import create_app
-from query.storage import QueryError, Store
 
 
 class ApiTest(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.directory = Path(self.temp.name)
-        self.store = Store(self.directory)
         self.client = TestClient(create_app(self.directory))
         self.addCleanup(self.temp.cleanup)
         self.addCleanup(self.client.close)
@@ -59,13 +57,6 @@ class ApiTest(unittest.TestCase):
         self.assertEqual(summary["runs"][0]["source"], "TEST_DOUBLE_QUERY")
         self.assertEqual(self.client.get("/api/snapshots?day=20260904&instrument=IF2609&limit=1").json()["rows"][0]["Volume"], 10)
         self.assertEqual(self.client.get("/api/snapshots?day=20260904&instrument=missing").json()["rows"], [])
-        with self.store.connect("20260904") as db:
-            with self.assertRaises(sqlite3.OperationalError):
-                db.execute("DELETE FROM snapshots")
-            # Shared lock stays held throughout the connection.
-            with open(self.directory / ".collector.lock", "rb") as another:
-                with self.assertRaises(BlockingIOError):
-                    fcntl.flock(another, fcntl.LOCK_EX | fcntl.LOCK_NB)
         self.assertEqual(path.read_bytes(), before)
         self.assertFalse(Path(str(path) + "-wal").exists())
 

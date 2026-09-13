@@ -1,6 +1,6 @@
 # Query 当前状态
 
-行为见 [Contract](CONTRACT.md)、[Market Frame](contracts/market-frame.md)、[Skew](contracts/analytics-skew.md)和[参考适配](contracts/references.md)。系统门槛见[根状态矩阵](../docs/acceptance.md)。
+行为见 [Contract](CONTRACT.md)、[Data Provider](../data_provider/CONTRACT.md)、[Skew](contracts/analytics-skew.md)和[参考适配](contracts/references.md)。系统门槛见[根状态矩阵](../docs/acceptance.md)。
 
 <a id="query-indicator-evidence"></a>
 

@@ -18,7 +18,7 @@
 
 仅 `CFFEX / MO / 一个显式 YYMM`，同一 expiry 的完整上市清单。用户显式选月，v1 不自动换月、不混月、不拼期限曲面。清单须完整且当天已验证；Raw frame 可以 PARTIAL，只有本契约所需输入全部合格才产出 Skew。缺失其他合约仍报告缺口，不能将 PARTIAL 改为 COMPLETE。
 
-只消费 [Market Frame v1](market-frame.md) 的 `option_chain` frame 与独立参考包；不直接访问 SQLite，不改变 Collector、Raw schema、15秒物化、日历、部署或 `experiments/`。派生值按请求在 Python 计算，不写 Raw 或 Derived SQLite，不把计算放进浏览器。现有 Market Frame 的 `usable` 不是 IV 保证。
+只消费 [Market Frame v1](../../data_provider/contracts/market-frame.md) 的 `option_chain` frame 与独立参考包；不直接访问 SQLite，不改变 Collector、Raw schema、15秒物化、日历、部署或 `experiments/`。派生值按请求在 Python 计算，不写 Raw 或 Derived SQLite，不把计算放进浏览器。现有 Market Frame 的 `usable` 不是 IV 保证。
 
 ## 2. 数学定义与单位
 
@@ -137,7 +137,7 @@ MO 的法律标的是中证1000指数；v1 的估值输入是该到期月的**�
 
 逻辑输出契约（HTTP 入口与投影另见 Read Path）：`schema_version=1, contract_id, algorithm_version, status, reasons[], scope, valuation_at, requested_at, historical, current_usable, reconstructed, display_age_us, raw_revision, universe/calendar/reference身份, input_completeness, expected/observed/eligible counts, F及三对明细, L/T/D/r_eff, wings, skew_25d_vp, provenance[]`。每个 provenance 含 day/id/run_id/received_us/snapshot_us/source time、mid、剔除原因或使用角色；不可计算为 JSON null，禁止 NaN/Inf、空字符串或0冒充失败。
 
-`status=OK` 或 `UNAVAILABLE`；OK 仍可带 PARTIAL_INPUT，历史标识单独保留。参数类型/必需结构缺失或非MO scope 抛 `ValueError`（HTTP适配为400）；结构完整但参考缺失/不匹配、质量或业务前提不满足时返回 UNAVAILABLE 与对应reason，不另造成功结果；现有 QueryError 404/503 继续原样抛出，不转成 EMPTY 或普通缺翼。
+`status=OK` 或 `UNAVAILABLE`；OK 仍可带 PARTIAL_INPUT，历史标识单独保留。参数类型/必需结构缺失或非MO scope 抛 `ValueError`（HTTP适配为400）；结构完整但参考缺失/不匹配、质量或业务前提不满足时返回 UNAVAILABLE 与对应reason，不另造成功结果；Data Provider 的缺失/不可用错误继续由 Query 映射为 404/503，不转成 EMPTY 或普通缺翼。
 
 确定处理顺序：输入结构/参考身份 → 日历/分钟封口/expiry → 基础报价 → forward → IV → 两翼/最终同步 → Skew。收集阶段内全部原因，按 instrument/reason 排序；前置阶段失败不执行后续阶段。保留原始质量字段和剔除计数。常见状态包括 `REFERENCE_INVALID, RATE_MISSING, UNIVERSE_INCOMPLETE, MINUTE_UNSEALED, UNSUPPORTED_SESSION, WAITING_FOR_MINUTE, EXPIRY_DAY_UNSUPPORTED, EXPIRED, FORWARD_PAIRS_MISSING, FORWARD_UNSYNCHRONIZED, FORWARD_INCONSISTENT, PRICE_OUT_OF_BOUNDS, TIME_VALUE_TOO_SMALL, IV_OUT_OF_RANGE, LOW_VEGA, IV_NOT_CONVERGED, NUMERICAL_ERROR, NON_MONOTONE_DELTA, WING_UNBRACKETED, WING_GAP_TOO_WIDE, INPUTS_UNSYNCHRONIZED`；不把失败变成成功数字。
 

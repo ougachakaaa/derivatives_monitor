@@ -5,10 +5,13 @@ import re
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from query.storage import QueryError, Store
-from query.contract_coverage import coverage
+from data_provider.contract_coverage import coverage
+from data_provider.errors import (DataNotFoundError, DataProviderError,
+                                  DataProviderInputError, DataUnavailableError)
 from query.indicator_service import IndicatorRequestError, skew_indicator_service
 from data_provider.market_calendar import sessions, DEFAULT_DIRECTORY
+from data_provider.storage import Store
+from query.errors import QueryError
 from query.skew_references import ReferenceRepository
 from query.skew_service import SkewService
 
@@ -26,6 +29,12 @@ def create_app(directory=None, calendar_directory=None, *, reference_directory=N
     @app.exception_handler(QueryError)
     async def query_error(request, error):
         return JSONResponse({"error": error.message}, status_code=error.status)
+
+    @app.exception_handler(DataProviderError)
+    async def data_provider_error(request, error):
+        status = (400 if isinstance(error, DataProviderInputError) else
+                  404 if isinstance(error, DataNotFoundError) else 503)
+        return JSONResponse({"error": str(error)}, status_code=status)
 
     @app.exception_handler(RequestValidationError)
     async def validation_error(request, error):
@@ -55,8 +64,8 @@ def create_app(directory=None, calendar_directory=None, *, reference_directory=N
         try:
             store.check_directory()
             data = {"readable": True}
-        except QueryError as error:
-            data = {"readable": False, "error": error.message}
+        except DataProviderError as error:
+            data = {"readable": False, "error": str(error)}
         return {"query": {"status": "healthy"}, "data": data, "collector": store.heartbeat()}
 
     @app.get("/api/sessions")
@@ -73,7 +82,7 @@ def create_app(directory=None, calendar_directory=None, *, reference_directory=N
         parameters(request, ())
         try:
             return coverage(store, calendar_directory)
-        except (ValueError, TypeError, KeyError, AttributeError):
+        except (ValueError, TypeError, KeyError, AttributeError, DataUnavailableError):
             raise QueryError(503, "Coverage files unavailable or invalid") from None
 
     @app.get("/api/days")

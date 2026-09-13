@@ -11,7 +11,7 @@
 | Market Frame | 已保存事实的 as-of/minute/latest 解释，含时间、session、quality、completeness、revision | 定价和金融指标 |
 | Market Indicator | 按版本化定义计算的描述性数值、单位、有效性和输入证据 | 改写 Market Frame 或 Raw，以及定义特定消费者流程 |
 
-Market Frame 的精确行为沿用 [Market Frame Contract](../../query/contracts/market-frame.md)。Indicator 的公式、输入质量、时间选择、窗口和参考要求由对应指标 Contract 决定；通用层不把某个金融指标的口径推广为全部指标的默认口径。
+Market Frame 的精确行为沿用 [Market Frame Contract](../../data_provider/contracts/market-frame.md)。Indicator 的公式、输入质量、时间选择、窗口和参考要求由对应指标 Contract 决定；通用层不把某个金融指标的口径推广为全部指标的默认口径。
 
 Query 的注册表、provider 与内部依赖规则见 [Query Contract](../../query/CONTRACT.md#query-indicator-provider-contract)。
 
@@ -47,7 +47,7 @@ Query 的注册表、provider 与内部依赖规则见 [Query Contract](../../qu
 
 该流内 `effective_at` 是采样的时间顺序，`sample_key` 用于同一位置相等判断，不得解析键或以字符串排序推断时间。相同位置的 Raw/参考修订不改变键；修订身份属于 evidence。请求时钟也不进入键。当前 provider 每个有效时间位置只有一个样本；需要其他排序模型的 provider 必须先扩展契约。
 
-UNAVAILABLE 仍保留已经知道的时间/身份/原因，未知身份保持 null 或空，不伪造证据。Raw 读取的 QueryError 404/503 原样保留；不把读库错误包装为正常不可算数值。provider 未预期异常通过 HTTP 失败暴露，不复用此前结果。
+UNAVAILABLE 仍保留已经知道的时间/身份/原因，未知身份保持 null 或空，不伪造证据。Raw 读取的 Data Provider not-found/unavailable 错误由 Query 映射为 404/503；不把读库错误包装为正常不可算数值。provider 未预期异常通过 HTTP 失败暴露，不复用此前结果。
 
 ## 3. MO Skew provider 映射
 

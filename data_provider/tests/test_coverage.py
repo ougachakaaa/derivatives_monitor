@@ -6,8 +6,9 @@ import time
 import unittest
 from unittest.mock import patch
 from zoneinfo import ZoneInfo
-from fastapi.testclient import TestClient
-from query.app import create_app
+from data_provider.contract_coverage import coverage
+from data_provider.errors import DataUnavailableError
+from data_provider.storage import Store
 
 
 class CoverageTest(unittest.TestCase):
@@ -15,8 +16,7 @@ class CoverageTest(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.directory = Path(self.temp.name)
-        self.client = TestClient(create_app(self.directory))
-        self.addCleanup(self.client.close)
+        self.store = Store(self.directory)
         self.now = time.time_ns() // 1000
         self.today = datetime.now(ZoneInfo('Asia/Shanghai')).strftime('%Y%m%d')
         self.hb = dict(schema_version=1, run_id='a'*32, updated_us=self.now, process_state='running',
@@ -38,9 +38,7 @@ class CoverageTest(unittest.TestCase):
         path.write_text(json.dumps(data))
 
     def get(self):
-        response = self.client.get('/api/coverage')
-        self.assertEqual(response.status_code, 200, response.text)
-        return response.json()
+        return coverage(self.store)
 
     def test_counts_failure_no_push_and_read_only(self):
         before = {str(p): p.read_bytes() for p in self.directory.rglob('*') if p.is_file()}
@@ -61,10 +59,10 @@ class CoverageTest(unittest.TestCase):
         self.write('.collector-status.json', self.hb)
         self.assertFalse(self.get()['complete'])
 
-    def test_invalid_missing_and_parameters(self):
-        self.assertEqual(self.client.get('/api/coverage?day=20260907').status_code, 400)
+    def test_invalid_and_missing_diagnostics(self):
         (self.directory / '.collector-coverage.json').write_text('{')
-        self.assertEqual(self.client.get('/api/coverage').status_code, 503)
+        with self.assertRaises(DataUnavailableError):
+            self.get()
         (self.directory / '.collector-coverage.json').unlink()
         self.assertFalse(self.get()['collector_current'])
 
@@ -80,7 +78,7 @@ class CoverageTest(unittest.TestCase):
             manifest['products'][product]=dict(exchange='SHFE',requested_day='20260908',data_date='20260908',
                 instruments=[dict(id=code,month='2610')],discovered_ids=[code],verified=True,stale=False,source='https://www.shfe.com.cn/')
         self.write('universe/current/manifest.json',manifest)
-        with patch('query.contract_coverage.datetime') as clock:
+        with patch('data_provider.contract_coverage.datetime') as clock:
             clock.now.return_value=now
             result=self.get()
         au=next(r for r in result['groups'] if r['product']=='AU')
@@ -91,8 +89,7 @@ class CoverageTest(unittest.TestCase):
         self.assertEqual(result['requested_days']['SHFE'],'20260908')
         self.assertFalse(result['complete'])
         self.assertEqual(next(r for r in result['instruments'] if r['id']=='au2610')['subscription'],'subscribed')
-        with TestClient(create_app(self.directory, self.directory/'missing')) as client:
-            result=client.get('/api/coverage').json()
+        result=coverage(self.store, self.directory/'missing')
         au=next(r for r in result['groups'] if r['product']=='AU')
         self.assertFalse(au['verified']);self.assertTrue(au['stale'])
         self.assertEqual(au['subscribed'],1) # Calendar failure cannot erase CTP facts.

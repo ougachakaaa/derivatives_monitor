@@ -8,9 +8,7 @@ query/**
 !query/poetry.lock
 !query/__init__.py
 !query/app.py
-!query/storage.py
-!query/contract_coverage.py
-!query/market_frame.py
+!query/errors.py
 !query/analytics.py
 !query/skew_service.py
 !query/skew_references.py
@@ -20,8 +18,7 @@ query/tests/**
 !query/tests/__init__.py
 !query/tests/test_analytics.py
 !query/tests/test_api.py
-!query/tests/test_coverage.py
-!query/tests/test_market_frame.py
+!query/tests/test_coverage_api.py
 !query/tests/test_sessions_api.py
 !query/tests/test_skew_api.py
 !query/tests/test_indicator_service.py
@@ -36,7 +33,11 @@ query/tests/fixtures/**
 !data_provider/
 data_provider/**
 !data_provider/__init__.py
+!data_provider/errors.py
+!data_provider/storage.py
+!data_provider/contract_coverage.py
 !data_provider/market_calendar.py
+!data_provider/market_frame.py
 !data_provider/calendars/
 data_provider/calendars/**
 !data_provider/calendars/2026.json
@@ -44,6 +45,9 @@ data_provider/calendars/**
 data_provider/tests/**
 !data_provider/tests/__init__.py
 !data_provider/tests/test_calendar.py
+!data_provider/tests/test_storage.py
+!data_provider/tests/test_coverage.py
+!data_provider/tests/test_market_frame.py
 
 # Defense in depth for secrets and runtime state.
 **/.env

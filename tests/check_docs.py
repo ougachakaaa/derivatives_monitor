@@ -18,8 +18,9 @@ REQUIRED_PATHS = (
     *(f'docs/contracts/{name}.md' for name in
       ('raw-boundary', 'read-path', 'market-session', 'deployment',
        'developer-runner', 'indicators')),
+    'data_provider/contracts/market-frame.md',
     *(f'query/contracts/{name}' for name in
-      ('market-frame.md', 'analytics-skew.md', 'analytics-skew-v1.json', 'references.md')),
+      ('analytics-skew.md', 'analytics-skew-v1.json', 'references.md')),
     'query/tests/fixtures/analytics-skew-v1.json',
 )
 EXCLUDED_DIRS = {'.git', '.venv', 'venv', 'node_modules', '__pycache__',

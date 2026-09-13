@@ -135,7 +135,7 @@ preflight() {
     docker run --rm --network none --read-only --user "$COLLECTOR_UID:$COLLECTOR_GID" \
         --mount "type=bind,src=$COLLECTOR_DIR/data,dst=/data,readonly" \
         --entrypoint python derivatives-monitor-query:local -c \
-        'from query.storage import Store; s=Store("/data"); s.check_directory(); s.days(); print("Query shared directory readable")'
+        'from data_provider.storage import Store; s=Store("/data"); s.check_directory(); s.days(); print("Query shared directory readable")'
     docker run --rm --network none --read-only --tmpfs /tmp:mode=1777 \
         --user "$COLLECTOR_UID:$COLLECTOR_GID" --entrypoint nginx derivatives-monitor-dashboard:local -t
 }

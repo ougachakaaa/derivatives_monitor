@@ -14,9 +14,9 @@ from unittest.mock import patch
 from fastapi.testclient import TestClient
 from query.app import create_app
 from data_provider.market_calendar import Calendar, DEFAULT_DIRECTORY, parse_at
-from query.market_frame import MarketFrameReader, OBSERVATION_COLUMNS, micros
+from data_provider.market_frame import MarketFrameReader, OBSERVATION_COLUMNS, micros
 from query.skew_references import ReferenceRepository, ReferenceUnavailable, digest, load_package
-from query.storage import Store
+from data_provider.storage import Store
 from query.tests.test_analytics import CHAIN, reference
 
 DAY = '20260916'

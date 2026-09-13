@@ -15,7 +15,7 @@ from urllib.parse import urlsplit
 
 from query.analytics import _parse_reference, _semantic_reference_reasons
 from data_provider.market_calendar import Calendar, parse_day, parse_at
-from query.market_frame import Scope, Universe
+from data_provider.market_frame import Scope, Universe
 
 IDENTIFIER = re.compile(r'[A-Za-z0-9][A-Za-z0-9_-]{0,95}')
 PACKAGE_FILES = ('manifest.json', 'bundle.json', 'universe.json', 'calendar.json')

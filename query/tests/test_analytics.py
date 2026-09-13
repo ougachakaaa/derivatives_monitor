@@ -11,9 +11,9 @@ from unittest.mock import patch
 from query import analytics
 from query.analytics import (ALGORITHM_VERSION, CONTRACT_ID, SolverFailure, black_price,
                        _choose_wing, calculate_skew, solve_iv)
-from query.market_frame import (OBSERVATION_COLUMNS, MarketFrameReader, Scope, Universe,
+from data_provider.market_frame import (OBSERVATION_COLUMNS, MarketFrameReader, Scope, Universe,
                           micros)
-from query.storage import Store
+from data_provider.storage import Store
 
 
 ROOT = Path(__file__).resolve().parents[2]

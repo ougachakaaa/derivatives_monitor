@@ -27,7 +27,8 @@ flowchart LR
 | Raw 日 SQLite | 保存 Collector 实际物化的行情事实、运行身份与时间来源 | 由 Collector 拥有；所有下游只读，不为页面或算法建立第二套事实 |
 | `collector/scripts/universe.py` | 通过 Data Provider 的纯 Calendar 模块选择来源日，生成和发布版本化合约清单参考 | 是工具依赖，不进入 C++ runtime；不写行情，清单不替代 CTP 行情事实 |
 | `data_provider/market_calendar.py` | 提供版本化交易日历、产品时段和逻辑交易日解释 | 是 Query 进程内源码模块；不改写源 TradingDay，不控制采集启停 |
-| `query/` | 只读访问 Raw，将显式 Universe/Calendar 组合为 Market Frame，并通过 Analytics 计算和发布可重建 Market Indicator JSON | 不写 Raw；内部关系见 [Query Architecture](query/ARCHITECTURE.md) |
+| `data_provider/` | 只读访问 Raw，将显式 Universe/Calendar 组合为 Market Frame，并解释 data availability/coverage | Query 进程内源码模块；不写 Raw，不计算金融指标 |
+| `query/` | 通过 Analytics 计算并发布可重建 Market Indicator JSON，同时发布 Data Provider 的只读诊断 | HTTP adapter 与 composition boundary；不解释 SQLite、Calendar 或 Market Frame 内部规则 |
 | `dashboard/` | 构建独立 React 汇报页面；Docker 由 Nginx、原生 systemd 由 Vite 提供页面及 API 代理 | 只消费 JSON；不读 SQLite，不维护另一套指标公式 |
 | `compose.yaml` / `scripts/deploy.sh` | 组成和管理仓库级三服务 Docker runtime | 属于系统 integration layer；服务内部构建和运行输入仍由各模块拥有 |
 | 根 `tests/` 与模块测试 | 根测试组织跨模块回归并记录证据；模块测试证明 owner 行为 | 不定义产品行为，也不进入生产数据路径 |
@@ -35,7 +36,7 @@ flowchart LR
 ## 数据流与依赖方向
 
 1. Collector 从 SDK 接收行情并把实际物化结果写入按源交易日组织的 Raw 日库。
-2. Query 的只读 Store 从同一 Raw 目录取得事实；Market Frame 再结合显式 Universe 与 Calendar 形成稳定的下游读取模型。
+2. Data Provider 的只读 Store 从同一 Raw 目录取得事实；Market Frame 再结合显式 Universe 与 Calendar 形成稳定的下游读取模型。
 3. Analytics 只消费 Market Frame 和独立审核参考包。业务 service 负责时间切片、读取身份固定及 JSON 投影。
 4. FastAPI 提供 JSON；Dashboard 通过 API 展示业务结果和诊断，不跨过 API 访问数据文件。
 
@@ -47,14 +48,14 @@ flowchart LR
 
 | 数据/记录 | Owner | 允许的消费者 |
 |---|---|---|
-| Raw 行情日库与采集运行诊断 | Collector | Query 只读访问；运维工具按契约检查或备份 |
+| Raw 行情日库与采集运行诊断 | Collector | Data Provider 只读访问；运维工具按契约检查或备份 |
 | Universe generations 与源响应 | Universe 管理工具 | Collector 订阅入口、Market Frame、coverage 与审核流程 |
 | Calendar 版本 | Data Provider | Market Frame、业务 service、coverage、Universe 工具与运维检查 |
 | Analytics ReferenceBundle | 独立审核/导入流程 | Analytics 及其只读适配层 |
 | IV / Skew 响应 | Analytics / business service | API 与 Dashboard；当前不是第二份持久化事实库 |
 | 验收日志和现场证据 | Repository verification / 验收流程 | Acceptance 引用；不进入 runtime |
 
-数据集的精确 schema、锁、版本、时间、质量、选择和错误规则不在本表重复，分别见 [Raw Boundary](docs/contracts/raw-boundary.md)、[Collector](collector/CONTRACT.md)、[Universe tool](collector/scripts/CONTRACT.md)、[Read Path](docs/contracts/read-path.md)、[Query](query/CONTRACT.md)、[Market Frame](query/contracts/market-frame.md)、[Calendar / Universe](docs/contracts/market-session.md)、[Deployment](docs/contracts/deployment.md)及 [Analytics / Skew v1](query/contracts/analytics-skew.md)。
+数据集的精确 schema、锁、版本、时间、质量、选择和错误规则不在本表重复，分别见 [Raw Boundary](docs/contracts/raw-boundary.md)、[Collector](collector/CONTRACT.md)、[Universe tool](collector/scripts/CONTRACT.md)、[Read Path](docs/contracts/read-path.md)、[Data Provider](data_provider/CONTRACT.md)、[Market Frame](data_provider/contracts/market-frame.md)、[Calendar / Universe](docs/contracts/market-session.md)、[Deployment](docs/contracts/deployment.md)及 [Analytics / Skew v1](query/contracts/analytics-skew.md)。
 
 ## Runtime 与模块边界
 

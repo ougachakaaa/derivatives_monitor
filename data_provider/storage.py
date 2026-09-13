@@ -9,22 +9,19 @@ import re
 import sqlite3
 import time
 
-
-class QueryError(Exception):
-    def __init__(self, status, message):
-        self.status = status
-        self.message = message
+from data_provider.errors import (DataNotFoundError, DataProviderError,
+                                  DataProviderInputError, DataUnavailableError)
 
 
 def validate_day(day):
     if not re.fullmatch(r"[0-9]{8}", day):
-        raise QueryError(400, "day must be a valid YYYYMMDD")
+        raise DataProviderInputError("day must be a valid YYYYMMDD")
     try:
         parsed = datetime.strptime(day, "%Y%m%d")
         if parsed.year < 1900:
             raise ValueError()
     except ValueError:
-        raise QueryError(400, "day must be a valid YYYYMMDD") from None
+        raise DataProviderInputError("day must be a valid YYYYMMDD") from None
     return day
 
 
@@ -34,16 +31,16 @@ class Store:
 
     def check_directory(self):
         if not self.directory.is_dir() or not os.access(self.directory, os.R_OK | os.X_OK):
-            raise QueryError(503, "Shared data directory is unavailable or unreadable")
+            raise DataUnavailableError("Shared data directory is unavailable or unreadable")
 
     def path(self, day):
         validate_day(day)
         self.check_directory()
         path = self.directory / f"{day}.sqlite"
         if path.is_symlink():
-            raise QueryError(503, "Daily database must not be a symlink")
+            raise DataUnavailableError("Daily database must not be a symlink")
         if not path.is_file():
-            raise QueryError(404, "Daily database does not exist")
+            raise DataNotFoundError("Daily database does not exist")
         return path
 
     @staticmethod
@@ -63,7 +60,7 @@ class Store:
                 validate_day(path.stem)
                 if path.is_file() and not path.is_symlink():
                     result.append({"day": path.stem, "size_bytes": self.size(path)})
-            except (QueryError, FileNotFoundError):
+            except (DataProviderError, FileNotFoundError):
                 continue
         return sorted(result, key=lambda row: row["day"], reverse=True)
 
@@ -91,7 +88,7 @@ class Store:
                 for suffix in ("-wal", "-shm"):
                     sidecar = Path(str(path) + suffix)
                     if not sidecar.is_file() or sidecar.is_symlink():
-                        raise QueryError(503, "WAL sidecars unavailable; stop Collector normally to read this historical day")
+                        raise DataUnavailableError("WAL sidecars unavailable; stop Collector normally to read this historical day")
             uri = path.as_uri() + "?mode=ro" + ("&immutable=1" if immutable else "")
             connection = sqlite3.connect(uri, uri=True, timeout=1)
             connection.row_factory = sqlite3.Row
@@ -102,10 +99,10 @@ class Store:
             if (connection.execute("PRAGMA user_version").fetchone()[0] != 1
                     or connection.execute("PRAGMA application_id").fetchone()[0] != 1145914161
                     or [tuple(r) for r in connection.execute("SELECT singleton,trading_day,schema_version FROM dataset")] != [(1, day, 1)]):
-                raise QueryError(503, "Unsupported schema or mismatched trading day")
+                raise DataUnavailableError("Unsupported schema or mismatched trading day")
             yield connection
         except sqlite3.Error:
-            raise QueryError(503, "Daily SQLite unreadable, incompatible, busy or query timed out") from None
+            raise DataUnavailableError("Daily SQLite unreadable, incompatible, busy or query timed out") from None
         finally:
             if connection is not None:
                 connection.close()

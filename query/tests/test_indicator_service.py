@@ -10,7 +10,7 @@ from query.indicator_service import (IndicatorRegistry, IndicatorRequestError, I
 from data_provider.market_calendar import DEFAULT_DIRECTORY
 from query.skew_references import ReferenceRepository
 from query.skew_service import SkewService
-from query.storage import Store
+from data_provider.storage import Store
 from query.tests.test_skew_api import DAY, MONTH, START, append_chain, make_database, write_package
 
 
