@@ -11,9 +11,10 @@ from data_provider.errors import (DataNotFoundError, DataProviderError,
 from query.indicator_service import IndicatorRequestError, skew_indicator_service
 from data_provider.market_calendar import sessions, DEFAULT_DIRECTORY
 from data_provider.storage import Store
+from analytics.errors import AnalyticsError, AnalyticsRequestError
+from analytics.skew_references import ReferenceRepository
+from analytics.skew_service import SkewService
 from query.errors import QueryError
-from query.skew_references import ReferenceRepository
-from query.skew_service import SkewService
 
 
 def create_app(directory=None, calendar_directory=None, *, reference_directory=None,
@@ -34,6 +35,11 @@ def create_app(directory=None, calendar_directory=None, *, reference_directory=N
     async def data_provider_error(request, error):
         status = (400 if isinstance(error, DataProviderInputError) else
                   404 if isinstance(error, DataNotFoundError) else 503)
+        return JSONResponse({"error": str(error)}, status_code=status)
+
+    @app.exception_handler(AnalyticsError)
+    async def analytics_error(request, error):
+        status = 400 if isinstance(error, AnalyticsRequestError) else 503
         return JSONResponse({"error": str(error)}, status_code=status)
 
     @app.exception_handler(RequestValidationError)

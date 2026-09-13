@@ -15,9 +15,9 @@ from fastapi.testclient import TestClient
 from query.app import create_app
 from data_provider.market_calendar import Calendar, DEFAULT_DIRECTORY, parse_at
 from data_provider.market_frame import MarketFrameReader, OBSERVATION_COLUMNS, micros
-from query.skew_references import ReferenceRepository, ReferenceUnavailable, digest, load_package
+from analytics.skew_references import ReferenceRepository, ReferenceUnavailable, digest, load_package
 from data_provider.storage import Store
-from query.tests.test_analytics import CHAIN, reference
+from analytics.tests.test_skew import CHAIN, reference
 
 DAY = '20260916'
 MONTH = '2610'
@@ -332,7 +332,7 @@ class SkewApiTest(unittest.TestCase):
         manifest['sha256']['bundle.json'] = digest(raw)
         (self.package / 'manifest.json').write_text(json.dumps(manifest))
         destination = self.root / 'imported'
-        command = [sys.executable, '-m', 'query.skew_references',
+        command = [sys.executable, '-m', 'analytics.skew_references',
                    str(self.package), '--directory', str(destination)]
         first = subprocess.run(command, capture_output=True, text=True, timeout=10)
         self.assertEqual(first.returncode, 0, first.stderr)

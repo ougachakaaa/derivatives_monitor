@@ -1,6 +1,6 @@
 # Query 工作指引
 
-本目录工作先读[根工作协议](../AGENTS.md)、本级[入口](README.md)及与任务对应的本级 Design、Architecture 或 Contract。Data Provider 行为见其 [Contract](../data_provider/CONTRACT.md)与 [Market Frame](../data_provider/contracts/market-frame.md)；修改 Analytics 时读取冻结的 [Skew v1](contracts/analytics-skew.md)及其[机器策略](contracts/analytics-skew-v1.json)，参考包读写适配同时读取 [Reference adapter](contracts/references.md)。
+本目录工作先读[根工作协议](../AGENTS.md)、本级[入口](README.md)及与任务对应的本级 Design、Architecture 或 Contract。Data Provider 行为见其 [Contract](../data_provider/CONTRACT.md)与 [Market Frame](../data_provider/contracts/market-frame.md)；Analytics 行为见其 [Contract](../analytics/CONTRACT.md)、冻结的 [Skew v1](../analytics/contracts/analytics-skew.md)及 [Reference adapter](../analytics/contracts/references.md)。
 
 Query 通过 Data Provider 只读消费共享 [Raw Boundary](../docs/contracts/raw-boundary.md)，HTTP wire contract、Market Indicator envelope 和 Calendar/Universe protocol 仍在 repository scope。不得让局部实现改写这些共享协议；不得让 Analytics 直接读取 Raw、联网取得参考值或重新生成 oracle expected 来修复回归。
 

@@ -4,7 +4,7 @@
 
 # Dashboard presentation contract
 
-本文件只拥有 React 页面如何呈现和清理已取得的业务/诊断结果。公共 HTTP 路径、参数、wire shape、状态和错误码仍以[共享 Read Path](../docs/contracts/read-path.md)为准；Calendar/Universe 协议见[共享 Market Session](../docs/contracts/market-session.md)，指标时间选择、质量、数值、series 及 reference 语义见 [Query Skew](../query/contracts/analytics-skew.md)与 [Reference adapter](../query/contracts/references.md)。页面不得改写这些语义。
+本文件只拥有 React 页面如何呈现和清理已取得的业务/诊断结果。公共 HTTP 路径、参数、wire shape、状态和错误码仍以[共享 Read Path](../docs/contracts/read-path.md)为准；Calendar/Universe 协议见[共享 Market Session](../docs/contracts/market-session.md)，指标时间选择、质量、数值、series 及 reference 语义见 [Analytics Skew](../analytics/contracts/analytics-skew.md)与 [Reference adapter](../analytics/contracts/references.md)。页面不得改写这些语义。
 
 ## 汇报首页与轮询
 

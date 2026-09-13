@@ -28,6 +28,7 @@ flowchart LR
 | `collector/scripts/universe.py` | 通过 Data Provider 的纯 Calendar 模块选择来源日，生成和发布版本化合约清单参考 | 是工具依赖，不进入 C++ runtime；不写行情，清单不替代 CTP 行情事实 |
 | `data_provider/market_calendar.py` | 提供版本化交易日历、产品时段和逻辑交易日解释 | 是 Query 进程内源码模块；不改写源 TradingDay，不控制采集启停 |
 | `data_provider/` | 只读访问 Raw，将显式 Universe/Calendar 组合为 Market Frame，并解释 data availability/coverage | Query 进程内源码模块；不写 Raw，不计算金融指标 |
+| `analytics/` | 消费 Market Frame 与审核参考包，拥有数值核心、业务时间选择和 Market Indicator 计算 | Query 进程内源码模块；不直接读 Raw，不依赖 HTTP，不建立缓存或独立进程 |
 | `query/` | 通过 Analytics 计算并发布可重建 Market Indicator JSON，同时发布 Data Provider 的只读诊断 | HTTP adapter 与 composition boundary；不解释 SQLite、Calendar 或 Market Frame 内部规则 |
 | `dashboard/` | 构建独立 React 汇报页面；Docker 由 Nginx、原生 systemd 由 Vite 提供页面及 API 代理 | 只消费 JSON；不读 SQLite，不维护另一套指标公式 |
 | `compose.yaml` / `scripts/deploy.sh` | 组成和管理仓库级三服务 Docker runtime | 属于系统 integration layer；服务内部构建和运行输入仍由各模块拥有 |
@@ -55,7 +56,7 @@ flowchart LR
 | IV / Skew 响应 | Analytics / business service | API 与 Dashboard；当前不是第二份持久化事实库 |
 | 验收日志和现场证据 | Repository verification / 验收流程 | Acceptance 引用；不进入 runtime |
 
-数据集的精确 schema、锁、版本、时间、质量、选择和错误规则不在本表重复，分别见 [Raw Boundary](docs/contracts/raw-boundary.md)、[Collector](collector/CONTRACT.md)、[Universe tool](collector/scripts/CONTRACT.md)、[Read Path](docs/contracts/read-path.md)、[Data Provider](data_provider/CONTRACT.md)、[Market Frame](data_provider/contracts/market-frame.md)、[Calendar / Universe](docs/contracts/market-session.md)、[Deployment](docs/contracts/deployment.md)及 [Analytics / Skew v1](query/contracts/analytics-skew.md)。
+数据集的精确 schema、锁、版本、时间、质量、选择和错误规则不在本表重复，分别见 [Raw Boundary](docs/contracts/raw-boundary.md)、[Collector](collector/CONTRACT.md)、[Universe tool](collector/scripts/CONTRACT.md)、[Read Path](docs/contracts/read-path.md)、[Data Provider](data_provider/CONTRACT.md)、[Market Frame](data_provider/contracts/market-frame.md)、[Calendar / Universe](docs/contracts/market-session.md)、[Deployment](docs/contracts/deployment.md)及 [Analytics / Skew v1](analytics/contracts/analytics-skew.md)。
 
 ## Runtime 与模块边界
 

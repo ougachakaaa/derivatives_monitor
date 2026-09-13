@@ -22,7 +22,7 @@ python3 tests/run.py docker
 | Profile | 前提与动作 |
 |---|---|
 | `docs` | 检查链接、authority、依赖方向、模块 Docker policy、Collector SDK manifest，并运行检查器自测；不访问外网 |
-| `analytics-contract` | 标准库核对 Query 拥有的冻结策略、fixture、生成器哈希、价格/IV/delta/远期/两翼及失败回归 |
+| `analytics-contract` | 标准库核对 Analytics 拥有的冻结策略、fixture、生成器哈希、价格/IV/delta/远期/两翼及失败回归 |
 | `analytics` | 在 contract 检查上运行生产 Analytics、Skew HTTP 与临时 SQLite TEST DOUBLE 回归 |
 | `offline` | 重建 Collector，运行 CTest、developer runner、Query、Universe、部署替身、SQLite CLI、React 与前端构建 |
 | `native` | 重建 Collector，运行合成夜盘和真实 HTTP 独立停启测试；仅临时数据和随机端口 |
@@ -36,7 +36,7 @@ python3 tests/run.py docker
 
 - `collector/tests/`：Collector runtime、配置、SDK、存储、部署替身与容器生命周期。
 - `data_provider/tests/`：Raw read、Calendar、coverage 与 Market Frame owner 行为。
-- `query/tests/`：HTTP adapter 与当前 Analytics/Market Indicator 行为，以及冻结 Analytics fixture、contract checker 和独立 oracle。
+- `analytics/tests/`：Skew 数值/service、冻结 fixture、contract checker 与独立 oracle；`query/tests/`：HTTP adapter 与当前 Market Indicator integration。
 - `dashboard/tests/`：React 组件和浏览器交互。
 - `tests/`：runner、文档与 repository invariants、developer runner、跨进程和 Docker 闭环。
 
@@ -54,16 +54,16 @@ PYTHONDONTWRITEBYTECODE=1 python3 tests/dev_runner_smoke.py
 Analytics / Skew：
 
 ```bash
-python3 query/tests/analytics_contract.py
-python3 -m unittest query.tests.test_analytics_contract -v
+python3 analytics/tests/analytics_contract.py
+python3 -m unittest analytics.tests.test_analytics_contract -v
 ```
 
-外部 oracle 仅在独立环境中复核，不加入 Query 生产依赖；默认比较且不覆盖 fixture：
+外部 oracle 仅在独立环境中复核，不加入生产依赖；默认比较且不覆盖 fixture：
 
 ```bash
 python3 -m venv artifacts/analytics-oracle-env
-artifacts/analytics-oracle-env/bin/python -m pip install -r query/tests/analytics-oracle-requirements.txt
-artifacts/analytics-oracle-env/bin/python query/tests/analytics_oracle.py
+artifacts/analytics-oracle-env/bin/python -m pip install -r analytics/tests/analytics-oracle-requirements.txt
+artifacts/analytics-oracle-env/bin/python analytics/tests/analytics_oracle.py
 ```
 
 生成器拒绝覆盖已有输出。不得因实现失败重生成 expected、修改冻结容差，或把合成结果登记为真实行情验收。

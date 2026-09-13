@@ -46,7 +46,8 @@ def profiles(profile):
     if profile == 'analytics':
         return checks + analytics_contract_steps() + [
                          step('analytics-production', [PYTHON, '-m', 'unittest',
-                              'query.tests.test_analytics', 'query.tests.test_skew_api', '-v'])]
+                              'analytics.tests.test_skew', 'analytics.tests.test_skew_service',
+                              'query.tests.test_skew_api', '-v'])]
     if profile in ('docker', 'packaging'):
         checks += [step('docker-engine', ['docker', 'version'], timeout=30),
                    step('docker-context', [sys.executable, 'tests/check_docker_context.py'], requires=['docker'], timeout=150)]
@@ -66,6 +67,7 @@ def profiles(profile):
                         timeout=180),
                    step('query', [PYTHON, '-m', 'unittest', 'discover', '-s', 'query/tests', '-t', '.', '-v']),
                    step('data-provider', [PYTHON, '-m', 'unittest', 'discover', '-s', 'data_provider/tests', '-t', '.', '-v']),
+                   step('analytics', [PYTHON, '-m', 'unittest', 'discover', '-s', 'analytics/tests', '-t', '.', '-v']),
                    step('universe', [sys.executable, '-m', 'unittest', 'discover', '-s', 'collector/tests', '-p', 'test_*.py', '-v']),
                    step('deploy', [sys.executable, 'collector/tests/deploy_test.py']),
                    step('verify', [sys.executable, 'collector/tests/verify_test.py'], requires=['sqlite3']),
@@ -80,8 +82,8 @@ def profiles(profile):
 
 def analytics_contract_steps():
     return [step('analytics-contract-tests', [sys.executable, '-m', 'unittest',
-                 'query.tests.test_analytics_contract', '-v']),
-            step('analytics-contract', [sys.executable, 'query/tests/analytics_contract.py'])]
+                 'analytics.tests.test_analytics_contract', '-v']),
+            step('analytics-contract', [sys.executable, 'analytics/tests/analytics_contract.py'])]
 
 
 def available(executable):

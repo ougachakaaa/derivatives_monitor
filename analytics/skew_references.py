@@ -1,6 +1,6 @@
 """Read audited, immutable Skew input packages; no Raw or network access.
 
-Package layout and the offline import command are documented in query/README.md.
+Package layout and the offline import command are documented in analytics/README.md.
 Hashes cover original bytes, never a JSON reserialization or a self-hash.
 """
 import argparse
@@ -13,7 +13,7 @@ import shutil
 import tempfile
 from urllib.parse import urlsplit
 
-from query.analytics import _parse_reference, _semantic_reference_reasons
+from analytics.skew import _parse_reference, _semantic_reference_reasons
 from data_provider.market_calendar import Calendar, parse_day, parse_at
 from data_provider.market_frame import Scope, Universe
 

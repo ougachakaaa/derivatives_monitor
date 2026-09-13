@@ -47,7 +47,7 @@ WAL、sidecar、immutable、共享锁、复制和 backup 的唯一约束见 [Raw
 
 ## MVP MO Skew JSON 业务查询
 
-数学定义和时间选择严格沿用 [mo-skew-25d-v1](../../query/contracts/analytics-skew.md)，不新增行情时间模型；实现与验证状态见 [Query Acceptance](../../query/ACCEPTANCE.md)，G2/G3 真实业务门槛仍见[根 Acceptance](../acceptance.md)。
+数学定义和时间选择严格沿用 [mo-skew-25d-v1](../../analytics/contracts/analytics-skew.md)，不新增行情时间模型；实现与验证状态见 [Query Acceptance](../../query/ACCEPTANCE.md)，G2/G3 真实业务门槛仍见[根 Acceptance](../acceptance.md)。
 
 | GET 路径 | 必需参数 | 能力 |
 |---|---|---|
@@ -57,14 +57,14 @@ WAL、sidecar、immutable、共享锁、复制和 backup 的唯一约束见 [Raw
 
 公共可选参数：`month=YYMM`（否则用 `SKEW_TARGET_MONTH`，不自动换月）、`at=带时区ISO时间`（默认请求时钟，作为 Market Frame `evaluated_at` / Analytics `requested_at`）、非负整数 `raw_revision`、`bundle_id`。后两者用于固定输入回放，不是 SQL 或文件路径。`at` 显式传入时是在该评估时刻下重建；`current_usable` 也是相对此时刻的判断。实际盯盘省略 `at`。历史分钟估值与 quote age 仍以 minute end 为准。参数未知、重复、类型错误、无时区、非整分钟、MO 月格式错误、day/minute 不匹配、未来分钟或超出可见 revision 返回400。
 
-最新分钟选择、封口、BREAK/CLOSED/竞价、缺数据不回退和 current usability 统一由 [Skew Contract](../../query/contracts/analytics-skew.md#时间入口)定义；本 HTTP contract 只投影其结果。
+最新分钟选择、封口、BREAK/CLOSED/竞价、缺数据不回退和 current usability 统一由 [Skew Contract](../../analytics/contracts/analytics-skew.md#时间入口)定义；本 HTTP contract 只投影其结果。
 
-单点响应是 [Skew Contract §7 逻辑输出](../../query/contracts/analytics-skew.md#7-输出错误及当日变化)的 JSON 投影（含 `skew_25d_vp`、`unit=vol_point`、`status/reasons`、quality 与 eligible/excluded 计数），字段语义不在本契约重复；HTTP 呈现另加 `schema_version=1`、`session`、`display_age_us` 等协议字段。原始 Raw rows、内部 scope 清单、表结构和本地路径不公开。
+单点响应是 [Skew Contract §7 逻辑输出](../../analytics/contracts/analytics-skew.md#7-输出错误及当日变化)的 JSON 投影（含 `skew_25d_vp`、`unit=vol_point`、`status/reasons`、quality 与 eligible/excluded 计数），字段语义不在本契约重复；HTTP 呈现另加 `schema_version=1`、`session`、`display_age_us` 等协议字段。原始 Raw rows、内部 scope 清单、表结构和本地路径不公开。
 
-追溯字段与 provenance 内容沿用 [Skew Contract §7 与 §10](../../query/contracts/analytics-skew.md#7-输出错误及当日变化)，本契约只固定 HTTP 命名差异：Market Frame 的四个 `invalid_BidPrice1/AskPrice1/BidVolume1/AskVolume1` 原因在 HTTP 中对应 `invalid_bid/invalid_ask/invalid_bid_size/invalid_ask_size`，其余质量语义不变。源时间保留原值，不拼造交易所时间戳；完整数值不按页面显示精度舍入。
+追溯字段与 provenance 内容沿用 [Skew Contract §7 与 §10](../../analytics/contracts/analytics-skew.md#7-输出错误及当日变化)，本契约只固定 HTTP 命名差异：Market Frame 的四个 `invalid_BidPrice1/AskPrice1/BidVolume1/AskVolume1` 原因在 HTTP 中对应 `invalid_bid/invalid_ask/invalid_bid_size/invalid_ask_size`，其余质量语义不变。源时间保留原值，不拼造交易所时间戳；完整数值不按页面显示精度舍入。
 
-当日响应直接投影 [Skew Contract 的序列结果](../../query/contracts/analytics-skew.md#7-输出错误及当日变化)：`points`、`baseline`、`change_vp` 与 `change_minute` 保持原顺序、值、null 和逐点状态，不在 HTTP 层重新枚举、forward-fill、回退或计算。
+当日响应直接投影 [Skew Contract 的序列结果](../../analytics/contracts/analytics-skew.md#7-输出错误及当日变化)：`points`、`baseline`、`change_vp` 与 `change_minute` 保持原顺序、值、null 和逐点状态，不在 HTTP 层重新枚举、forward-fill、回退或计算。
 
 缺目标月、参考包、无效/不匹配参考、未知日历、非连续/未封口分钟以及不能计算的行情前提返回200和 UNAVAILABLE/null/原因，current_usable=false；尚未读取 Raw 时 revision/quality/provenance 明确未知或空，不伪造完整性。日库实际读取抛出的404/503原样保留，不变成业务缺翼。序列采用10秒执行预算（逐分钟检查），超限503并丢弃部分响应；这不是 P95≤2秒的性能证明。所有响应 no-store，不启用派生持久化或缓存。
 
-参考选择、不可变包核对、历史 Universe/Calendar 固定及生产/TEST DOUBLE 准入由 [Reference adapter](../../query/contracts/references.md)和 [Skew Contract](../../query/contracts/analytics-skew.md)定义；HTTP/环境变量不增加绕过开关。
+参考选择、不可变包核对、历史 Universe/Calendar 固定及生产/TEST DOUBLE 准入由 [Reference adapter](../../analytics/contracts/references.md)和 [Skew Contract](../../analytics/contracts/analytics-skew.md)定义；HTTP/环境变量不增加绕过开关。

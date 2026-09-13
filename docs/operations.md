@@ -96,7 +96,7 @@ Collector 活跃但所查历史日已关闭且缺 sidecar 时，Query 按 [Read 
 1. 记录版本、数据目录、实际日文件、采样参数、run ID 和清单/Calendar 版本；选定不覆盖已有文件的备份目的目录。
 2. 正常停止 Collector；关闭读连接。确认服务已终止且目录 writer 锁已释放。若是异常退出先完成正常恢复，不删除 WAL；存在非空 WAL 时不能只复制主文件。
 3. 对已正常关闭、无非空 WAL 的日库逐个执行只读 `integrity_check` 和 `foreign_key_check`，记录 dataset 身份、行数、run 来源、最大 id、文件 SHA-256。复制日库及重放所需的不可变 Universe generation、Calendar、已审核 ReferenceBundle 和来源原件，记录对应算法版本。配置备份单独以受限权限保存，不进 Git。
-4. 把备份复制到全新的隔离恢复目录。比较 SHA-256 和只读完整性、dataset、行数/最大 id；不要覆盖实际 `collector/data/`。按[Query 手册](../query/README.md)使用 `--data-dir` 指向恢复目录，读取样本分钟并比较固定 revision 输出；通过现有离线参考包导入与 Skew API，对相同 Raw revision、ReferenceBundle 和算法版本执行指标重放对账，业务判定仍以 [Analytics / Skew Contract](../query/contracts/analytics-skew.md)为准。若没有已审核的生产参考包，将指标重放记为未执行，不得用 TEST DOUBLE 代替 live recovery evidence。
+4. 把备份复制到全新的隔离恢复目录。比较 SHA-256 和只读完整性、dataset、行数/最大 id；不要覆盖实际 `collector/data/`。按[Query 手册](../query/README.md)使用 `--data-dir` 指向恢复目录，读取样本分钟并比较固定 revision 输出；通过现有离线参考包导入与 Skew API，对相同 Raw revision、ReferenceBundle 和算法版本执行指标重放对账，业务判定仍以 [Analytics / Skew Contract](../analytics/contracts/analytics-skew.md)为准。若没有已审核的生产参考包，将指标重放记为未执行，不得用 TEST DOUBLE 代替 live recovery evidence。
 5. 记录备份/恢复耗时、哈希、检查结果和输出路径。恢复原 Collector 后确认同日追加和新心跳，已提交记录未减少；演练日志与真实数据证据单独保存。
 
 在线备份需 SQLite backup API 或其他已验证的一致性方案，不允许直接复制活跃主文件。当前没有自动在线备份工具；不要把上述人工规程记成已完成演练。运行时 SQLite 的只读锁规则仍适用。

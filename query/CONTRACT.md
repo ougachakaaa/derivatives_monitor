@@ -23,10 +23,10 @@ Query 使用显式的 `indicator_id → provider` 注册表。生产注册表只
 | `sample_key` | 实际交易日、业务 scope 与封口分钟的确定性身份；不含 raw_revision、参考修订或请求时间 |
 | `evidence` | 包括 algorithm、quality、raw_revision、Universe/Calendar/ReferenceBundle 身份和哈希、provenance 的完整公共结果 |
 
-完整结果放入 `evidence`，通用字段直接投影，不重新计算、不按显示精度舍入、不重选分钟或报价。冻结的模型、单位、数值容差、官方参考准入、封口分钟选择及当前报价质量全部沿用 [mo-skew-25d-v1](contracts/analytics-skew.md)及其[机器策略](contracts/analytics-skew-v1.json)。特别是 PARTIAL 可以有合格 Skew；历史有效值或当前陈旧值可以保留数值，但不能因此成为当前有效判断。未选到分钟时不构造采样键。
+完整结果放入 `evidence`，通用字段直接投影，不重新计算、不按显示精度舍入、不重选分钟或报价。冻结的模型、单位、数值容差、官方参考准入、封口分钟选择及当前报价质量全部沿用 [mo-skew-25d-v1](../analytics/contracts/analytics-skew.md)及其[机器策略](../analytics/contracts/analytics-skew-v1.json)。特别是 PARTIAL 可以有合格 Skew；历史有效值或当前陈旧值可以保留数值，但不能因此成为当前有效判断。未选到分钟时不构造采样键。
 
 这里新增的是通用投影，不新增 basis、return 或 ATM IV 定义。Skew 中的单合约求解结果、两翼 IV 和平价远期不自动成为独立 ATM IV 或 IM basis。basis 的现货输入尚无本次授权的正式来源；示例测试不得替代数据源及指标契约。envelope、错误与版本语义仍由 repository [Market Indicator Contract](../docs/contracts/indicators.md)拥有。
 
-provider 回归必须验证与既有 Skew latest 在相同输入下数值、时间、状态、质量和证据一致，并覆盖缺参考、历史/休市、未封口、PARTIAL、陈旧、404/503、参数拒绝与生产拒绝 TEST DOUBLE；独立验证门槛与容差不放宽，沿用 [Skew v1 §8](contracts/analytics-skew.md#8-独立验证与收尾门槛)。
+provider 回归必须验证与既有 Skew latest 在相同输入下数值、时间、状态、质量和证据一致，并覆盖缺参考、历史/休市、未封口、PARTIAL、陈旧、404/503、参数拒绝与生产拒绝 TEST DOUBLE；独立验证门槛与容差不放宽，沿用 [Skew v1 §8](../analytics/contracts/analytics-skew.md#8-独立验证与收尾门槛)。
 
 未来 provider 必须先有明确指标定义和证据，再登记同一接口。rolling market window 的归属、输入选择、身份要求与写权边界唯一见 repository [Market Indicator Contract §4](../docs/contracts/indicators.md#4-rolling-window-与后续指标)。

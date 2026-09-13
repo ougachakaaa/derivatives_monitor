@@ -8,5 +8,6 @@
 |---|---|---|
 | Collector | [README](../collector/README.md) | [Contract](../collector/CONTRACT.md)、[工具 Contract](../collector/scripts/CONTRACT.md) |
 | Data Provider | [README](../data_provider/README.md) | [Contract](../data_provider/CONTRACT.md)、[Market Frame](../data_provider/contracts/market-frame.md)、[Market Session](contracts/market-session.md) |
-| Query | [README](../query/README.md) | [Contract](../query/CONTRACT.md)、[Skew](../query/contracts/analytics-skew.md)、[参考适配](../query/contracts/references.md) |
+| Analytics | [README](../analytics/README.md) | [Contract](../analytics/CONTRACT.md)、[Skew](../analytics/contracts/analytics-skew.md)、[参考适配](../analytics/contracts/references.md) |
+| Query | [README](../query/README.md) | [Contract](../query/CONTRACT.md) |
 | Dashboard | [README](../dashboard/README.md) | [Contract](../dashboard/CONTRACT.md) |

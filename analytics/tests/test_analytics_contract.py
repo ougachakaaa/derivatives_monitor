@@ -5,7 +5,7 @@ from pathlib import Path
 import sys
 import unittest
 
-from query.tests.analytics_contract import POLICY, FIXTURES, check, eligible, solve, price
+from analytics.tests.analytics_contract import POLICY, FIXTURES, check, eligible, solve, price
 
 
 class AnalyticsContractTest(unittest.TestCase):

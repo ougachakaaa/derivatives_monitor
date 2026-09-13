@@ -2,7 +2,7 @@
 
 Query 是 Python 3.12 / FastAPI 服务：读取 Collector 的 Raw 数据，提供诊断、Market Session、Market Frame、MO Skew 与 Market Indicator JSON。这里提供安装、启动、调用和排障方法；内部设计与结构见本级 [Design](DESIGN.md)和 [Architecture](ARCHITECTURE.md)，共享 Raw 与 HTTP 分别见 [Raw Boundary](../docs/contracts/raw-boundary.md)和 [Read Path](../docs/contracts/read-path.md)。
 
-本级契约与状态：[组件 Contract](CONTRACT.md) · [Analytics / Skew](contracts/analytics-skew.md) · [Reference adapter](contracts/references.md) · [Query Acceptance](ACCEPTANCE.md)。Data Provider 用法与 Market Frame 见 [Data Provider README](../data_provider/README.md)。共享协议：[Market Session](../docs/contracts/market-session.md) · [Market Indicator](../docs/contracts/indicators.md)。系统状态与验证入口见[根 Acceptance](../docs/acceptance.md)和 [Repository Verification](../tests/README.md)。
+本级契约与状态：[组件 Contract](CONTRACT.md) · [Query Acceptance](ACCEPTANCE.md)。Data Provider 用法与 Market Frame 见 [Data Provider README](../data_provider/README.md)，Skew 与参考包见 [Analytics README](../analytics/README.md)。共享协议：[Market Session](../docs/contracts/market-session.md) · [Market Indicator](../docs/contracts/indicators.md)。系统状态与验证入口见[根 Acceptance](../docs/acceptance.md)和 [Repository Verification](../tests/README.md)。
 
 统一前台开发入口位于仓库根：`./dev doctor query` 检查本组件，`./dev up query` 运行本组件，`./dev up` 运行完整开发会话。参数示例和与持久部署的区别见 [Operations](../docs/operations.md#前台开发会话)；下面保留 Query 自身的安装、直接运行和调用用法。
 
@@ -106,7 +106,7 @@ curl --get http://127.0.0.1:8000/api/skew/series --data-urlencode 'month=2610' -
 curl --get http://127.0.0.1:8000/api/skew/minute --data-urlencode 'month=2610' --data-urlencode 'day=20260916' --data-urlencode 'minute=2026-09-16T09:30:00+08:00'
 ```
 
-示例日期和月份只展示调用格式，不代表存在生产参考包或真实市场验收。查询参数和 JSON 投影见 [Read Path Contract](../docs/contracts/read-path.md)；算法、质量、重放和不可计算原因见 [Analytics / Skew Contract](contracts/analytics-skew.md)，参考包适配见 [Reference adapter](contracts/references.md)。
+示例日期和月份只展示调用格式，不代表存在生产参考包或真实市场验收。查询参数和 JSON 投影见 [Read Path Contract](../docs/contracts/read-path.md)；算法、质量、重放和不可计算原因见 [Analytics / Skew Contract](../analytics/contracts/analytics-skew.md)，参考包适配见 [Reference adapter](../analytics/contracts/references.md)。
 
 ## Market Indicator API
 
@@ -135,10 +135,10 @@ audited-package/
   rate.source
 ```
 
-包内容必须符合 [Analytics / Skew Contract](contracts/analytics-skew.md)和 [Reference adapter Contract](contracts/references.md)。导入器会验证并复制已有审核包，但不会联网抓取、替代人工审核或修改 Raw：
+包内容必须符合 [Analytics / Skew Contract](../analytics/contracts/analytics-skew.md)和 [Reference adapter Contract](../analytics/contracts/references.md)。导入器会验证并复制已有审核包，但不会联网抓取、替代人工审核或修改 Raw：
 
 ```bash
-query/.venv/bin/python -m query.skew_references /path/to/audited-package --directory /path/to/references/analytics
+query/.venv/bin/python -m analytics.skew_references /path/to/audited-package --directory /path/to/references/analytics
 ```
 
 导入结果位于 `<directory>/<trading_day>/<bundle_id>/`，已有 bundle ID 不覆盖。审核者随后在同一 trading day 目录原子发布 `<month>.json` 选择文件：

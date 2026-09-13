@@ -4,11 +4,11 @@ from pathlib import Path
 import re
 import time
 
-from query.analytics import ALGORITHM_VERSION, CONTRACT_ID, calculate_skew
+from analytics.errors import AnalyticsRequestError, AnalyticsUnavailableError
+from analytics.skew import ALGORITHM_VERSION, CONTRACT_ID, calculate_skew
 from data_provider.market_calendar import Calendar, CalendarError, parse_at, parse_day
 from data_provider.market_frame import MarketFrameReader, micros
-from query.skew_references import IDENTIFIER, ReferenceUnavailable, read_bytes
-from query.errors import QueryError
+from analytics.skew_references import IDENTIFIER, ReferenceUnavailable, read_bytes
 
 MINUTE = timedelta(minutes=1)
 QUALITY_REASONS = {
@@ -116,7 +116,7 @@ class SkewService:
                 if day != minute.strftime('%Y%m%d'):
                     raise ValueError('minute/day')
         except (ValueError, TypeError, OverflowError):
-            raise QueryError(400, 'Invalid Skew query parameters (timezone and whole minute required)') from None
+            raise AnalyticsRequestError('Invalid Skew query parameters (timezone and whole minute required)') from None
         if month is None:
             return unavailable(None, day, at, 'TARGET_MONTH_MISSING')
 
@@ -170,7 +170,7 @@ class SkewService:
             frame = reader.minute(context.scope, minute, evaluated_at=at,
                                   stale_after_us=30_000_000, raw_revision=revision)
         except ValueError:
-            raise QueryError(400, 'Minute or revision does not match available Market Frame') from None
+            raise AnalyticsRequestError('Minute or revision does not match available Market Frame') from None
         result = calculate_skew(frame, context.bundle, at, historical=historical)
         result['reference'].update(manifest_sha256=context.manifest_sha256,
                                    listing_sha256=context.listing_sha256)
@@ -193,7 +193,7 @@ class SkewService:
         selected, selected_day, historical, _, state = latest_minute(calendar, at)
         for minute in minutes:
             if time.monotonic() >= deadline:
-                raise QueryError(503, 'Skew series execution budget exceeded')
+                raise AnalyticsUnavailableError('Skew series execution budget exceeded')
             if reference_error:
                 result = unavailable(month, day, at, reference_error, minute)
             else:
@@ -203,7 +203,7 @@ class SkewService:
                     revision = result['raw_revision']
             points.append(result)
         if time.monotonic() >= deadline:
-            raise QueryError(503, 'Skew series execution budget exceeded')
+            raise AnalyticsUnavailableError('Skew series execution budget exceeded')
         baseline = next((p for p in points if p['status'] == 'OK'), None)
         last = points[-1] if points else None
         # Do not pick the last *valid* value when the selected minute failed.

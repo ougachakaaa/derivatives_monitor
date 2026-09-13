@@ -83,16 +83,17 @@ class RepositoryChecksTest(unittest.TestCase):
     def test_legal_calendar_tool_and_local_imports(self):
         self.write('collector/scripts/universe.py', 'from data_provider.market_calendar import Calendar\n')
         self.write('data_provider/market_calendar.py', 'class Calendar: pass\n')
-        self.write('query/service.py', 'from query import analytics\nfrom data_provider.market_calendar import Calendar\n')
+        self.write('analytics/skew.py', 'from data_provider.market_calendar import Calendar\n')
+        self.write('query/service.py', 'from analytics import skew\nfrom data_provider.market_calendar import Calendar\n')
         self.write('query/tests/test_fake.py', 'import dashboard\n')
         self.assertEqual(module_dependency_errors(self.root), [])
 
     def test_illegal_runtime_imports_and_collector_include(self):
         for path, source in {
             'query/service.py': 'import dashboard\n',
-            'dashboard/service.py': 'from query import analytics\n',
+            'dashboard/service.py': 'from analytics import skew\n',
             'collector/runtime.py': 'from data_provider.market_calendar import Calendar\n',
-            'collector/scripts/universe.py': 'from query import analytics\n',
+            'collector/scripts/universe.py': 'from analytics import skew\n',
             'collector/src/main.cpp': '#include "../../query/private.h"\n',
         }.items():
             self.write(path, source)

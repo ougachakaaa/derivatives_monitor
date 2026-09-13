@@ -38,7 +38,7 @@ Latest 分开报告 calendar_trading_day（CLOSED 常为下一交易日）和 fr
 
 一帧一个 Store.connect 只读事务，先读取 max(id)，逐成员用已有 snapshots_instrument_time 索引做有界 top-1 查询；绑定所有参数，不加 Raw 索引或表。清单最多10000成员，沿用3秒 SQL预算；超时明确失败。不建立 Derived SQLite，不写缓存/Raw/sidecar，不改变 Collector、runtime、日历规则或部署读写挂载。模块随 Query 镜像复制，不新增第三方依赖。
 
-下游 IV Chain → Skew 获得有序 scope、原始 observation、时间、session、revision、quality、completeness；MO Skew v1按[已冻结下游契约](../../query/contracts/analytics-skew.md)筛选PARTIAL、age和报价有效性，不直接回到 SQLite；其他派生业务不得默认沿用为通用口径。本模块不实现 IV、Skew、Basis、定价或 Analytics；这些属于独立下游。
+下游 IV Chain → Skew 获得有序 scope、原始 observation、时间、session、revision、quality、completeness；MO Skew v1按[已冻结下游契约](../../analytics/contracts/analytics-skew.md)筛选PARTIAL、age和报价有效性，不直接回到 SQLite；其他派生业务不得默认沿用为通用口径。本模块不实现 IV、Skew、Basis、定价或 Analytics；这些属于独立下游。
 
 ## 验证
 

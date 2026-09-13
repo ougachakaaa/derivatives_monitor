@@ -9,26 +9,16 @@ query/**
 !query/__init__.py
 !query/app.py
 !query/errors.py
-!query/analytics.py
-!query/skew_service.py
-!query/skew_references.py
 !query/indicator_service.py
 !query/tests/
 query/tests/**
 !query/tests/__init__.py
-!query/tests/test_analytics.py
 !query/tests/test_api.py
 !query/tests/test_coverage_api.py
 !query/tests/test_sessions_api.py
 !query/tests/test_skew_api.py
 !query/tests/test_indicator_service.py
 !query/tests/test_indicators_api.py
-!query/tests/analytics_contract.py
-!query/tests/analytics_oracle.py
-!query/tests/test_analytics_contract.py
-!query/tests/fixtures/
-query/tests/fixtures/**
-!query/tests/fixtures/analytics-skew-v1.json
 
 !data_provider/
 data_provider/**
@@ -48,6 +38,27 @@ data_provider/tests/**
 !data_provider/tests/test_storage.py
 !data_provider/tests/test_coverage.py
 !data_provider/tests/test_market_frame.py
+
+!analytics/
+analytics/**
+!analytics/__init__.py
+!analytics/errors.py
+!analytics/skew.py
+!analytics/skew_service.py
+!analytics/skew_references.py
+!analytics/contracts/
+analytics/contracts/**
+!analytics/contracts/analytics-skew-v1.json
+!analytics/tests/
+analytics/tests/**
+!analytics/tests/__init__.py
+!analytics/tests/test_skew.py
+!analytics/tests/test_skew_service.py
+!analytics/tests/analytics_contract.py
+!analytics/tests/test_analytics_contract.py
+!analytics/tests/fixtures/
+analytics/tests/fixtures/**
+!analytics/tests/fixtures/analytics-skew-v1.json
 
 # Defense in depth for secrets and runtime state.
 **/.env

@@ -6,7 +6,7 @@ from pathlib import Path
 import re
 
 ROOT = Path(__file__).resolve().parents[1]
-MODULES = {'collector', 'data_provider', 'query', 'dashboard'}
+MODULES = {'collector', 'data_provider', 'analytics', 'query', 'dashboard'}
 EXCLUDED_DIRS = {'.git', '.venv', 'venv', 'node_modules', '__pycache__',
                  'build', 'dist', 'artifacts', 'data', 'flow', 'logs',
                  'third_party', 'experiments', '.cache'}
@@ -81,7 +81,9 @@ def module_dependency_errors(root=ROOT):
                     continue
                 if other not in MODULES or other == owner:
                     continue
-                if owner == 'query' and other == 'data_provider':
+                if owner == 'analytics' and other == 'data_provider':
+                    continue
+                if owner == 'query' and other in {'data_provider', 'analytics'}:
                     continue
                 if relative.as_posix() == 'collector/scripts/universe.py' \
                         and target == 'data_provider.market_calendar':
@@ -115,7 +117,7 @@ def packaging_policy_errors(root=ROOT):
             if not rule.startswith('!'):
                 continue
             allowed = rule[1:].lstrip('/')
-            roots = {service, 'data_provider'} if service == 'query' else {service}
+            roots = {service, 'data_provider', 'analytics'} if service == 'query' else {service}
             if '..' in Path(allowed).parts or not any(
                     allowed == root or allowed.startswith(root + '/') for root in roots):
                 errors.append(f'{service}: Docker allow rule crosses owner boundary: {rule}')

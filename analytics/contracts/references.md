@@ -1,4 +1,4 @@
-<a id="query-reference-bundle-contract"></a>
+<a id="analytics-reference-bundle-contract"></a>
 
 # Skew ReferenceBundle 与只读适配契约
 
@@ -12,4 +12,4 @@ Analytics 所需参考字段、来源、单位、日期、范围与折现约定�
 
 数值核心仍只消费 frame 与参考对象，不读取 Raw 或参考文件。重放身份至少包含 `(contract_id, algorithm_version, actual_trading_day, month, minute, raw_revision, universe_version+hash, calendar_version+hash, reference_bundle_id+hash)`；后补参考的 `retrieved_at` 可以晚于历史估值时刻，但必须标记 `reconstructed=true`，不得声称当时系统已拥有该参考或已提交行情。
 
-实际离线导入命令见 [Query README](../README.md#审核参考包的离线导入)，来源档案见 [Analytics / Skew sources](../references/analytics-skew-sources.md)。
+实际离线导入命令见 [Analytics README](../README.md#审核参考包的离线导入)，来源档案见 [Analytics / Skew sources](../references/analytics-skew-sources.md)。

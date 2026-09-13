@@ -1,8 +1,8 @@
-<a id="query-skew-contract"></a>
+<a id="analytics-skew-contract"></a>
 
 # MVP Analytics / Skew contract v1
 
-状态：**FROZEN**，2026-09-08；契约 ID `mo-skew-25d-v1`。本文件冻结七项设计，机器常量见[策略文件](analytics-skew-v1.json)。这是当前单月 Skew MVP 的唯一 Analytics 定义；实现与验证状态见 [Query Acceptance](../ACCEPTANCE.md)，系统门槛见[根 Acceptance](../../docs/acceptance.md)。共享 [Indicator 查询](../../docs/contracts/indicators.md)复用本契约，不改变任何冻结数值或质量要求。
+状态：**FROZEN**，2026-09-08；契约 ID `mo-skew-25d-v1`。本文件冻结七项设计，机器常量见[策略文件](analytics-skew-v1.json)。这是当前单月 Skew MVP 的唯一 Analytics 定义；实现与验证状态见 [Analytics Acceptance](../ACCEPTANCE.md)，系统门槛见[根 Acceptance](../../docs/acceptance.md)。共享 [Indicator 查询](../../docs/contracts/indicators.md)复用本契约，不改变任何冻结数值或质量要求。
 
 | 决定 | v1 选择 |
 |---|---|
@@ -153,7 +153,7 @@ MO 的法律标的是中证1000指数；v1 的估值输入是该到期月的**�
 4. **必测场景**：平坦笑脸Skew=0、put翼高/低与符号/单位、非零/负利率ACT360、T的ACT365、C/P平价远期、三对不足/偏离、两翼不跨25Δ/跨度过宽/非单调、30s/5s/15s等号与超1μs、交叉/零量/错误tick/宽spread/小价格、时间价值边界、σ上下界/低vega/迭代失败、缺参考/错日期/单位、未知日历、竞价/首分钟/午休历史展示、到期日拒绝、固定revision重放及PARTIAL输入。生产实现必须补齐这些行为测试；数值向量不能替代它们。
 5. **真实独立对账**：至少10个不同估值时点，至少6个可计算（含put翼较高及非平坦情况），至少4个异常/不可用；真实市场未自然出现的异常可对真实frame复制件定点扰动，单列 SYNTHETIC_MUTATION，不宣称实盘异常。固定输入包、使用独立 QuantLib/独立选择脚本或人工表格复算；至少一个完整链逐项核对三对选择/翼端点/权重/时间跨度。真实现场样本必须由真实行情提供，不能以合成向量充数。
 
-契约冻结只证明公式和基准内部一致、决定可实现，不替代真实业务验收。当前 Query 实现与历史工程证据见[本级 Acceptance](../ACCEPTANCE.md)，G1–G6/P1/P2 见[根 Acceptance](../../docs/acceptance.md)；独立 oracle、合约选择及规则的测试映射见[Repository Verification](../../tests/README.md)。
+契约冻结只证明公式和基准内部一致、决定可实现，不替代真实业务验收。当前 Analytics 实现与工程证据见[本级 Acceptance](../ACCEPTANCE.md)，G1–G6/P1/P2 见[根 Acceptance](../../docs/acceptance.md)；独立 oracle、合约选择及规则的测试映射见[Repository Verification](../../tests/README.md)。
 
 ## 9. 变更规则与依据
 

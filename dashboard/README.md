@@ -21,7 +21,7 @@ npm run dev
 QUERY_URL=http://127.0.0.1:18000 npm run dev
 ```
 
-页面行为不在 README 重复，统一见[本级 Contract](CONTRACT.md)；API 字段与指标语义分别见[共享 Read Path](../docs/contracts/read-path.md)和 [Analytics / Skew Contract](../query/contracts/analytics-skew.md)。
+页面行为不在 README 重复，统一见[本级 Contract](CONTRACT.md)；API 字段与指标语义分别见[共享 Read Path](../docs/contracts/read-path.md)和 [Analytics / Skew Contract](../analytics/contracts/analytics-skew.md)。
 
 ## 构建与组件测试
 

@@ -6,7 +6,7 @@ import math
 from pathlib import Path
 
 ROOT=Path(__file__).resolve().parents[2]
-POLICY=ROOT/'query/contracts/analytics-skew-v1.json'
+POLICY=ROOT/'analytics/contracts/analytics-skew-v1.json'
 FIXTURES=Path(__file__).resolve().parent/'fixtures/analytics-skew-v1.json'
 BASELINE_WITHOUT_GENERATOR_SHA256='4ae593379952b70006fb977c906dec29909a48423f7e492f98283513d6c46b56'
 

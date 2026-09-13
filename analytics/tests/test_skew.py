@@ -8,8 +8,8 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from query import analytics
-from query.analytics import (ALGORITHM_VERSION, CONTRACT_ID, SolverFailure, black_price,
+from analytics import skew
+from analytics.skew import (ALGORITHM_VERSION, CONTRACT_ID, SolverFailure, black_price,
                        _choose_wing, calculate_skew, solve_iv)
 from data_provider.market_frame import (OBSERVATION_COLUMNS, MarketFrameReader, Scope, Universe,
                           micros)
@@ -120,7 +120,7 @@ class PricingTest(unittest.TestCase):
         self.assertEqual(caught.exception.reason, 'IV_OUT_OF_RANGE')
 
     def test_solver_sigma_bounds_low_vega_and_iteration_failure(self):
-        for sigma in (analytics.SIGMA_MIN, analytics.SIGMA_MAX):
+        for sigma in (skew.SIGMA_MIN, skew.SIGMA_MAX):
             price = black_price('C', 6000, 6000, 1, 1, sigma)
             solved = solve_iv('C', 6000, 6000, 1, 1, price)
             self.assertLessEqual(abs(solved['sigma'] - sigma), 1e-8)
@@ -129,7 +129,7 @@ class PricingTest(unittest.TestCase):
             solve_iv('C', 100, 120, .01, 1, low_vega_price)
         self.assertEqual(caught.exception.reason, 'LOW_VEGA')
         market_price = black_price('C', 100, 100, .5, 1, .2)
-        with patch.object(analytics, 'MAX_ITERATIONS', 1):
+        with patch.object(skew, 'MAX_ITERATIONS', 1):
             with self.assertRaises(SolverFailure) as caught:
                 solve_iv('C', 100, 100, .5, 1, market_price)
         self.assertEqual(caught.exception.reason, 'IV_NOT_CONVERGED')
@@ -242,7 +242,7 @@ class SkewTest(unittest.TestCase):
                     'vega': 100, 'model_price': market_price, 'price_error': 0,
                     'iterations': 1, 'bracket': [.2, .2]}
 
-        with patch.object(analytics, 'solve_iv', side_effect=flat_solver):
+        with patch.object(skew, 'solve_iv', side_effect=flat_solver):
             result = calculate()
         self.assertEqual(result['status'], 'OK')
         self.assertEqual(result['wings']['P']['iv'], .2)
@@ -274,7 +274,7 @@ class SkewTest(unittest.TestCase):
             self.assertIn('FORWARD_PAIRS_MISSING', result['reasons'])
             self.assertIsNone(result['skew_25d_vp'])
 
-        with patch.object(analytics, 'solve_iv', side_effect=SolverFailure('IV_NOT_CONVERGED')):
+        with patch.object(skew, 'solve_iv', side_effect=SolverFailure('IV_NOT_CONVERGED')):
             result = calculate()
         self.assertEqual(result['status'], 'UNAVAILABLE')
         self.assertIn('IV_NOT_CONVERGED', result['reasons'])

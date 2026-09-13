@@ -18,7 +18,7 @@ class IndicatorRequestError(ValueError):
 
 
 class IndicatorRegistry:
-    """Small explicit registry; production providers are registered by Query."""
+    """Small explicit registry; production providers are registered explicitly."""
 
     def __init__(self):
         self._providers = {}
