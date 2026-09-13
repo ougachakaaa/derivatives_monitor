@@ -13,9 +13,9 @@ import shutil
 import tempfile
 from urllib.parse import urlsplit
 
-from analytics import _parse_reference, _semantic_reference_reasons
-from market_calendar import Calendar, parse_day, parse_at
-from market_frame import Scope, Universe
+from query.analytics import _parse_reference, _semantic_reference_reasons
+from query.market_calendar import Calendar, parse_day, parse_at
+from query.market_frame import Scope, Universe
 
 IDENTIFIER = re.compile(r'[A-Za-z0-9][A-Za-z0-9_-]{0,95}')
 PACKAGE_FILES = ('manifest.json', 'bundle.json', 'universe.json', 'calendar.json')

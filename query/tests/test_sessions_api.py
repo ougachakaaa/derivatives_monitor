@@ -3,7 +3,7 @@ from pathlib import Path
 import tempfile
 import unittest
 from fastapi.testclient import TestClient
-from app import create_app
+from query.app import create_app
 
 
 class SessionsApiTest(unittest.TestCase):

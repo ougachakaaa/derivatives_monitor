@@ -6,6 +6,7 @@ query/**
 !query/Dockerfile.dockerignore
 !query/pyproject.toml
 !query/poetry.lock
+!query/__init__.py
 !query/app.py
 !query/storage.py
 !query/contract_coverage.py
@@ -20,6 +21,7 @@ query/calendars/**
 !query/calendars/2026.json
 !query/tests/
 query/tests/**
+!query/tests/__init__.py
 !query/tests/test_analytics.py
 !query/tests/test_api.py
 !query/tests/test_calendar.py

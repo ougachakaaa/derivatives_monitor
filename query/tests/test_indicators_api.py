@@ -8,10 +8,10 @@ import unittest
 
 from fastapi.testclient import TestClient
 
-from app import create_app
-from indicator_service import SKEW_INDICATOR_ID
-from skew_references import ReferenceRepository
-from tests.test_skew_api import DAY, MONTH, START, append_chain, make_database, write_package
+from query.app import create_app
+from query.indicator_service import SKEW_INDICATOR_ID
+from query.skew_references import ReferenceRepository
+from query.tests.test_skew_api import DAY, MONTH, START, append_chain, make_database, write_package
 
 
 class IndicatorApiTest(unittest.TestCase):

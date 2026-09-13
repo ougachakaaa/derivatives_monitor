@@ -7,8 +7,8 @@ import tempfile
 import time
 import unittest
 from fastapi.testclient import TestClient
-from app import create_app
-from storage import QueryError, Store
+from query.app import create_app
+from query.storage import QueryError, Store
 
 
 class ApiTest(unittest.TestCase):

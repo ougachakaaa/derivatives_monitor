@@ -8,12 +8,12 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-import analytics
-from analytics import (ALGORITHM_VERSION, CONTRACT_ID, SolverFailure, black_price,
+from query import analytics
+from query.analytics import (ALGORITHM_VERSION, CONTRACT_ID, SolverFailure, black_price,
                        _choose_wing, calculate_skew, solve_iv)
-from market_frame import (OBSERVATION_COLUMNS, MarketFrameReader, Scope, Universe,
+from query.market_frame import (OBSERVATION_COLUMNS, MarketFrameReader, Scope, Universe,
                           micros)
-from storage import Store
+from query.storage import Store
 
 
 ROOT = Path(__file__).resolve().parents[2]

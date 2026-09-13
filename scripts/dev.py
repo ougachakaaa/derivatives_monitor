@@ -745,8 +745,8 @@ def component_spec(args: argparse.Namespace, parser: argparse.ArgumentParser, in
         environment["DATA_DIR"] = str(data_dir)
         return ProcessSpec(
             "query",
-            [str(ROOT / "query/.venv/bin/python"), "-m", "uvicorn", "app:app", "--host", "127.0.0.1", "--port", str(port), "--no-proxy-headers"],
-            ROOT / "query",
+            [str(ROOT / "query/.venv/bin/python"), "-m", "uvicorn", "query.app:app", "--host", "127.0.0.1", "--port", str(port), "--no-proxy-headers"],
+            ROOT,
             environment,
             clean_exit_ok=False,
         )
@@ -780,8 +780,8 @@ def up_specs(args: argparse.Namespace, parser: argparse.ArgumentParser, invocati
     query_env["DATA_DIR"] = str(data_dir)
     query = ProcessSpec(
         "query",
-        [str(ROOT / "query/.venv/bin/python"), "-m", "uvicorn", "app:app", "--host", "127.0.0.1", "--port", str(query_port), "--no-proxy-headers"],
-        ROOT / "query",
+        [str(ROOT / "query/.venv/bin/python"), "-m", "uvicorn", "query.app:app", "--host", "127.0.0.1", "--port", str(query_port), "--no-proxy-headers"],
+        ROOT,
         query_env,
         clean_exit_ok=False,
     )

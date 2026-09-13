@@ -5,7 +5,7 @@ import re
 import time
 from zoneinfo import ZoneInfo
 
-from market_calendar import CFFEX_PRODUCTS, SHFE_PRODUCTS, sessions, DEFAULT_DIRECTORY
+from query.market_calendar import CFFEX_PRODUCTS, SHFE_PRODUCTS, sessions, DEFAULT_DIRECTORY
 
 PRODUCTS = CFFEX_PRODUCTS + SHFE_PRODUCTS
 ID = re.compile(r'^(IF|IH|IC|IM|TS|TF|TL|T|IO|HO|MO|au|ag)(\d{2}(?:0[1-9]|1[0-2]))(?:-[CP]-\d+(?:\.\d+)?)?$')
@@ -27,7 +27,7 @@ def read_json(path, limit=8 * 1024 * 1024):
 
 
 def coverage(store, calendar_directory=DEFAULT_DIRECTORY):
-    from storage import QueryError
+    from query.storage import QueryError
     store.check_directory()
     try:
         manifest = read_json(store.directory / 'universe/current/manifest.json')

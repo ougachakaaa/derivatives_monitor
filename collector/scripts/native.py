@@ -58,7 +58,7 @@ def install():
     common = '[Unit]\nStartLimitIntervalSec=0\n\n[Service]\nType=simple\nRestart=on-failure\nRestartSec=10\nTimeoutStopSec=60\nKillSignal=SIGTERM\n'
     definitions = {
         SERVICES[0]: common + f'WorkingDirectory={str(ROOT).replace("%", "%%")}\nExecStartPre=-{updater} --if-needed\nTimeoutStartSec=600\nExecStart={quote(binary)} --config {quote(config)}\n',
-        SERVICES[1]: common + f'WorkingDirectory={str(ROOT / "query").replace("%", "%%")}\nEnvironment={quote("DATA_DIR=" + str(COLLECTOR / "data"))}\nExecStart={quote(python)} -m uvicorn app:app --host 127.0.0.1 --port 8000 --no-proxy-headers\n',
+        SERVICES[1]: common + f'WorkingDirectory={str(ROOT).replace("%", "%%")}\nEnvironment={quote("DATA_DIR=" + str(COLLECTOR / "data"))}\nExecStart={quote(python)} -m uvicorn query.app:app --host 127.0.0.1 --port 8000 --no-proxy-headers\n',
         SERVICES[2]: common + f'WorkingDirectory={str(ROOT / "dashboard").replace("%", "%%")}\nExecStart={quote(node)} node_modules/vite/bin/vite.js --host 127.0.0.1 --port 8101 --strictPort\n',
     }
     proxies = ''.join('Environment=' + quote(k + '=' + os.environ[k]) + '\n'

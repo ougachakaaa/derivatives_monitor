@@ -8,18 +8,20 @@ Query 是 Python 3.12 / FastAPI 服务：读取 Collector 的 Raw 数据，提�
 
 ## 安装、启动与测试
 
-从 `query/` 目录执行：
+依赖仍安装在 `query/.venv`，服务从仓库根目录启动：
 
 ```bash
+cd query
 poetry config virtualenvs.in-project true --local
 poetry sync
-DATA_DIR=../collector/data poetry run uvicorn app:app --host 127.0.0.1 --port 8000
+cd ..
+DATA_DIR=collector/data query/.venv/bin/python -m uvicorn query.app:app --host 127.0.0.1 --port 8000
 ```
 
 FastAPI 文档默认位于 **http://127.0.0.1:8000/docs**。运行完整 Query 测试：
 
 ```bash
-poetry run python -m unittest discover -s tests -v
+query/.venv/bin/python -m unittest discover -s query/tests -t . -v
 ```
 
 Docker 构建使用同一 `poetry.lock` 并执行测试；系统级启动使用仓库根 `./scripts/deploy.sh up`，具体运维步骤见 [Operations](../docs/operations.md)。
@@ -59,9 +61,9 @@ Query 不需要 CTP 凭据。生产挂载、只读权限、端口和服务生命
 无需启动 HTTP 即可查询或验证 Calendar：
 
 ```bash
-python3 query/market_calendar.py --exchange SHFE --product AU --at '2026-09-07T23:30:00+08:00'
+python3 -m query.market_calendar --exchange SHFE --product AU --at '2026-09-07T23:30:00+08:00'
 
-python3 query/market_calendar.py --validate query/calendars/2026.json
+python3 -m query.market_calendar --validate query/calendars/2026.json
 ```
 
 输入需使用带时区时间。Calendar 的交易日、OPEN/BREAK/CLOSED/UNKNOWN、夜盘归属和 source TradingDay 边界由 [Market Session Contract](../docs/contracts/market-session.md) 定义；参考文件维护见 [Calendar README](calendars/README.md)。
@@ -72,8 +74,8 @@ python3 query/market_calendar.py --validate query/calendars/2026.json
 
 ```python
 from datetime import datetime
-from market_frame import MarketFrameReader, Scope
-from storage import Store
+from query.market_frame import MarketFrameReader, Scope
+from query.storage import Store
 
 reader = MarketFrameReader(Store("../collector/data"))
 scope = Scope.instrument("MO2609-C-5000", "20260908")
@@ -87,7 +89,7 @@ frame = reader.minute(
 从仓库根目录运行等价 CLI：
 
 ```bash
-query/.venv/bin/python query/market_frame.py minute --data-dir collector/data --day 20260908 --instrument MO2609-C-5000 --at '2026-09-08T09:30:00+08:00' --evaluated-at '2026-09-08T09:31:00+08:00'
+query/.venv/bin/python -m query.market_frame minute --data-dir collector/data --day 20260908 --instrument MO2609-C-5000 --at '2026-09-08T09:30:00+08:00' --evaluated-at '2026-09-08T09:31:00+08:00'
 ```
 
 产品、月份或期权链读取需要通过 `--universe` 显式提供保存的 Universe；查看完整参数用 `--help`。Scope、分钟选择、revision、quality、freshness、完整性和失败语义只由 [Market Frame Contract](contracts/market-frame.md) 定义。
@@ -136,7 +138,7 @@ audited-package/
 包内容必须符合 [Analytics / Skew Contract](contracts/analytics-skew.md)和 [Reference adapter Contract](contracts/references.md)。导入器会验证并复制已有审核包，但不会联网抓取、替代人工审核或修改 Raw：
 
 ```bash
-query/.venv/bin/python query/skew_references.py /path/to/audited-package --directory /path/to/references/analytics
+query/.venv/bin/python -m query.skew_references /path/to/audited-package --directory /path/to/references/analytics
 ```
 
 导入结果位于 `<directory>/<trading_day>/<bundle_id>/`，已有 bundle ID 不覆盖。审核者随后在同一 trading day 目录原子发布 `<month>.json` 选择文件：
@@ -149,7 +151,7 @@ query/.venv/bin/python query/skew_references.py /path/to/audited-package --direc
 
 ## 回归与排障
 
-- Query 单元/集成测试：`cd query && poetry run python -m unittest discover -s tests -v`。
+- Query 单元/集成测试：`query/.venv/bin/python -m unittest discover -s query/tests -t . -v`。
 - Analytics 与 Skew HTTP TEST DOUBLE 回归：`python3 tests/run.py analytics`。
 - 完整离线工程回归：`python3 tests/run.py offline`。
 - 返回参考缺失、日历未知、质量不可用或固定 revision 问题时，先保留完整 JSON reason/identity，再查相应 Contract；不要用默认值或旧结果绕过错误。

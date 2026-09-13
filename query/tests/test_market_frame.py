@@ -1,7 +1,7 @@
 from datetime import datetime
 import unittest
 
-from market_frame import Scope, Universe, aware, micros
+from query.market_frame import Scope, Universe, aware, micros
 
 
 def at(value):
@@ -55,8 +55,8 @@ from pathlib import Path
 import sqlite3
 import tempfile
 
-from market_frame import MarketFrameReader
-from storage import QueryError, Store
+from query.market_frame import MarketFrameReader
+from query.storage import QueryError, Store
 
 # Actual v1 fact columns; same names/types as Collector VisitFacts, no mock Store.
 TEXT_FIELDS = 'TradingDay ExchangeID InstrumentID ExchangeInstID ActionDay UpdateTime'.split()
@@ -322,7 +322,7 @@ class FrameTest(unittest.TestCase):
         listing = self.directory / 'universe.json'
         listing.write_text(json.dumps(dict(trading_day='20260908', version='synthetic-80-v1',
                                          instruments=codes, complete=True)))
-        base = [sys.executable, str(Path(__file__).resolve().parents[1] / 'market_frame.py'),
+        base = [sys.executable, '-m', 'query.market_frame',
                 'minute', '--data-dir', str(self.directory), '--day', '20260908',
                 '--at', at('09:30:00').isoformat(), '--evaluated-at', at('09:31:00').isoformat(),
                 '--universe', str(listing), '--exchange', 'CFFEX', '--product', 'MO',
@@ -359,7 +359,7 @@ class FrameTest(unittest.TestCase):
 
     def test_wal_commit_during_frame_is_not_mixed(self):
         from unittest.mock import patch
-        import market_frame
+        from query import market_frame
         codes = ('MO2609-C-5000', 'MO2609-P-5000')
         self.scope = Scope.select(Universe('20260908', 'v1', codes, True), 'CFFEX', 'MO', month='2609')
         self.insert(code=codes[0])
@@ -373,7 +373,7 @@ class FrameTest(unittest.TestCase):
             if calls == 1:
                 self.insert('09:30:59', code=codes[1])
             return old_quality(*args)
-        with patch('market_frame.quality', side_effect=quality_with_writer):
+        with patch('query.market_frame.quality', side_effect=quality_with_writer):
             frame = self.frame()
         self.assertEqual(frame['raw_revision'], 2)
         self.assertEqual([row['observation']['id'] for row in frame['rows']], [1, 2])

@@ -206,8 +206,8 @@ class DevDoctorTests(unittest.TestCase):
                 (
                     ["up", "query", "--data-dir", "raw", "--query-port", "18000"],
                     "query",
-                    [str(root / "query/.venv/bin/python"), "-m", "uvicorn", "app:app", "--host", "127.0.0.1", "--port", "18000", "--no-proxy-headers"],
-                    root / "query",
+                    [str(root / "query/.venv/bin/python"), "-m", "uvicorn", "query.app:app", "--host", "127.0.0.1", "--port", "18000", "--no-proxy-headers"],
+                    root,
                 ),
                 (
                     ["up", "dashboard", "--dashboard-port", "18101"],

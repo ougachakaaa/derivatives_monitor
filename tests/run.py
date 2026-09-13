@@ -46,7 +46,7 @@ def profiles(profile):
     if profile == 'analytics':
         return checks + analytics_contract_steps() + [
                          step('analytics-production', [PYTHON, '-m', 'unittest',
-                              'tests.test_analytics', 'tests.test_skew_api', '-v'], ROOT / 'query')]
+                              'query.tests.test_analytics', 'query.tests.test_skew_api', '-v'])]
     if profile in ('docker', 'packaging'):
         checks += [step('docker-engine', ['docker', 'version'], timeout=30),
                    step('docker-context', [sys.executable, 'tests/check_docker_context.py'], requires=['docker'], timeout=150)]
@@ -64,7 +64,7 @@ def profiles(profile):
                         requires=[BUILD / 'bin/data_collector', BUILD / 'libfake_md.so',
                                   PYTHON, 'node', ROOT / 'dashboard/node_modules/vite/bin/vite.js'],
                         timeout=180),
-                   step('query', [PYTHON, '-m', 'unittest', 'discover', '-s', 'tests', '-v'], ROOT / 'query'),
+                   step('query', [PYTHON, '-m', 'unittest', 'discover', '-s', 'query/tests', '-t', '.', '-v']),
                    step('universe', [sys.executable, '-m', 'unittest', 'discover', '-s', 'collector/tests', '-p', 'test_*.py', '-v']),
                    step('deploy', [sys.executable, 'collector/tests/deploy_test.py']),
                    step('verify', [sys.executable, 'collector/tests/verify_test.py'], requires=['sqlite3']),
@@ -79,7 +79,7 @@ def profiles(profile):
 
 def analytics_contract_steps():
     return [step('analytics-contract-tests', [sys.executable, '-m', 'unittest',
-                 'tests.test_analytics_contract', '-v'], ROOT / 'query'),
+                 'query.tests.test_analytics_contract', '-v']),
             step('analytics-contract', [sys.executable, 'query/tests/analytics_contract.py'])]
 
 

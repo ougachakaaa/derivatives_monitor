@@ -5,12 +5,12 @@ import re
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from storage import QueryError, Store
-from contract_coverage import coverage
-from indicator_service import IndicatorRequestError, skew_indicator_service
-from market_calendar import sessions, DEFAULT_DIRECTORY
-from skew_references import ReferenceRepository
-from skew_service import SkewService
+from query.storage import QueryError, Store
+from query.contract_coverage import coverage
+from query.indicator_service import IndicatorRequestError, skew_indicator_service
+from query.market_calendar import sessions, DEFAULT_DIRECTORY
+from query.skew_references import ReferenceRepository
+from query.skew_service import SkewService
 
 
 def create_app(directory=None, calendar_directory=None, *, reference_directory=None,

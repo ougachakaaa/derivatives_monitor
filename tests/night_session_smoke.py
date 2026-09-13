@@ -14,9 +14,8 @@ import tempfile
 import time
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / 'query'))
 from fastapi.testclient import TestClient
-from app import create_app
+from query.app import create_app
 
 
 def read(path, sql):

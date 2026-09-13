@@ -5,8 +5,7 @@ from pathlib import Path
 import sys
 import unittest
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from analytics_contract import POLICY, FIXTURES, check, eligible, solve, price
+from query.tests.analytics_contract import POLICY, FIXTURES, check, eligible, solve, price
 
 
 class AnalyticsContractTest(unittest.TestCase):

@@ -64,7 +64,7 @@ def main():
             return process
 
         def query():
-            return start([python, "-m", "uvicorn", "app:app", "--host", "127.0.0.1", "--port", str(query_port)], ROOT / "query", "query", DATA_DIR=str(work / "data"))
+            return start([python, "-m", "uvicorn", "query.app:app", "--host", "127.0.0.1", "--port", str(query_port)], ROOT, "query", DATA_DIR=str(work / "data"))
 
         def collector():
             return start([binary, "--config", work / "config.ini"], ROOT, "collector", LD_PRELOAD=str(fake))

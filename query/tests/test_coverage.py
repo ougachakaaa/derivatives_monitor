@@ -7,7 +7,7 @@ import unittest
 from unittest.mock import patch
 from zoneinfo import ZoneInfo
 from fastapi.testclient import TestClient
-from app import create_app
+from query.app import create_app
 
 
 class CoverageTest(unittest.TestCase):
@@ -80,7 +80,7 @@ class CoverageTest(unittest.TestCase):
             manifest['products'][product]=dict(exchange='SHFE',requested_day='20260908',data_date='20260908',
                 instruments=[dict(id=code,month='2610')],discovered_ids=[code],verified=True,stale=False,source='https://www.shfe.com.cn/')
         self.write('universe/current/manifest.json',manifest)
-        with patch('contract_coverage.datetime') as clock:
+        with patch('query.contract_coverage.datetime') as clock:
             clock.now.return_value=now
             result=self.get()
         au=next(r for r in result['groups'] if r['product']=='AU')
