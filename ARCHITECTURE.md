@@ -45,6 +45,8 @@ Python 源码依赖固定为 `data_provider → analytics → query`：Data Prov
 
 这里的 runtime 依赖不等于目录内所有工具的依赖：Universe 工具的上述 Calendar 例外不推广到其他 Collector 脚本；`collector/scripts/native.py` 虽位于 Collector 目录，却作为 repository integration 工具管理三个服务。两者均不改变采集 runtime 的故障隔离或 Raw 写所有权。
 
+Collector Health 的解释边界位于 Query 进程内：Collector 发布 Runtime Facts，Data Provider 提供只读事实与 Calendar，Query 组合 Health evaluator 产生派生诊断。它不是新的服务或持久化事实库，不进入 Analytics 数值链路，也不反向控制 Collector；精确语义见 [Collector Health Contract](docs/contracts/collector-health.md)，接入程度见 [Acceptance](docs/acceptance.md#collector-health-缺口)。
+
 ## 数据所有权
 
 | 数据/记录 | Owner | 允许的消费者 |

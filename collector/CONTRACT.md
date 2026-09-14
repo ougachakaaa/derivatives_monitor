@@ -52,6 +52,7 @@
 
 ## 生命周期与失败语义
 
+- Connection/login/订阅事实的生命周期及常驻运行约束由 [Collector Health](../docs/contracts/collector-health.md#ctp-session-与订阅生命周期)统一定义；Collector 发布事实，不保存派生 Health 为权威事实。
 - SDK 断线后由应用在每次连接后登录并重新订阅。请求返回 0 只表示本地受理；订阅响应单独跟踪，区分 pending、成功、失败和已订阅但无行情。
 - 主线程负责有间隔的登录重试、订阅批次、超时检测、自然 bucket 封口和事务提交；callback 不阻塞在这些工作上。断线立即破坏 observation continuity，但不修改已提交 Bar。
 - Raw writer 锁、SQLite 持久性和逐日事务边界统一见 [Raw Boundary](../docs/contracts/raw-boundary.md#writer-协调与持久性)。写入失败必须明确日志并非零退出；成功 commit 后才累计 durable Bar 数。

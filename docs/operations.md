@@ -83,7 +83,7 @@ QUERY_URL=http://127.0.0.1:8000 ./dev up dashboard --dashboard-port 8101
 
 ## 故障处理
 
-API 失败先检查 `/healthz` 与数据读取错误；Collector 可能仍正常采集。心跳缺失/过期显示 unknown/stale，不能用旧 JSON 判定健康。CTP 断线后的重连由 SDK 处理，应用重新登录订阅；不可声称补回断线期间行情。
+API 失败先检查 `/healthz` 与数据读取错误；Collector 可能仍正常采集。心跳缺失/过期不能用旧 JSON 判定健康；Collector Health 的目标语义见 [Contract](contracts/collector-health.md)，当前 unknown/stale 诊断输出与接入缺口见 [Acceptance](acceptance.md#collector-health-缺口)。CTP 断线后的重连由 SDK 处理，应用重新登录订阅；不可声称补回断线期间行情。
 
 持久化错误非零退出；检查空间、权限、writer 冲突及日志。保留未提交 WAL，避免删除 sidecar。崩溃后由正常 Collector/SQLite 恢复，再正常停止验证；不直接改库或伪造 run 结束状态。
 

@@ -60,6 +60,8 @@
 
 ## Collector 运行诊断协议
 
+本节拥有诊断传输格式与当前运行参数；Runtime Facts 与 Health 判定的业务语义唯一见 [Collector Health](collector-health.md)。`current_status` 是逻辑事实视图，不等同于已发布的新 schema。下述 v2 字段不得未经映射和计数口径核对直接冒充该视图；当前差距见 [Acceptance](../acceptance.md#collector-health-缺口)。
+
 - Collector 持有 Raw writer 锁期间，每 2 秒原子替换数据目录中的 `.collector-status.json`，诊断 `schema_version=2`。内容至少包括 `run_id`、`updated_us`、`process_state`、连接/登录状态、订阅汇总、`callbacks_accepted`、`bars_written`、`partial_bars`、`late_callbacks`、非法 TradingDay/event-time 计数以及最后 callback 接收/成功提交时间。
 - `.collector-coverage.json` 同步使用诊断 schema v2，逐合约区分订阅状态、callback 计数、最近接收时间、Bar 写入/partial/late 计数；它是 coverage 证据，不是 Raw 行情表。
 - 心跳由 Collector 主循环产生，独立于 callback 和 Bar commit。超过 10 秒、时钟明显倒退、内容损坏或缺失时，消费者不得判定进程存活；SIGKILL 后遗留文件也不能继续证明健康。
