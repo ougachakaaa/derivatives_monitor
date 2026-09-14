@@ -4,7 +4,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import App from '../src/App.jsx';
 
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
-const health = { query: { status: 'healthy' }, data: { readable: true }, collector: { status: 'healthy', process_alive: true, heartbeat: { connected: true, logged_in: true, expected: 10, subscribed: 10, accepted: 100, written: 80, last_received_us: 1789522260000000 } } };
+const health = { query: { status: 'healthy' }, data: { readable: true }, collector: { status: 'running', process_alive: true, heartbeat: { connected: true, logged_in: true, expected: 10, subscribed: 10, accepted: 100, written: 80, last_received_us: 1789522260000000 } } };
 const quality = { completeness: 'COMPLETE', expected_count: 10, observed_count: 10, usable_count: 10, missing_count: 0, stale_count: 0, invalid_count: 0 };
 const current = { schema_version: 1, status: 'OK', reasons: [], scope: { exchange: 'CFFEX', product: 'MO', month: '2610', trading_day: '20260916' }, minute: '2026-09-16T09:31:00+08:00', valuation_at: '2026-09-16T09:32:00+08:00', historical: false, current_usable: true, skew_25d_vp: 1.2345, quality, raw_revision: 88, algorithm_version: '1.0.0', reference: { bundle_id: 'fixture-2610', source_kind: 'SYNTHETIC' } };
 const series = { status: 'OK', baseline: { minute: '2026-09-16T09:30:00+08:00', skew_25d_vp: .5 }, change_vp: .7345, points: [{ ...current, minute: '2026-09-16T09:30:00+08:00', skew_25d_vp: .5 }, current] };
@@ -90,7 +90,8 @@ test('diagnostic data remains available but failures clear its old evidence inde
   mount(path => broken && ['/api/health', '/api/coverage'].includes(path) ? Promise.reject(new Error('diagnostic unavailable')) : undefined, 30);
   await waitFor(() => expect(screen.getByTestId('rows').textContent).toBe('5'));
   fireEvent.click(screen.getByText('运行与数据诊断'));
-  expect(screen.getAllByText('运行正常')).toHaveLength(2);
+  expect(screen.getAllByText('运行正常')).toHaveLength(1);
+  expect(screen.getByText('运行中')).toBeTruthy();
   broken = true;
   await screen.findAllByText(/diagnostic unavailable/);
   expect(screen.queryAllByText('运行正常')).toHaveLength(0);

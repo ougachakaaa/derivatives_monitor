@@ -31,7 +31,7 @@ public:
             for (int step = 0; running_; ++step) {
                 {
                     std::lock_guard<std::mutex> lock(mutex_);
-                    if (spi) {
+                    if (spi && !no_front_) {
                         if (step == 0 || step == 12) spi->OnFrontConnected();
                         if (step == 10) { subscribed = false; spi->OnFrontDisconnected(0x1001); }
                         if (subscribed) {
@@ -74,6 +74,7 @@ public:
         subscribed = true; return 0;
     }
 private:
+    const bool no_front_ = std::getenv("DM_TEST_SCENARIO") && std::string(std::getenv("DM_TEST_SCENARIO")) == "no-front";
     const bool night_ = std::getenv("DM_TEST_SCENARIO") && std::string(std::getenv("DM_TEST_SCENARIO")) == "shfe-night";
     std::set<std::string> targets_;
     std::mutex mutex_;

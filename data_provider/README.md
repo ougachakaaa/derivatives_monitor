@@ -16,3 +16,5 @@ Market Frame 从仓库根使用现有 Query Python 环境运行：
 ```bash
 query/.venv/bin/python -m data_provider.market_frame minute --data-dir collector/data --day 20260908 --instrument MO2609-C-5000 --at '2026-09-08T09:30:00+08:00' --evaluated-at '2026-09-08T09:31:00+08:00'
 ```
+
+Collector 运行诊断由 `runtime_status.py` 只读访问独立运行库，协议见 [Raw Boundary](../docs/contracts/raw-boundary.md#collector-运行诊断协议)；不依赖行情日库存在。

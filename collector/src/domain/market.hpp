@@ -59,6 +59,8 @@ struct MarketBar {
 };
 
 struct InstrumentAggregationStats {
+    std::uint64_t ticks_received = 0;
+    std::int64_t last_tick_received_us = 0;
     std::uint64_t callbacks_accepted = 0;
     std::uint64_t late_callbacks = 0;
     std::uint64_t invalid_event_time = 0;
@@ -66,6 +68,9 @@ struct InstrumentAggregationStats {
 };
 
 struct AggregationStats {
+    std::uint64_t ticks_received = 0;
+    std::int64_t last_tick_received_us = 0;
+    std::map<std::string, std::uint64_t> ticks_by_day;
     std::uint64_t callbacks_accepted = 0;
     std::uint64_t invalid_trading_day = 0;
     std::uint64_t invalid_event_time = 0;

@@ -79,12 +79,9 @@ void CtpSession::OnRtnDepthMarketData(CThostFtdcDepthMarketDataField* data) {
     const auto received_us = NowUs();
     Callback([&] {
         if (!data) return;
-        {
-            std::lock_guard<std::mutex> lock(mutex_);
-            if (!status_.logged_in) return;
-        }
-        if (!aggregator_.Receive(*data, received_us)) return;
         std::lock_guard<std::mutex> lock(mutex_);
+        if (!status_.logged_in) return;
+        if (!aggregator_.Receive(*data, received_us)) return;
         auto it = status_.instruments.find(ctp::FieldString(data->InstrumentID));
         if (it != status_.instruments.end()) {
             ++it->second.received;

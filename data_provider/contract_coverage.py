@@ -1,12 +1,12 @@
-"""Read-only coverage diagnostics, independent of SQLite schema and query locks."""
+"""Read-only coverage combining Universe and one atomic Collector runtime snapshot."""
 from datetime import datetime
 import json
 import re
-import time
 from zoneinfo import ZoneInfo
 
 from data_provider.market_calendar import CFFEX_PRODUCTS, SHFE_PRODUCTS, sessions, DEFAULT_DIRECTORY
 from data_provider.errors import DataUnavailableError
+from data_provider.runtime_status import read_runtime_status, diagnostic
 
 PRODUCTS = CFFEX_PRODUCTS + SHFE_PRODUCTS
 ID = re.compile(r'^(IF|IH|IC|IM|TS|TF|TL|T|IO|HO|MO|au|ag)(\d{2}(?:0[1-9]|1[0-2]))(?:-[CP]-\d+(?:\.\d+)?)?$')
@@ -41,20 +41,14 @@ def coverage(store, calendar_directory=DEFAULT_DIRECTORY):
         update = {}
     except (OSError, ValueError, TypeError, KeyError):
         raise DataUnavailableError('Invalid Universe update diagnostic') from None
-    try:
-        snapshot = read_json(store.directory / '.collector-coverage.json')
-    except FileNotFoundError:
-        snapshot = {}
-    except (OSError, ValueError, TypeError, KeyError):
-        raise DataUnavailableError('Invalid Collector coverage diagnostic') from None
-    heartbeat = store.heartbeat()
+    runtime = read_runtime_status(store.directory)
+    heartbeat = diagnostic(runtime)
     alive = heartbeat['process_alive']
     hb = heartbeat.get('heartbeat') or {}
-    age = (time.time_ns() // 1000 - snapshot.get('updated_us', 0)) / 1_000_000
-    current = alive and snapshot.get('run_id') == hb.get('run_id') and 0 <= age <= 10
-    items = snapshot.get('instruments', [])
-    if not isinstance(items, list) or len(items) > 10000:
-        raise DataUnavailableError('Invalid Collector coverage diagnostic')
+    snapshot = runtime[0] if runtime else {}
+    current = alive
+    items = [dict(row, id=row['instrument_id'], received=row['ticks_received'],
+                  last_received_us=row['last_tick_received_us']) for row in runtime[1]] if runtime else []
     statuses = {}
     for item in items:
         if (not isinstance(item, dict) or not isinstance(item.get('id'), str)

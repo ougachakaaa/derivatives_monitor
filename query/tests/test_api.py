@@ -1,3 +1,4 @@
+from data_provider.tests.runtime_fixture import write_runtime, update_runtime
 import fcntl
 import json
 import os
@@ -103,22 +104,24 @@ class ApiTest(unittest.TestCase):
         self.assertEqual(self.client.get("/api/days").json(), {"days": []})
 
     def test_heartbeat_no_quotes_stale_stop_and_malformed(self):
-        path = self.directory / ".collector-status.json"
+        path = self.directory / "collector-runtime.sqlite"
         self.assertEqual(self.client.get("/api/health").json()["collector"]["status"], "unknown")
         heartbeat = dict(schema_version=1, run_id="a" * 32, updated_us=time.time_ns() // 1000,
                          process_state="running", connected=True, logged_in=True,
                          connections=1, disconnections=0, expected=1, subscribed=1,
                          subscription_failed=0, accepted=0, written=0,last_received_us=0,last_commit_us=0)
         def read(**changes):
-            path.write_text(json.dumps(heartbeat | changes))
+            write_runtime(self.directory, heartbeat | changes)
             return self.client.get("/api/health").json()["collector"]
-        self.assertEqual(read()["status"], "healthy")
+        self.assertEqual(read()["status"], "running")
         self.assertTrue(read()["process_alive"])
-        self.assertEqual(read(logged_in=False)["status"], "degraded")
+        self.assertEqual(read(logged_in=False)["status"], "running")
         self.assertFalse(read(process_state="stopped")["process_alive"])
         self.assertEqual(read(updated_us=1)["status"], "stale")
         self.assertEqual(read(updated_us=time.time_ns() // 1000 + 20_000_000)["status"], "stale")
-        self.assertEqual(read(connected="yes")["status"], "unknown")
+        read()
+        update_runtime(self.directory, "UPDATE current_status SET connected='yes'")
+        self.assertEqual(self.client.get('/api/health').json()['collector']['status'], 'unknown')
         path.write_text("invalid")
         self.assertFalse(self.client.get("/api/health").json()["collector"]["process_alive"])
 

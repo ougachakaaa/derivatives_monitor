@@ -8,7 +8,7 @@ RUN pip install --no-cache-dir poetry==2.2.1
 COPY query/pyproject.toml query/poetry.lock ./
 RUN poetry sync --no-interaction
 COPY query/__init__.py query/app.py query/errors.py ./query/
-COPY data_provider/__init__.py data_provider/errors.py data_provider/storage.py data_provider/contract_coverage.py data_provider/market_calendar.py data_provider/market_frame.py ./data_provider/
+COPY data_provider/__init__.py data_provider/errors.py data_provider/storage.py data_provider/runtime_status.py data_provider/contract_coverage.py data_provider/market_calendar.py data_provider/market_frame.py ./data_provider/
 COPY data_provider/calendars/ ./data_provider/calendars/
 COPY data_provider/tests/ ./data_provider/tests/
 COPY analytics/__init__.py analytics/errors.py analytics/skew.py analytics/skew_service.py analytics/skew_references.py analytics/indicator_service.py ./analytics/
@@ -25,7 +25,7 @@ ENV PATH="/app/.venv/bin:$PATH" PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 DAT
 WORKDIR /app
 COPY --from=build /app/.venv /app/.venv
 COPY query/__init__.py query/app.py query/errors.py ./query/
-COPY data_provider/__init__.py data_provider/errors.py data_provider/storage.py data_provider/contract_coverage.py data_provider/market_calendar.py data_provider/market_frame.py ./data_provider/
+COPY data_provider/__init__.py data_provider/errors.py data_provider/storage.py data_provider/runtime_status.py data_provider/contract_coverage.py data_provider/market_calendar.py data_provider/market_frame.py ./data_provider/
 COPY data_provider/calendars/ ./data_provider/calendars/
 COPY analytics/__init__.py analytics/errors.py analytics/skew.py analytics/skew_service.py analytics/skew_references.py analytics/indicator_service.py ./analytics/
 USER 65532:65532

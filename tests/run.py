@@ -61,6 +61,7 @@ def profiles(profile):
     checks += build_steps()
     if profile == 'offline':
         checks += [step('ctest', ['ctest', '--test-dir', BUILD, '--output-on-failure']),
+                   step('runtime-status', [PYTHON, 'tests/runtime_status_smoke.py'], requires=['sqlite3'], timeout=90),
                    step('dev-runner-tests', [sys.executable, '-m', 'unittest', 'discover',
                                              '-s', 'tests', '-p', 'test_dev*.py', '-v']),
                    step('dev-runner-smoke', [sys.executable, 'tests/dev_runner_smoke.py'],

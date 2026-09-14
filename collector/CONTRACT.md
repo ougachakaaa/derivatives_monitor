@@ -54,7 +54,7 @@
 
 - Connection/login/订阅事实的生命周期及常驻运行约束由 [Collector Health](../docs/contracts/collector-health.md#ctp-session-与订阅生命周期)统一定义；Collector 发布事实，不保存派生 Health 为权威事实。
 - SDK 断线后由应用在每次连接后登录并重新订阅。请求返回 0 只表示本地受理；订阅响应单独跟踪，区分 pending、成功、失败和已订阅但无行情。
-- 主线程负责有间隔的登录重试、订阅批次、超时检测、自然 bucket 封口和事务提交；callback 不阻塞在这些工作上。断线立即破坏 observation continuity，但不修改已提交 Bar。
+- 主线程负责有间隔的登录重试、订阅批次、请求超时检测、自然 bucket 封口和事务提交；首次连接/登录超时不退出，等待 SDK 重连并持续签到；callback 不阻塞在这些工作上。断线立即破坏 observation continuity，但不修改已提交 Bar。
 - Raw writer 锁、SQLite 持久性和逐日事务边界统一见 [Raw Boundary](../docs/contracts/raw-boundary.md#writer-协调与持久性)。写入失败必须明确日志并非零退出；成功 commit 后才累计 durable Bar 数。
 - SIGINT/SIGTERM 先停止并释放 SDK，SPI 在 callback 收尾期间保持有效。对于已经到达 bucket end、但仍处于 1 秒 grace 的 bucket，正常停止最多等待剩余 grace 后提交；不得等待当前未结束 bucket 到期，也不得把它作为半根 Bar 写入。强制终止可能丢失所有尚未 commit 的内存 Bar。
 - canonical identity 冲突、schema 不兼容或持久化失败均为 invariant/persistence failure；不得 upsert、忽略冲突、修正历史或继续报告健康。
@@ -62,7 +62,7 @@
 ## 运行诊断与验收约束
 
 - 日志和诊断使用 callback/bar 词汇，至少包含 run ID、连接/登录/断线/重连、逐合约订阅、`callbacks_accepted`、`bars_written`、`partial_bars`、`late_callbacks`、非法 day/event-time、最近接收/成功提交时间及持久化错误；不得输出凭据。
-- 运行诊断 JSON 的共享字段和 freshness 见 [Raw Boundary](../docs/contracts/raw-boundary.md#collector-运行诊断协议)。连接、订阅、callback、Bar commit 和市场时段是不同证据。
+- 独立运行库的共享字段和 freshness 见 [Raw Boundary](../docs/contracts/raw-boundary.md#collector-运行诊断协议)。连接、订阅、callback、Bar commit 和市场时段是不同证据。
 - 核心聚合、四个自然边界、ActionDay 午夜、TradingDay 切换、baseline、partial 恢复、event regression/late event、事务冲突、停止和 SDK 生命周期必须可用明确标记的 TEST DOUBLE 离线验证。
 - 实盘连接、真实订阅和真实持续行情分别记录证据。前置不可达或非交易时段只能报告已验证部分；空库、登录成功或模拟行情均不能证明本契约。
 

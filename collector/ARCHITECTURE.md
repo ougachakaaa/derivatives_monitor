@@ -9,7 +9,7 @@ src/app/main.cpp → src/config/config.hpp → src/app/runtime.cpp
                                              ├─ src/ingestion/session.* → CTP MdApi callbacks
                                              ├─ src/domain/market.* → AlignedBarAggregator / MarketBar
                                              ├─ src/persistence/sqlite_store.* → daily Raw SQLite
-                                             └─ src/observability/health.* → status publication
+                                             └─ src/observability/runtime_status.* → runtime SQLite publication
 ```
 
 - `app/` 拥有 CLI、进程信号和 runtime 编排；runtime 只协调各 owner，不定义行情或 SQLite 语义。
@@ -17,6 +17,6 @@ src/app/main.cpp → src/config/config.hpp → src/app/runtime.cpp
 - `ingestion/` 隔离 MdApi 连接、登录、订阅和 callback 状态；callback 立即复制行情并交给 `AlignedBarAggregator`，不直接写 SQLite。
 - `domain/` 以 CTP event time 按 `(TradingDay, InstrumentID)` 维护自然时间对齐的 15 秒 bucket、累计 baseline 与 continuity，并输出领域对象 `MarketBar`。
 - `persistence/` 是 canonical `market_bars` 的唯一 Raw writer 边界；它与只读消费者共同遵守的 schema、身份、目录所有权、锁、WAL 与发布协议由[共享 Raw Boundary](../docs/contracts/raw-boundary.md)定义。
-- `observability/` 发布共享诊断投影；字段和消费者解释仍由 Raw Boundary 拥有。
+- `observability/` 在主循环中事务发布独立运行库的当前状态和逐合约状态；存储协议见 Raw Boundary，业务解释见 [Collector Health](../docs/contracts/collector-health.md)。
 
 C++ runtime 不导入或启动 Query/Dashboard。系统级 manager、Compose 与三服务生命周期由[根 Deployment Contract](../docs/contracts/deployment.md)约束；前台 runner 的命令面、输入解析与所有权由 [Developer Runner Contract](../docs/contracts/developer-runner.md)约束。

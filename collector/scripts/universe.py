@@ -5,6 +5,7 @@ SHFE ContractBaseInfo supplies AU/AG futures. CFFEX jycs.js supplies dated XML.
 Sina fallback uses
 its expiry selector and OptionService.getOptionData; no generated contracts.
 """
+import contextlib
 import argparse
 from datetime import datetime, timedelta
 import fcntl
@@ -325,12 +326,26 @@ def publish(directory, manifest, restart=None, run=subprocess.run):
     temporary.symlink_to(generation.relative_to(universe), target_is_directory=True)
     os.replace(temporary, current)
     needs_restart = changed
-    diagnostic = directory / '.collector-coverage.json'
+    diagnostic = directory / 'collector-runtime.sqlite'
     if restart and diagnostic.exists():
         try:
-            live = json.loads(diagnostic.read_text())
-            needs_restart |= {r['id'] for r in live['instruments']} != set(instruments)
-        except (ValueError, KeyError, TypeError):
+            import sqlite3
+            if diagnostic.is_symlink():
+                raise ValueError('runtime database must not be a symlink')
+            if any(diagnostic.with_name(diagnostic.name + suffix).is_symlink() for suffix in ('-journal', '-wal', '-shm')):
+                raise ValueError('runtime sidecar must not be a symlink')
+            with contextlib.closing(sqlite3.connect(diagnostic.absolute().as_uri() + '?mode=ro', uri=True, timeout=0.1)) as db:
+                db.execute('PRAGMA query_only=ON')
+                db.execute('BEGIN')
+                if (db.execute('PRAGMA user_version').fetchone()[0] != 1
+                        or db.execute('PRAGMA journal_mode').fetchone()[0] != 'delete'):
+                    raise ValueError('unsupported runtime schema')
+                status = db.execute('SELECT run_id,updated_us,target_count FROM current_status WHERE singleton=1').fetchone()
+                rows = db.execute('SELECT instrument_id,run_id,updated_us FROM instrument_status').fetchall()
+                if not status or len(rows) != status[2] or any(row[1:] != status[:2] for row in rows):
+                    raise ValueError('inconsistent runtime snapshot')
+                needs_restart |= {row[0] for row in rows} != set(instruments)
+        except (OSError, sqlite3.Error, ValueError, KeyError, TypeError):
             needs_restart = True
     if needs_restart and restart:
         active = run(['systemctl', '--user', 'is-active', '--quiet', restart], check=False)

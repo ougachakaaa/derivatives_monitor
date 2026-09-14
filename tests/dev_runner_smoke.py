@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Actual ./dev native chain with a TEST DOUBLE CTP SDK and temporary state only."""
 
+from contextlib import closing
 import json
 import os
 from pathlib import Path
@@ -18,6 +19,13 @@ from urllib.request import build_opener, ProxyHandler
 
 ROOT = Path(__file__).resolve().parents[1]
 DAY = "20260907"
+
+
+def runtime_status(directory):
+    # TEST DOUBLE process output; never opens a real data directory.
+    with closing(sqlite3.connect((directory / 'collector-runtime.sqlite').as_uri() + '?mode=ro', uri=True)) as db:
+        db.row_factory = sqlite3.Row
+        return dict(db.execute('SELECT * FROM current_status WHERE singleton=1').fetchone())
 
 
 def unused_port() -> int:
@@ -265,7 +273,7 @@ def main() -> None:
             assert process_exists(first_pids["collector"])
             wait(lambda: row_count(data) > before_downstream_stop + 2, "Collector commits after downstream exit")
             stop_runner(first, first_pids, expected=(1,))
-            assert json.loads((data / ".collector-status.json").read_text())["process_state"] == "stopped"
+            assert runtime_status(data)["process_state"] == "stopped"
 
             rows_before_restart = row_count(data)
             runs_before_restart = run_count(data)
@@ -283,7 +291,7 @@ def main() -> None:
             assert "TEST DOUBLE" in restarted_summary["runs"][0]["source"]
             stop_runner(second, second_pids, expected=(128 + signal.SIGTERM,))
             assert "sending SIGKILL" not in second_log.read_text(errors="replace")
-            assert json.loads((data / ".collector-status.json").read_text())["process_state"] == "stopped"
+            assert runtime_status(data)["process_state"] == "stopped"
 
             with sqlite3.connect((data / f"{DAY}.sqlite").as_uri() + "?mode=ro", uri=True) as connection:
                 assert connection.execute("PRAGMA integrity_check").fetchone()[0] == "ok"

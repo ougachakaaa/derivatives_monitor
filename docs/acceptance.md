@@ -15,12 +15,12 @@
 
 ## Collector Health 缺口
 
-[Collector Health 语义](contracts/collector-health.md)已冻结核心事实、生命周期与三态判定；尚未实现完整 evaluator，也未完成业务验收。当前 Collector 发布诊断 v2（2 秒周期），Data Provider `Store.heartbeat()` 仍消费旧字段并返回 unknown/stale 等诊断状态，Query `/api/health` 仅组合既有诊断，未结合 Calendar 产生新语义结果。旧诊断状态不等于新的 Health enum。
+[Collector Health 语义](contracts/collector-health.md)已冻结核心事实、生命周期与三态判定。Collector 当前状态和逐合约事实已实现于独立运行库，Data Provider、Query、coverage、Universe 与 healthcheck 从该库读取；不再使用两份 Collector JSON。具体参数和计数口径见 [Raw Boundary](contracts/raw-boundary.md#collector-运行诊断协议)。运行事实的 TEST DOUBLE 工程验证不证明实盘或完整 Health 已完成。
 
-- 尚需冻结 `current_status` 的 wire/schema 与旧字段映射；运行累计 `callbacks_accepted` 不等于 `total_ticks_today`，交易日身份、切换、重启累计口径及未收到首个 Tick/commit 的表示仍需明确。
-- 约 1 秒 heartbeat / 约 2 秒 alive threshold 仅为建议；现有 Raw Boundary 的 2 秒发布 / 10 秒阈值仍是当前协议参数，变更需同步 producer、consumer 与 healthcheck。
-- 尚需冻结多市场活动 scope 的归并、UNKNOWN Calendar、缺失/损坏事实的输出及原因、feed/persistence 阈值和开盘/启动宽限；不得把未知当休市或据此报告 healthy。
-- 尚需接入 evaluator 与 HTTP envelope，并验证休市、活跃时段、断线重连、订阅不完整、停 Tick、Tick 正常但 commit 停滞、heartbeat 过期及交易日切换。`runtime_snapshots` 和历史完整性尚未定义或实现。
+- 完整 Calendar Health evaluator 尚未实现，当前 HTTP 仅投影进程状态与运行事实。
+- 尚需冻结多市场活动 scope 的归并、UNKNOWN Calendar、缺失/损坏事实对应的 Health 输出及原因、feed/persistence 阈值和开盘/启动宽限；不得把未知当休市或据此报告 healthy。
+- 仓库整体 offline 回归仍有 developer-runner 工作目录断言不一致，以及 smoke fixture 使用已退役 `SnapshotIntervalMs` 的缺口；运行事实独立闭环不替代完整开发会话验收。
+- 仍需真实运行验证事实记录与外部观察一致；`runtime_snapshots` 和历史完整性尚未定义或实现。
 
 模块状态：[Data Provider](../data_provider/ACCEPTANCE.md) · [Analytics](../analytics/ACCEPTANCE.md) · [Query](../query/ACCEPTANCE.md) · [Dashboard](../dashboard/ACCEPTANCE.md)。
 

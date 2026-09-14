@@ -38,7 +38,7 @@ struct Child {
 };
 
 template<class F> void Eventually(F&& predicate) {
-    for (int i = 0; i < 300; ++i) {
+    for (int i = 0; i < 1000; ++i) {
         try { if (predicate()) return; } catch (const std::exception&) {}
         std::this_thread::sleep_for(std::chrono::milliseconds(20));
     }
@@ -55,26 +55,55 @@ int main(int argc, char** argv) {
     TempDirectory temp;
     const auto config = temp.path / "config.ini";
     const auto log = temp.path / "process.log";
-    const auto health = temp.path / "data/.collector-status.json";
+    const auto health = temp.path / "data/collector-runtime.sqlite";
+    const auto value = [&](const char* column) {
+        TestDb db(health);
+        return db.Scalar(std::string("SELECT ") + column + " FROM current_status");
+    };
     {
         std::ofstream out(config);
         out << "# TEST DOUBLE: no real front\n[config]\nFrontMdAddr=test-double\nInstruments=IF2609\n"
                "DataDirectory=data\nFlowPath=flow\nStatusIntervalSeconds=1\nConnectTimeoutSeconds=2\n";
     }
     Child child(argv[1], argv[2], config, log);
-    Eventually([&] { return Read(health).find("\"process_state\": \"running\"") != std::string::npos; });
-    CHECK(Read(health).find("\"schema_version\": 2") != std::string::npos);
+    Eventually([&] { return value("process_state") == "running"; });
+    const auto first_run = value("run_id");
+    const auto first_heartbeat = value("heartbeat_us");
+    Eventually([&] { return value("heartbeat_us") != first_heartbeat; });
+    CHECK(value("run_id") == first_run);
+    Eventually([&] { return value("last_market_commit_us") != "NULL"; });
+    CHECK(std::stoll(value("ticks_received")) > 0);
+    CHECK(std::stoll(value("bars_written")) > 0);
     {
         Child duplicate(argv[1], argv[2], config, log);
         CHECK(duplicate.Wait() == 1);
     }
     CHECK(kill(child.pid, SIGTERM) == 0);
     CHECK(child.Wait() == 0);
-    CHECK(Read(health).find("\"process_state\": \"stopped\"") != std::string::npos);
+    CHECK(value("process_state") == "stopped");
 
-    Child restarted(argv[1], argv[2], config, log, "1");
-    CHECK(restarted.Wait() == 0);
-    CHECK(Read(health).find("\"process_state\": \"stopped\"") != std::string::npos);
+    Child restarted(argv[1], argv[2], config, log);
+    Eventually([&] { return value("run_id") != first_run; });
+    CHECK(kill(restarted.pid, SIGKILL) == 0);
+    CHECK(restarted.Wait() == 128 + SIGKILL);
+    const auto killed_heartbeat = value("heartbeat_us");
+    std::this_thread::sleep_for(std::chrono::milliseconds(1200));
+    CHECK(value("heartbeat_us") == killed_heartbeat);
+
+    // TEST DOUBLE: disconnected startup lasts beyond ConnectTimeoutSeconds.
+    setenv("DM_TEST_SCENARIO", "no-front", 1);
+    const auto killed_run = value("run_id");
+    Child waiting(argv[1], argv[2], config, log);
+    Eventually([&] { return value("run_id") != killed_run; });
+    const auto waiting_heartbeat = value("heartbeat_us");
+    std::this_thread::sleep_for(std::chrono::milliseconds(2300));
+    CHECK(value("heartbeat_us") != waiting_heartbeat);
+    CHECK(value("process_state") == "starting");
+    CHECK(value("connected") == "0");
+    CHECK(value("ticks_received") == "0");
+    CHECK(kill(waiting.pid, SIGTERM) == 0);
+    CHECK(waiting.Wait() == 0);
+    unsetenv("DM_TEST_SCENARIO");
     std::ifstream input(log);
     const std::string text((std::istreambuf_iterator<char>(input)), {});
     CHECK(text.find("TEST DOUBLE - synthetic market data") != std::string::npos);

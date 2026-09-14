@@ -50,7 +50,7 @@ collector/build/Release/bin/data_collector --config collector/config.ini
 ./scripts/deploy.sh verify YYYYMMDD
 ```
 
-日志中常用事件包括 `front_connected`、`login_response`、`subscription_response`、`health`、`bar_commit`、`persistence_failed` 和 `stop`。连接、订阅、callback 接收、Bar 写入和市场时段是不同证据；精确状态含义见 [Collector Contract](CONTRACT.md) 与 [Read Path Contract](../docs/contracts/read-path.md)。
+日志中常用事件包括 `front_connected`、`login_response`、`subscription_response`、`runtime_status`、`bar_commit`、`persistence_failed` 和 `stop`。连接、订阅、callback 接收、Bar 写入和市场时段是不同证据；精确状态含义见 [Collector Contract](CONTRACT.md) 与 [Read Path Contract](../docs/contracts/read-path.md)。
 
 可选的只读 SQLite 快速检查：
 
@@ -82,3 +82,14 @@ sqlite3 -readonly collector/data/YYYYMMDD.sqlite \
 构建使用已入库的 **v6.7.13_20260225 / Linux x86-64 Market Data** 最小 SDK，无需联网下载。原包及头文件、动态库哈希见 [MANIFEST](third_party/ctp/v6.7.13_20260225/MANIFEST.txt)；头文件仅将注释由 GB18030 转为 UTF-8，二进制未改。原包名含 trader 不代表使用 Trader API。
 
 官方入口：[上期技术](https://www.sfit.com.cn/5_2_DocumentDown_2.htm)、[SimNow](https://www.simnow.com.cn/static/apiDownload.action)。这些是查找入口，不是已确认可用的固定版本直链；重新取得原包时必须核对清单哈希。
+
+## 检查当前运行事实
+
+在配置的 DataDirectory 中用 SQLite 只读查询运行状态（下例从仓库根使用默认目录）：
+
+```bash
+sqlite3 -readonly collector/data/collector-runtime.sqlite 'SELECT * FROM current_status;'
+sqlite3 -readonly collector/data/collector-runtime.sqlite 'SELECT * FROM instrument_status ORDER BY instrument_id;'
+```
+
+字段、NULL、交易日计数、发布失败及读取边界由 [运行诊断协议](../docs/contracts/raw-boundary.md#collector-运行诊断协议)定义。库中的 process_state 表达运行生命周期，Health 的解释规则见 [Collector Health](../docs/contracts/collector-health.md)。

@@ -17,7 +17,7 @@ class CoverageApiTest(unittest.TestCase):
 
     def test_transport_parameters_and_data_provider_error_mapping(self):
         self.assertEqual(self.client.get('/api/coverage?day=20260907').status_code, 400)
-        (self.directory / '.collector-coverage.json').write_text('{')
+        (self.directory / 'collector-runtime.sqlite').write_text('{')
         response = self.client.get('/api/coverage')
         self.assertEqual(response.status_code, 503)
         self.assertEqual(response.json(), {'error': 'Coverage files unavailable or invalid'})

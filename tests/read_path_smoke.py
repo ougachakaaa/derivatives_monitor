@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Native-process acceptance, NOT Docker or live CTP acceptance. Temporary test data only."""
 import argparse
+from contextlib import closing
 import json
 import os
 from pathlib import Path
+import sqlite3
 import signal
 import socket
 import subprocess
@@ -12,6 +14,13 @@ import time
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def runtime_status(directory):
+    # TEST DOUBLE process output; never opens a real data directory.
+    with closing(sqlite3.connect((directory / 'collector-runtime.sqlite').as_uri() + '?mode=ro', uri=True)) as db:
+        db.row_factory = sqlite3.Row
+        return dict(db.execute('SELECT * FROM current_status WHERE singleton=1').fetchone())
 
 
 def port():
@@ -75,7 +84,7 @@ def main():
             assert not get("/api/health")["collector"]["process_alive"]
             cpp = collector()
             wait(lambda: get("/api/summary?day=20260907")["rows"] > 2, "live WAL rows")
-            wait(lambda: get("/api/health")["collector"]["status"] == "healthy", "Collector heartbeat")
+            wait(lambda: get("/api/health")["collector"]["status"] == "running", "Collector heartbeat")
             before = get("/api/summary?day=20260907")["rows"]
             wait(lambda: get("/api/summary?day=20260907")["rows"] > before, "continuous commits")
             assert "TEST DOUBLE" in get("/api/summary?day=20260907")["runs"][0]["source"]
@@ -88,8 +97,8 @@ def main():
                 web.terminate(); web.wait(timeout=10)
             api.terminate(); assert api.wait(timeout=10) in (0, -signal.SIGTERM)
             assert "Application shutdown complete" in (work / "query.log").read_text()
-            before = json.loads((work / "data/.collector-status.json").read_text())["written"]
-            wait(lambda: json.loads((work / "data/.collector-status.json").read_text())["written"] > before + 2, "Collector writes without Python")
+            before = runtime_status(work / "data")["bars_written"]
+            wait(lambda: runtime_status(work / "data")["bars_written"] > before + 2, "Collector writes without Python")
             api = query()
             wait(lambda: get("/api/summary?day=20260907")["rows"] > 2, "API restart reads existing data")
             cpp.send_signal(signal.SIGTERM); assert cpp.wait(timeout=10) == 0
@@ -99,7 +108,7 @@ def main():
             assert get("/healthz")["status"] == "ok"
             cpp = collector()
             wait(lambda: get("/api/summary?day=20260907")["rows"] > rows, "Collector restart appends")
-            wait(lambda: get("/api/health")["collector"]["status"] == "healthy", "new heartbeat")
+            wait(lambda: get("/api/health")["collector"]["status"] == "running", "new heartbeat")
             cpp.kill(); cpp.wait(timeout=10)
             wait(lambda: get("/api/health")["collector"]["status"] == "stale", "SIGKILL heartbeat expiry", seconds=15)
             assert not get("/api/health")["collector"]["process_alive"]

@@ -75,6 +75,8 @@ int main() {
     CHECK(state.Stats().callbacks_accepted == 1);
     session.OnFrontDisconnected(0x1001);
     CHECK(!session.Status().connected && !session.Status().logged_in);
+    CHECK(session.Status().instruments.at("IF2609").subscription == Subscription::NotSent);
+    CHECK(session.Snapshot().aggregation.ticks_received == 1);
     session.OnFrontConnected(); session.Pump(now + 4001); api.Login();
     session.Pump(now + 4002); api.SubscriptionReply("IF2609");
     CHECK(session.Status().connections == 2 && session.Status().disconnections == 1);
@@ -93,6 +95,25 @@ int main() {
     zero_session.OnRspUserLogin(&response, &info, 0, true);
     CHECK(zero_session.Status().logged_in);
 
+    // TEST DOUBLE: unanswered login attempts time out and retry without ending the session.
+    AlignedBarAggregator retry_state({"IF2609"});
+    FakeApi retry_api;
+    CtpSession retry_session(retry_api, config, retry_state, "TEST DOUBLE - retry");
+    retry_api.RegisterSpi(&retry_session); retry_api.Init();
+    const auto retry_start = SteadyMs();
+    retry_session.Pump(retry_start);
+    CHECK(retry_api.login_calls == 1);
+    retry_session.Pump(retry_start + 2000);
+    CHECK(retry_api.login_calls == 1);
+    retry_session.Pump(retry_start + 3000);
+    CHECK(retry_api.login_calls == 2);
+    CHECK(retry_session.Status().connected && !retry_session.Status().logged_in);
+    auto before_login = CurrentTick();
+    retry_api.spi->OnRtnDepthMarketData(&before_login);
+    CHECK(retry_session.Snapshot().aggregation.ticks_received == 0);
+    retry_api.Login();
+    CHECK(retry_session.Status().logged_in);
+
     {
         TempDirectory temp;
         config.data_directory = temp.path / "data";
@@ -106,11 +127,30 @@ int main() {
         volatile std::sig_atomic_t stop = 0;
         CHECK(RunCollector(config, stop, ApiPtr(fake)) == 0);
         CHECK(released);
-        std::ifstream health(config.data_directory / ".collector-status.json");
-        const std::string json((std::istreambuf_iterator<char>(health)), {});
-        CHECK(json.find("\"schema_version\": 2") != std::string::npos);
-        CHECK(json.find("\"process_state\": \"stopped\"") != std::string::npos);
-        CHECK(json.find("\"late_callbacks\": 2") != std::string::npos);
+        TestDb db(config.data_directory / "collector-runtime.sqlite");
+        CHECK(db.Scalar("SELECT process_state FROM current_status") == "stopped");
+        CHECK(db.Scalar("SELECT late_callbacks FROM current_status") == "2");
+        CHECK(db.Scalar("SELECT ticks_received FROM current_status") == "2");
+        CHECK(db.Scalar("SELECT subscribed_count FROM current_status") == "0");
         CHECK(!std::filesystem::exists(config.data_directory / "20260904.sqlite"));
     }
+    {
+        // TEST DOUBLE: SDK startup exception still records terminal runtime facts.
+        struct FailingInit : FakeApi {
+            void Init() override { throw std::runtime_error("TEST DOUBLE - failed SDK init"); }
+        };
+        TempDirectory temp;
+        config.data_directory = temp.path / "data";
+        config.flow_path = temp.path / "flow";
+        auto* failing = new FailingInit;
+        failing->delete_on_release = true;
+        volatile std::sig_atomic_t stop = 0;
+        bool failed = false;
+        try { RunCollector(config, stop, ApiPtr(failing)); } catch (...) { failed = true; }
+        CHECK(failed);
+        TestDb db(config.data_directory / "collector-runtime.sqlite");
+        CHECK(db.Scalar("SELECT process_state FROM current_status") == "failed");
+        CHECK(db.Scalar("SELECT connected || logged_in || subscribed_count FROM current_status") == "000");
+    }
+
 }

@@ -15,7 +15,7 @@
 - manifest v1 保留 `products` 键，并记录 exchange、各产品 requested day、来源、完整性和 stale/error 状态；每个产品的已发现精确代码去重。具体字段的跨模块解释由共享 Market Session Contract 拥有。
 - SHFE 来源失败或部分返回时按产品保留未到期旧代码并标记 stale/未完整确认；初次 SHFE 无可用代码不能伪装完整覆盖，已有 CFFEX 清单继续可用。
 - 全量空清单拒绝发布并保留现有清单。可用结果沿用锁保护和原子 generation 切换；失败必须明确记录。
-- 只有已发布合约集变化、活跃 Collector 的订阅集与清单不一致，或已有订阅诊断无法解析时，才请求正常重启指定的活跃 Collector。工具不依据 Market Session 启动或停止 Collector，也不成为 C++ 运行时依赖。
+- 只有已发布合约集变化、从 [Collector 运行库](../../docs/contracts/raw-boundary.md#collector-运行诊断协议)读取的目标订阅集与清单不一致，或已有订阅诊断无法解析时，才请求正常重启指定的活跃 Collector。工具不依据 Market Session 启动或停止 Collector，也不成为 C++ 运行时依赖。
 
 ## 验收边界
 

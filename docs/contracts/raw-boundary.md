@@ -60,12 +60,49 @@
 
 ## Collector 运行诊断协议
 
-本节拥有诊断传输格式与当前运行参数；Runtime Facts 与 Health 判定的业务语义唯一见 [Collector Health](collector-health.md)。`current_status` 是逻辑事实视图，不等同于已发布的新 schema。下述 v2 字段不得未经映射和计数口径核对直接冒充该视图；当前差距见 [Acceptance](../acceptance.md#collector-health-缺口)。
+本节拥有运行诊断存储与读取协议；事实和 Health 解释语义见 [Collector Health](collector-health.md)。运行库与行情日库分别版本化，不改变 Raw Market Bar schema。
 
-- Collector 持有 Raw writer 锁期间，每 2 秒原子替换数据目录中的 `.collector-status.json`，诊断 `schema_version=2`。内容至少包括 `run_id`、`updated_us`、`process_state`、连接/登录状态、订阅汇总、`callbacks_accepted`、`bars_written`、`partial_bars`、`late_callbacks`、非法 TradingDay/event-time 计数以及最后 callback 接收/成功提交时间。
-- `.collector-coverage.json` 同步使用诊断 schema v2，逐合约区分订阅状态、callback 计数、最近接收时间、Bar 写入/partial/late 计数；它是 coverage 证据，不是 Raw 行情表。
-- 心跳由 Collector 主循环产生，独立于 callback 和 Bar commit。超过 10 秒、时钟明显倒退、内容损坏或缺失时，消费者不得判定进程存活；SIGKILL 后遗留文件也不能继续证明健康。
-- 进程存活、CTP 已连接、订阅状态、callback 最近更新和 Bar 成功提交是不同证据。休市无 callback 不等于进程停止；状态输出失败由 Collector 记录但不停止采集，消费者故障也不进入采集控制路径。
+### 运行库与发布
+
+- 固定路径为 `DataDirectory/collector-runtime.sqlite`，`PRAGMA user_version=1`。Collector 是唯一 writer，必须先持有同目录 `.collector.lock`；运行库生命周期在该锁以内。运行库不参与按交易日枚举。
+- 运行库使用 `journal_mode=DELETE`、`synchronous=FULL`、100ms busy timeout。只有下述两张表；producer 核对版本和建表定义，不自动修复坏库或迁移不兼容库。空库初始化及状态替换均为事务。
+- 主循环约每 1 秒发布一份完整快照，启动、正常停止、异常退出另行发布。总体与全部目标合约行在同一事务替换，读者只能看到完整前一份或后一份；新 run 覆盖当前状态，不累计历史快照。
+- `heartbeat_us` 是主循环本次签到时间，`updated_us` 与之相等；没有 Tick 也持续发布。不设置独立心跳线程，不以 SQLite 文件 mtime、Bar 时间或 CTP 回调心跳代替主循环签到。
+- 打开或写入失败记录 `status_write_failed`，事务回滚，继续采集并在下个周期重试；不得单独更新磁盘 heartbeat。行情写入失败仍按 Collector 的致命错误语义处理。终止时尽力发布 stopped/failed；写失败只能保留上次成功记录。
+- 不再生成或消费 `.collector-status.json`、`.collector-coverage.json`；遗留现场文件不删除、不回退读取。
+
+### Current Status schema
+
+`current_status` 固定一行，`singleton INTEGER PRIMARY KEY CHECK(singleton=1)`。除以下明确可空的字段外全部 NOT NULL；计数与时间为 INTEGER，字符串为 TEXT。
+
+| 字段 | 类型与口径 |
+|---|---|
+| `run_id` | 32 位小写十六进制，与该 Collector 的行情 run provenance 相同 |
+| `heartbeat_us`, `updated_us` | 正 UTC epoch 微秒；同一次主循环发布的时刻 |
+| `process_state` | `starting / running / stopped / failed`；running 表示本 run 曾成功登录且尚未退出，断线不把它变成 Health |
+| `connected`, `logged_in` | 0/1；未连接不能 logged_in，释放 SDK 后两者为 0 |
+| `target_count`, `subscribed_count`, `subscription_failed` | 当前目标数、当前 connection 确认成功数、失败数；未登录或 SDK 释放后确认失效 |
+| `trading_day` | 可空；本 run 合法接收中最大的源 TradingDay（YYYYMMDD） |
+| `total_ticks_today`, `ticks_received` | 当前 run 内上述交易日累计、当前 run 全部交易日合法接收累计；包含 late，不等于逐笔成交数 |
+| `last_tick_received_us`, `last_market_commit_us` | 可空；本 run 最近合法 callback 接收、最近成功行情 commit 时间；运行库 commit 不推进后者 |
+| `connections`, `disconnections` | 本 run Front connection 建立与断开次数 |
+| `callbacks_accepted`, `bars_written`, `partial_bars`, `late_callbacks` | 本 run 聚合接受数、成功持久化 Bar 数、其中 partial 数、late 拒收聚合数 |
+| `invalid_trading_day`, `invalid_event_time`, `unknown_instrument`, `event_time_regressions` | 本 run 对应接入/聚合诊断计数 |
+
+第一条合法接收前 trading_day 与最后接收为 NULL，当日和运行接收数为 0；首次成功 Market commit 前最后提交为 NULL。计数非负，`ticks_received = callbacks_accepted + late_callbacks`，`partial_bars <= bars_written`。交易日计数按源日期分组，展示最大日期；旧日期交错不令当前日倒退。重启清零，不从旧 run 或 Bar 重建 callback 数。
+
+### Instrument Status schema
+
+`instrument_status` 以 `instrument_id TEXT PRIMARY KEY` 保存精确目标合约，每个目标一行。`run_id TEXT`、`updated_us INTEGER` 必须与 current_status 一致。`subscription TEXT` 为 `not_sent / pending / subscribed / failed`，`error_id INTEGER` 保存响应/超时错误；SDK 释放后状态清为 not_sent、错误清零。
+
+其余字段为 `ticks_received`、`last_tick_received_us`（可空）、`callbacks_accepted`、`bars_written`、`partial_bars`、`late_callbacks`、`invalid_event_time`。口径与总体相同、范围限于该合约；接收和 Bar 计数跨 reconnect 保留。除明确可空字段外全部 NOT NULL。逐合约计数之和须等于对应总体计数；订阅成功/失败行数须与总体汇总相等。
+
+### 只读诊断与存活
+
+- 消费者用 `mode=ro` / SQLite READONLY 和短事务读取；不得创建或修改运行库、journal 或 sidecar，不使用 immutable，不根据旧 JSON 兜底。库缺失与损坏/不兼容/暂不可读分别交接；拒绝符号链接库及 sidecar。
+- Data Provider 同一事务读取两张表并校验 schema、字段、行数、run/发布时间和计数一致性。损坏或不一致不得作为新鲜状态。Universe 工具只读取它需要的目标集合和快照身份，不解释 Health。
+- 存活窗口为 `0 <= now_us - heartbeat_us <= 10_000_000`，且 process_state 为 starting/running；缺失、损坏、不可读、未来时间或超时都不能证明存活。容器 healthcheck 读取同一主循环事实，不检查行情活动。
+- HTTP 的诊断形状与 unavailable 映射见 [Read Path](read-path.md#健康证据)。Health evaluator 尚未接入，进程状态不能充当 healthy/degraded/down。
 
 ## 失败与证据边界
 

@@ -3,6 +3,8 @@ import importlib.util
 import json
 from pathlib import Path
 import subprocess
+import sqlite3
+from contextlib import closing
 import tempfile
 import unittest
 from unittest.mock import Mock, patch
@@ -84,8 +86,24 @@ class UniverseTest(unittest.TestCase):
             before = path.read_text()
             with self.assertRaises(ValueError): u.publish(directory, u.merge({}, {}, {}, '20260907'))
             self.assertEqual(path.read_text(), before)
+            # TEST DOUBLE runtime snapshot: unchanged targets require no restart and reads are non-mutating.
+            diagnostic = directory / 'collector-runtime.sqlite'
+            with closing(sqlite3.connect(diagnostic)) as db, db:
+                db.executescript("PRAGMA user_version=1; CREATE TABLE current_status(singleton,run_id,updated_us,target_count);"
+                                 "CREATE TABLE instrument_status(instrument_id,run_id,updated_us);"
+                                 "INSERT INTO current_status VALUES(1,'test-double',100,1);"
+                                 "INSERT INTO instrument_status VALUES('IF2609','test-double',100);")
+            before_runtime = diagnostic.read_bytes()
+            run.reset_mock()
+            u.publish(directory, manifest, 'collector.service', run)
+            run.assert_not_called()
+            self.assertEqual(diagnostic.read_bytes(), before_runtime)
+            with closing(sqlite3.connect(diagnostic)) as db, db:
+                db.execute("UPDATE instrument_status SET instrument_id='IC2609'")
+            u.publish(directory, manifest, 'collector.service', run)
+            self.assertEqual(run.call_count, 2)
             # A failed restart after publication must be retried even with unchanged text.
-            (directory / '.collector-coverage.json').write_text(json.dumps({'instruments': [{'id': 'IC2609'}]}))
+            (directory / 'collector-runtime.sqlite').write_text('TEST DOUBLE - unreadable runtime')
             run.reset_mock()
             u.publish(directory, manifest, 'collector.service', run)
             self.assertEqual(run.call_count, 2)

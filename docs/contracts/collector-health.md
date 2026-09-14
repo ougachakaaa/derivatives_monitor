@@ -20,7 +20,7 @@ Collector Runtime Facts + Market Calendar + evaluator 当前时间
 
 ## Current Status
 
-`current_status` 是 Collector 维护的当前运行事实的逻辑名称，不在本文指定新表或文件。至少包含：
+`current_status` 是 Collector 维护的当前运行事实；其 SQLite 载体由 [Raw Boundary](raw-boundary.md#运行库与发布)定义。至少包含：
 
 | 逻辑字段 | 事实语义 |
 |---|---|
@@ -30,11 +30,11 @@ Collector Runtime Facts + Market Calendar + evaluator 当前时间
 | `logged_in` | 当前 connection 是否已成功完成 CTP login |
 | `target_count` | Collector 当前期望订阅集合的合约数量 |
 | `subscribed_count` | 当前 connection 已确认订阅成功的合约数量 |
-| `total_ticks_today` | 当前交易日 Collector 已接受的合法行情 callback 累计数量 |
+| `total_ticks_today` | 当前 run 内当前源交易日合法接收的行情 callback 累计数量 |
 | `last_tick_received_us` | 最近一条合法行情 callback 的接收时间 |
 | `last_market_commit_us` | 最近一次 Market Bar 成功持久化的时间 |
 
-时间字段表达本地 UTC epoch 微秒；接收时间与成功提交时间不得用 event time、最新 Bar 的 bucket 时间代替。合法 callback 的接入边界由 [Collector Contract](../../collector/CONTRACT.md#event-time-与-bucket)定义。累计 callback 数不是逐笔成交数，也不能凭运行累计计数重命名为交易日计数。
+时间字段表达本地 UTC epoch 微秒；接收时间与成功提交时间不得用 event time、最新 Bar 的 bucket 时间代替。合法接收要求已登录、目标合约及合法 TradingDay/event time；late callback 仍是合法接收证据，但不进入已封口 Bar，聚合拒收边界见 [Collector Contract](../../collector/CONTRACT.md#event-time-与-bucket)。累计 callback 数不是逐笔成交数。当前交易日取本 run 已合法接收的最大源 TradingDay，按源日期分组计数，旧日期交错不使当前日倒退；重启清零，以 run_id 明确范围。首次接收前交易日及接收时间未知，首次 Market commit 前提交时间未知。
 
 ## Collector Liveness
 
@@ -42,7 +42,7 @@ Collector Runtime Facts + Market Calendar + evaluator 当前时间
 
 Heartbeat 是本判定中 Collector 正常运行的唯一直接证据。`connected`、`logged_in`、最近 Tick、最近 commit 或数据库最后一根 Bar 都可能在进程死亡后保留，不能替代 heartbeat。
 
-主循环约 1 秒签到、初始约 2 秒 alive threshold 是参数建议，不是长期业务常量，也不覆盖现有传输协议的数值。实际发布周期、存活阈值、时钟异常及不可读诊断的约束由 [Raw Boundary](raw-boundary.md#collector-运行诊断协议)拥有；参数接入缺口见 [Acceptance](../acceptance.md#collector-health-缺口)。
+发布周期、存活窗口和不可读诊断的精确运行参数由 [Raw Boundary](raw-boundary.md#只读诊断与存活)拥有，不作为 Health 的长期业务常量。
 
 ## CTP Session 与订阅生命周期
 

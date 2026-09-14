@@ -1,3 +1,4 @@
+from data_provider.tests.runtime_fixture import write_runtime
 import fcntl
 import json
 import os
@@ -88,16 +89,15 @@ class StoreTest(unittest.TestCase):
             self.store.summary('20260904')
 
     def test_heartbeat_distinguishes_health_and_staleness(self):
-        path = self.directory / '.collector-status.json'
         heartbeat = dict(schema_version=1, run_id='a' * 32, updated_us=time.time_ns() // 1000,
                          process_state='running', connected=True, logged_in=True,
                          connections=1, disconnections=0, expected=1, subscribed=1,
                          subscription_failed=0, accepted=0, written=0,
                          last_received_us=0, last_commit_us=0)
-        path.write_text(json.dumps(heartbeat))
-        self.assertEqual(self.store.heartbeat()['status'], 'healthy')
+        write_runtime(self.directory, heartbeat)
+        self.assertEqual(self.store.heartbeat()['status'], 'running')
         heartbeat['updated_us'] = 1
-        path.write_text(json.dumps(heartbeat))
+        write_runtime(self.directory, heartbeat)
         self.assertEqual(self.store.heartbeat()['status'], 'stale')
 
 

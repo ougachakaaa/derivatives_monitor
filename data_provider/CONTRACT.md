@@ -14,4 +14,4 @@ Data Provider 不联网生成 Calendar、不控制 Collector、不写 Raw，也�
 
 ## Coverage
 
-Coverage 按 exchange/product 分组，按共享 Universe manifest 中各产品目标日期核对清单，并分别表达订阅、callback 接收、Bar 写入/partial/late、缺口、stale/error 与进程健康。Calendar 状态不得改写 Collector 事实或控制 Collector。损坏、非诊断 schema v2 或不兼容的输入抛 `DataUnavailableError`。
+Coverage 按 exchange/product 分组，按共享 Universe manifest 中各产品目标日期核对清单，并分别表达订阅、callback 接收、Bar 写入/partial/late、缺口、stale/error 与进程健康。Calendar 状态不得改写 Collector 事实或控制 Collector。Collector 诊断通过 [运行库协议](../docs/contracts/raw-boundary.md#collector-运行诊断协议)只读获取同一事务的 current_status 与 instrument_status；缺失不证明当前 coverage，损坏、不兼容或不一致抛 `DataUnavailableError`。

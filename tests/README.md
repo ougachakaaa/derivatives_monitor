@@ -24,7 +24,7 @@ python3 tests/run.py docker
 | `docs` | 检查链接、authority、依赖方向、模块 Docker policy、Collector SDK manifest，并运行检查器自测；不访问外网 |
 | `analytics-contract` | 标准库核对 Analytics 拥有的冻结策略、fixture、生成器哈希、价格/IV/delta/远期/两翼及失败回归 |
 | `analytics` | 在 contract 检查上运行生产 Analytics、Skew HTTP 与临时 SQLite TEST DOUBLE 回归 |
-| `offline` | 重建 Collector，运行 CTest、developer runner、Query、Universe、部署替身、SQLite CLI、React 与前端构建 |
+| `offline` | 重建 Collector，运行 CTest、Collector runtime SQLite/HTTP/healthcheck 闭环、developer runner、Query、Universe、部署替身、SQLite CLI、React 与前端构建 |
 | `native` | 重建 Collector，运行合成夜盘和真实 HTTP 独立停启测试；仅临时数据和随机端口 |
 | `browser` | `native` 范围加 Playwright 浏览器闭环 |
 | `packaging` | 用三个 Dockerfile 的 `context-audit` 导出实际上下文，按模块 policy 核对精确文件与字节 |

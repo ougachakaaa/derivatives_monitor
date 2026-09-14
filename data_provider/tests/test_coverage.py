@@ -1,3 +1,4 @@
+from data_provider.tests.runtime_fixture import write_runtime, update_runtime
 from datetime import datetime
 import json
 from pathlib import Path
@@ -25,8 +26,7 @@ class CoverageTest(unittest.TestCase):
         self.items = [dict(id='IF2609', subscription='subscribed', error_id=0, received=1, last_received_us=self.now),
             dict(id='IO2609-C-4000', subscription='subscribed', error_id=0, received=0, last_received_us=0),
             dict(id='IO2609-P-4000', subscription='failed', error_id=31, received=0, last_received_us=0)]
-        self.write('.collector-status.json', self.hb)
-        self.write('.collector-coverage.json', dict(schema_version=1, run_id='a'*32, updated_us=self.now, instruments=self.items))
+        write_runtime(self.directory, self.hb, self.items)
         self.write('universe/current/manifest.json', dict(schema_version=1, complete=False, requested_day=self.today,
             updated_us=self.now, products={p: dict(instruments=[dict(id=s['id'], month='2609') for s in self.items if s['id'].startswith(p)],
                 discovered_ids=[s['id'] for s in self.items if s['id'].startswith(p)], verified=True, stale=False,
@@ -52,18 +52,18 @@ class CoverageTest(unittest.TestCase):
         self.assertEqual(before, after)
 
     def test_old_session_and_stale_heartbeat_clear_live_counts(self):
-        self.write('.collector-coverage.json', dict(schema_version=1, run_id='b'*32, updated_us=self.now, instruments=self.items))
-        self.assertFalse(self.get()['collector_current'])
-        self.assertTrue(all(g['subscribed'] is None for g in self.get()['groups']))
+        update_runtime(self.directory, "UPDATE instrument_status SET run_id=?", ('b'*32,))
+        with self.assertRaises(DataUnavailableError):
+            self.get()
         self.hb['updated_us'] = 1
-        self.write('.collector-status.json', self.hb)
+        write_runtime(self.directory, self.hb, self.items)
         self.assertFalse(self.get()['complete'])
 
     def test_invalid_and_missing_diagnostics(self):
-        (self.directory / '.collector-coverage.json').write_text('{')
+        (self.directory / 'collector-runtime.sqlite').write_text('{')
         with self.assertRaises(DataUnavailableError):
             self.get()
-        (self.directory / '.collector-coverage.json').unlink()
+        (self.directory / 'collector-runtime.sqlite').unlink()
         self.assertFalse(self.get()['collector_current'])
 
     def test_shfe_night_target_date_and_market_health_separation(self):
@@ -71,8 +71,7 @@ class CoverageTest(unittest.TestCase):
         extra = [dict(id='au2610', subscription='subscribed', error_id=0, received=0, last_received_us=0),
                  dict(id='ag2610', subscription='failed', error_id=31, received=0, last_received_us=0)]
         self.hb['expected'] = 5
-        self.write('.collector-status.json', self.hb)
-        self.write('.collector-coverage.json',dict(schema_version=1,run_id='a'*32,updated_us=self.now,instruments=self.items+extra))
+        write_runtime(self.directory, self.hb, self.items + extra)
         manifest=json.loads((self.directory/'universe/current/manifest.json').read_text())
         for product,code in [('AU','au2610'),('AG','ag2610')]:
             manifest['products'][product]=dict(exchange='SHFE',requested_day='20260908',data_date='20260908',

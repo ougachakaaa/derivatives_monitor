@@ -124,6 +124,12 @@ bool AlignedBarAggregator::Receive(const CThostFtdcDepthMarketDataField& data, s
         return false;
     }
 
+    // Reception facts include valid late callbacks, independently of Bar acceptance.
+    ++stats_.ticks_received;
+    ++stats_.ticks_by_day[trading_day];
+    stats_.last_tick_received_us = std::max(stats_.last_tick_received_us, received_us);
+    ++instrument_stats.ticks_received;
+    instrument_stats.last_tick_received_us = std::max(instrument_stats.last_tick_received_us, received_us);
     const auto event_us = *parsed;
     const auto bucket_start_us = FloorBucket(event_us);
     const auto bucket_end_us = bucket_start_us + kBarIntervalUs;

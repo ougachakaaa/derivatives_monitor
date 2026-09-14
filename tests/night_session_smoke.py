@@ -3,6 +3,7 @@
 
 Run with query/.venv/bin/python. No real credentials, data or services are used.
 """
+from contextlib import closing
 import json
 import os
 from pathlib import Path
@@ -16,6 +17,13 @@ import time
 ROOT = Path(__file__).resolve().parents[1]
 from fastapi.testclient import TestClient
 from query.app import create_app
+
+
+def runtime_status(directory):
+    # TEST DOUBLE process output; never opens a real data directory.
+    with closing(sqlite3.connect((directory / 'collector-runtime.sqlite').as_uri() + '?mode=ro', uri=True)) as db:
+        db.row_factory = sqlite3.Row
+        return dict(db.execute('SELECT * FROM current_status WHERE singleton=1').fetchone())
 
 
 def read(path, sql):
@@ -74,7 +82,7 @@ def main():
                     assert response.status_code == 200, response.text
                     assert all(r['TradingDay'] == day for r in response.json()['rows'])
             assert not (data / '20260907.sqlite').exists()  # Natural night start is not a partition.
-            assert sorted(p.name for p in data.glob('*.sqlite')) == ['20260908.sqlite', '20260909.sqlite']
+            assert sorted(p.name for p in data.glob('[0-9]' * 8 + '.sqlite')) == ['20260908.sqlite', '20260909.sqlite']
             assert read(day1, "SELECT DISTINCT InstrumentID FROM snapshots ORDER BY InstrumentID") == [('IF2609',), ('ag2610',), ('au2610',)]
             for instrument in ('au2610', 'ag2610'):
                 rows = read(day1, "SELECT DISTINCT ActionDay,UpdateTime FROM snapshots WHERE InstrumentID='" + instrument + "'")
@@ -92,8 +100,8 @@ def main():
             if previous_counts:
                 assert all(after > before for before, after in zip(previous_counts, counts))
             previous_counts = counts
-            heartbeat = json.loads((data / '.collector-status.json').read_text())
-            assert heartbeat['accepted'] > heartbeat['written'] > 0
+            heartbeat = runtime_status(data)
+            assert heartbeat['ticks_received'] > heartbeat['bars_written'] > 0
             assert heartbeat['connections'] == 2 and heartbeat['disconnections'] == 1
             assert heartbeat['process_state'] == 'stopped'
         text = (directory / 'collector.log').read_text()

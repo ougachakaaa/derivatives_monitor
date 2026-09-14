@@ -8,12 +8,14 @@
 flowchart LR
     CTP[CTP Market Data SDK] --> C[C++ Collector]
     C -->|唯一写入| RAW[(Raw 日 SQLite)]
+    C -->|运行事实| RT[(Runtime SQLite)]
     RAW -->|只读 Store| MS[Python Market Frame]
     CAL[版本化 Calendar 与 Universe] --> MS
     MS --> A[Analytics：IV / Skew]
     REF[版本化审核参考包] --> A
     A --> API[FastAPI JSON]
     RAW -->|只读诊断| API
+    RT -->|只读运行诊断| API
     CAL --> API
     API --> UI[独立 React 汇报视图]
 ```
@@ -25,6 +27,7 @@ flowchart LR
 | CTP Market Data SDK | 提供外部行情回调与连接生命周期 | 是 Collector 的上游外部依赖，不是下游应用接口 |
 | `collector/` 的 C++ runtime | 接收行情、按 CTP event time 聚合自然时间对齐的 15 秒 Market Bar，并管理连接、订阅和运行诊断 | Raw 的唯一 writer；不计算业务指标，不依赖 Query 或 Dashboard runtime |
 | Raw 日 SQLite | 保存不可变 15 秒聚合事实、bucket-close CTP 市场状态、运行来源与观察时间 | 由 Collector 拥有；所有下游只读，不为页面或算法建立第二套事实 |
+| Runtime SQLite | 原子保存当前进程与逐合约运行事实 | Collector 唯一写入；只读消费者解释，不保存派生 Health 或历史窗口 |
 | `collector/scripts/universe.py` | 通过 Data Provider 的纯 Calendar 模块选择来源日，生成和发布版本化合约清单参考 | 是工具依赖，不进入 C++ runtime；不写行情，清单不替代 CTP 行情事实 |
 | `data_provider/market_calendar.py` | 提供版本化交易日历、产品时段和逻辑交易日解释 | 是 Query 进程内源码模块；不改写源 TradingDay，不控制采集启停 |
 | `data_provider/` | 只读访问 Raw，将显式 Universe/Calendar 组合为 Market Frame，并解释 data availability/coverage | Query 进程内源码模块；不写 Raw，不计算金融指标 |
@@ -51,7 +54,7 @@ Collector Health 的解释边界位于 Query 进程内：Collector 发布 Runtim
 
 | 数据/记录 | Owner | 允许的消费者 |
 |---|---|---|
-| Raw 行情日库与采集运行诊断 | Collector | Data Provider 只读访问；运维工具按契约检查或备份 |
+| Raw 行情日库与独立 Collector 运行状态 SQLite | Collector | Data Provider 只读访问；运维工具按契约检查或备份 |
 | Universe generations 与源响应 | Universe 管理工具 | Collector 订阅入口、Market Frame、coverage 与审核流程 |
 | Calendar 版本 | Data Provider | Market Frame、业务 service、coverage、Universe 工具与运维检查 |
 | Analytics ReferenceBundle | 独立审核/导入流程 | Analytics 及其只读适配层 |

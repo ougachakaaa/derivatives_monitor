@@ -38,6 +38,11 @@ struct SessionStatus {
     std::map<std::string, InstrumentStatus> instruments;
 };
 
+struct RuntimeSnapshot {
+    SessionStatus session;
+    AggregationStats aggregation;
+};
+
 class CtpSession final : public CThostFtdcMdSpi {
 public:
     CtpSession(CThostFtdcMdApi& api, const Config& config, AlignedBarAggregator& aggregator, std::string run_id)
@@ -53,6 +58,15 @@ public:
     void OnRtnDepthMarketData(CThostFtdcDepthMarketDataField*) override;
     void Pump(std::int64_t now_ms = SteadyMs());
     SessionStatus Status() const { std::lock_guard<std::mutex> lock(mutex_); return status_; }
+    RuntimeSnapshot Snapshot() const {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return {status_, aggregator_.Stats()};
+    }
+    void Released() {
+        std::lock_guard<std::mutex> lock(mutex_);
+        status_.connected = status_.logged_in = false;
+        for (auto& item : status_.instruments) item.second = {};
+    }
     bool HasLoggedIn() const { std::lock_guard<std::mutex> lock(mutex_); return status_.ever_logged_in; }
     void CheckFailure() const {
         if (failed_) {

@@ -130,30 +130,8 @@ class Store:
         return {"day": day, "rows": rows}
 
     def heartbeat(self):
-        unknown = {"status": "unknown", "process_alive": False, "heartbeat": None}
+        from data_provider.runtime_status import read_runtime_status, diagnostic
         try:
-            with open(self.directory / ".collector-status.json", "rb") as file:
-                data = json.loads(file.read(65537))
-            if not isinstance(data, dict) or data.get("schema_version") != 1:
-                return unknown
-            numeric = ("updated_us", "connections", "disconnections", "expected", "subscribed",
-                       "subscription_failed", "accepted", "written", "last_received_us", "last_commit_us")
-            if any(type(data.get(k)) is not int or data[k] < 0 for k in numeric):
-                return unknown
-            if any(type(data.get(k)) is not bool for k in ("connected", "logged_in")):
-                return unknown
-            if not isinstance(data.get("run_id"), str) or not re.fullmatch(r"[0-9a-f]{32}", data["run_id"]):
-                return unknown
-            state = data.get("process_state")
-            if state not in ("starting", "running", "stopped", "failed"):
-                return unknown
-            age = (time.time_ns() // 1000 - data["updated_us"]) / 1_000_000
-            fresh = 0 <= age <= 10
-            alive = fresh and state in ("starting", "running")
-            status = state if fresh else "stale"
-            if alive and state == "running":
-                status = "healthy" if (data["connected"] and data["logged_in"] and data["expected"] > 0
-                    and data["subscribed"] == data["expected"] and data["subscription_failed"] == 0) else "degraded"
-            return {"status": status, "process_alive": alive, "age_seconds": round(age, 3), "heartbeat": data}
-        except (OSError, ValueError, TypeError):
-            return unknown
+            return diagnostic(read_runtime_status(self.directory))
+        except DataUnavailableError:
+            return diagnostic(None)

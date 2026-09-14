@@ -23,6 +23,7 @@ data_provider/**
 !data_provider/__init__.py
 !data_provider/errors.py
 !data_provider/storage.py
+!data_provider/runtime_status.py
 !data_provider/contract_coverage.py
 !data_provider/market_calendar.py
 !data_provider/market_frame.py
@@ -34,6 +35,8 @@ data_provider/tests/**
 !data_provider/tests/__init__.py
 !data_provider/tests/test_calendar.py
 !data_provider/tests/test_storage.py
+!data_provider/tests/runtime_fixture.py
+!data_provider/tests/test_runtime_status.py
 !data_provider/tests/test_coverage.py
 !data_provider/tests/test_market_frame.py
 

@@ -28,7 +28,13 @@ Dashboard 如何轮询、布局和清理显示状态由[页面契约](../../dash
 
 ## 健康证据
 
-`GET /api/health` 只读取得 [Collector Runtime Facts](raw-boundary.md#collector-运行诊断协议)，由 Query 组合 Calendar 与 Health evaluator，按唯一的 [Collector Health 语义](collector-health.md)产生 `health + reasons[]`，并保留事实诊断。Query HTTP adapter 与页面不另建判定规则；此 Collector Health 与 Query 自身存活、目录可读性分别表达。具体 JSON envelope、逻辑字段映射及 evaluator 接入尚未冻结或实现，见 [Acceptance](../acceptance.md#collector-health-缺口)。
+`GET /api/health` 通过 Data Provider 读取 [Collector Runtime Facts](raw-boundary.md#collector-运行诊断协议)。响应保持 `query / data / collector`；`collector` 包含 `status`、`process_alive`、`heartbeat`，可读时另含 `age_seconds`。`status` 只表达 `starting / running / stopped / failed / unknown / stale`：库缺失或不可安全读取时 unknown、heartbeat=null；超出存活窗口或未来 heartbeat 时 stale；有效窗口内保留 process_state。不得按 connection/subscription 推导 healthy/degraded。
+
+`heartbeat` 投影 current_status（去掉 singleton），另加运行诊断 `schema_version=1`；保留既有 wire 名 `expected=target_count`、`subscribed=subscribed_count`、`accepted=ticks_received`、`written=bars_written`、`last_received_us=last_tick_received_us`、`last_commit_us=last_market_commit_us`。未接收/未提交的时间保留 null，不造零时间；原生字段同时公开以区分合法接收与聚合 accepted。此 schema_version 是运行诊断版本，不是行情日库版本。
+
+`/api/coverage` 使用同一事务中的总体/逐合约事实。库缺失时明确没有当前 coverage；库损坏、不兼容或读取失败映射 503。逐合约 `received` 映射本 run `ticks_received`，跨 reconnect 保留；订阅状态仅属于当前 connection。
+
+完整 `health + reasons[]` 仍须由 Query 组合 Calendar 与 evaluator，唯一语义见 [Collector Health](collector-health.md)；这与当前运行诊断状态、Query 自身存活、目录可读性分别表达。evaluator 的 HTTP envelope 和接入缺口见 [Acceptance](../acceptance.md#collector-health-缺口)。
 
 - Docker healthcheck 分别检查 Collector 主循环新鲜心跳、Python `/healthz` 与前端静态服务 `/healthz`；页面显示的是应用健康证据，不声称通过 Docker 管理 API 查询容器状态。
 
