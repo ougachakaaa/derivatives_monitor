@@ -56,7 +56,7 @@ int main(int argc, char** argv) {
     const auto config = temp.path / "config.ini";
     const auto log = temp.path / "process.log";
     const auto health = temp.path / "data/collector-runtime.sqlite";
-    const auto value = [&](const char* column) {
+    const auto value = [&](const std::string& column) {
         TestDb db(health);
         return db.Scalar(std::string("SELECT ") + column + " FROM current_status");
     };
@@ -68,6 +68,8 @@ int main(int argc, char** argv) {
     Child child(argv[1], argv[2], config, log);
     Eventually([&] { return value("process_state") == "running"; });
     const auto first_run = value("run_id");
+    CHECK(value("(SELECT count(*) FROM runs)") == "1");
+    CHECK(value("(SELECT ended_us FROM runs WHERE runs.run_id=current_status.run_id)") == "NULL");
     const auto first_heartbeat = value("heartbeat_us");
     Eventually([&] { return value("heartbeat_us") != first_heartbeat; });
     CHECK(value("run_id") == first_run);
@@ -81,18 +83,21 @@ int main(int argc, char** argv) {
     CHECK(kill(child.pid, SIGTERM) == 0);
     CHECK(child.Wait() == 0);
     CHECK(value("process_state") == "stopped");
+    CHECK(value("(SELECT terminal_state FROM runs ORDER BY started_us LIMIT 1)") == "stopped");
 
     Child restarted(argv[1], argv[2], config, log);
     Eventually([&] { return value("run_id") != first_run; });
+    const auto killed_run = value("run_id");
+    CHECK(value("(SELECT count(*) FROM runs)") == "2");
     CHECK(kill(restarted.pid, SIGKILL) == 0);
     CHECK(restarted.Wait() == 128 + SIGKILL);
     const auto killed_heartbeat = value("heartbeat_us");
     std::this_thread::sleep_for(std::chrono::milliseconds(1200));
     CHECK(value("heartbeat_us") == killed_heartbeat);
+    CHECK(value("(SELECT ended_us FROM runs WHERE runs.run_id='" + killed_run + "')") == "NULL");
 
     // TEST DOUBLE: disconnected startup lasts beyond ConnectTimeoutSeconds.
     setenv("DM_TEST_SCENARIO", "no-front", 1);
-    const auto killed_run = value("run_id");
     Child waiting(argv[1], argv[2], config, log);
     Eventually([&] { return value("run_id") != killed_run; });
     const auto waiting_heartbeat = value("heartbeat_us");

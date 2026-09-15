@@ -9,8 +9,11 @@ done
 heartbeat=$(sqlite3 -readonly -cmd '.timeout 100' "$status" "
 BEGIN;
 SELECT heartbeat_us FROM current_status WHERE singleton=1
- AND (SELECT user_version FROM pragma_user_version)=1
  AND (SELECT journal_mode FROM pragma_journal_mode)='delete'
+ AND (SELECT group_concat(name, ',') FROM
+      (SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name))
+     ='current_status,instrument_status,runs,runtime_snapshots'
+ AND EXISTS(SELECT 1 FROM runs WHERE runs.run_id=current_status.run_id)
  AND process_state IN ('starting','running')
  AND typeof(heartbeat_us)='integer' AND heartbeat_us > 0;
 ROLLBACK;")

@@ -89,8 +89,10 @@ class UniverseTest(unittest.TestCase):
             # TEST DOUBLE runtime snapshot: unchanged targets require no restart and reads are non-mutating.
             diagnostic = directory / 'collector-runtime.sqlite'
             with closing(sqlite3.connect(diagnostic)) as db, db:
-                db.executescript("PRAGMA user_version=1; CREATE TABLE current_status(singleton,run_id,updated_us,target_count);"
+                db.executescript("CREATE TABLE runs(run_id); CREATE TABLE runtime_snapshots(run_id,interval_start_us);"
+                                 "CREATE TABLE current_status(singleton,run_id,updated_us,target_count);"
                                  "CREATE TABLE instrument_status(instrument_id,run_id,updated_us);"
+                                 "INSERT INTO runs VALUES('test-double');"
                                  "INSERT INTO current_status VALUES(1,'test-double',100,1);"
                                  "INSERT INTO instrument_status VALUES('IF2609','test-double',100);")
             before_runtime = diagnostic.read_bytes()

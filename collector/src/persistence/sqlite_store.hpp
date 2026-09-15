@@ -15,6 +15,12 @@ struct InstrumentStoreStats {
     std::uint64_t partial_bars = 0;
 };
 
+struct RuntimeCommitStats {
+    std::uint64_t bars = 0;
+    std::uint64_t partial_bars = 0;
+    std::int64_t last_commit_us = 0;
+};
+
 class DailyBarStore {
 public:
     DailyBarStore(std::filesystem::path directory, const std::vector<std::string>& instruments, std::string source);
@@ -29,6 +35,13 @@ public:
     std::uint64_t PartialBars() const { return partial_bars_; }
     std::int64_t LastCommitUs() const { return last_commit_us_; }
     const std::map<std::string, InstrumentStoreStats>& InstrumentStats() const { return instrument_stats_; }
+    const std::map<std::int64_t, RuntimeCommitStats>& RuntimeCommits() const { return runtime_commits_; }
+    void PruneRuntimeIntervalsBefore(std::int64_t interval_start_us) {
+        runtime_commits_.erase(runtime_commits_.begin(), runtime_commits_.lower_bound(interval_start_us));
+    }
+    std::int64_t StartedUs() const { return started_us_; }
+    const std::string& Instruments() const { return instruments_; }
+    const std::string& Source() const { return source_; }
 
 private:
     void Open(const std::string& day);
@@ -40,6 +53,7 @@ private:
     const std::int64_t started_us_ = NowUs();
     std::set<std::string> touched_days_;
     std::map<std::string, InstrumentStoreStats> instrument_stats_;
+    std::map<std::int64_t, RuntimeCommitStats> runtime_commits_;
     std::uint64_t bars_written_ = 0, partial_bars_ = 0;
     std::int64_t last_commit_us_ = 0;
 };

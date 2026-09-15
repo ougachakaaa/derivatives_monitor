@@ -52,6 +52,8 @@ int RunCollector(const Config& config, const volatile std::sig_atomic_t& stop, A
     RuntimeStatusStore runtime_status(config.data_directory);
     RuntimeSnapshot initial;
     for (const auto& id : config.instruments) initial.session.instruments.emplace(id, InstrumentStatus{});
+    if (!runtime_status.StartRun(store))
+        throw std::runtime_error("failed to create Collector runtime run");
     runtime_status.Publish(initial, store, ProcessState::Starting);
     try {
         std::filesystem::create_directories(config.flow_path);
@@ -93,6 +95,8 @@ int RunCollector(const Config& config, const volatile std::sig_atomic_t& stop, A
     };
     const auto publish = [&](ProcessState state) {
         runtime_status.Publish(session.Snapshot(), store, state);
+        aggregator.PruneRuntimeIntervalsBefore(runtime_status.CurrentIntervalStartUs());
+        store.PruneRuntimeIntervalsBefore(runtime_status.CurrentIntervalStartUs());
     };
     try {
         publish(ProcessState::Starting);

@@ -126,10 +126,12 @@ bool AlignedBarAggregator::Receive(const CThostFtdcDepthMarketDataField& data, s
 
     // Reception facts include valid late callbacks, independently of Bar acceptance.
     ++stats_.ticks_received;
+    const auto runtime_interval = (received_us / kBarIntervalUs) * kBarIntervalUs;
+    ++stats_.runtime_ticks_by_interval[runtime_interval];
     ++stats_.ticks_by_day[trading_day];
-    stats_.last_tick_received_us = std::max(stats_.last_tick_received_us, received_us);
+    stats_.last_tick_received_us = received_us;
     ++instrument_stats.ticks_received;
-    instrument_stats.last_tick_received_us = std::max(instrument_stats.last_tick_received_us, received_us);
+    instrument_stats.last_tick_received_us = received_us;
     const auto event_us = *parsed;
     const auto bucket_start_us = FloorBucket(event_us);
     const auto bucket_end_us = bucket_start_us + kBarIntervalUs;
@@ -164,6 +166,12 @@ bool AlignedBarAggregator::Receive(const CThostFtdcDepthMarketDataField& data, s
     ++instrument_stats.callbacks_accepted;
     instrument_stats.last_received_us = received_us;
     return true;
+}
+
+void AlignedBarAggregator::PruneRuntimeIntervalsBefore(std::int64_t interval_start_us) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    stats_.runtime_ticks_by_interval.erase(stats_.runtime_ticks_by_interval.begin(),
+        stats_.runtime_ticks_by_interval.lower_bound(interval_start_us));
 }
 
 MarketBar AlignedBarAggregator::Finalize(Stream& stream, std::int64_t bucket_start_us, Bucket bucket) {

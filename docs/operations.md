@@ -110,7 +110,7 @@ Collector 活跃但所查历史日已关闭且缺 sidecar 时，Query 按 [Read 
 4. 把备份复制到全新的隔离恢复目录。比较 SHA-256 和只读完整性、dataset、行数/最大 id；不要覆盖实际 `collector/data/`。按[Query 手册](../query/README.md)使用 `--data-dir` 指向恢复目录，读取样本分钟并比较固定 revision 输出；通过现有离线参考包导入与 Skew API，对相同 Raw revision、ReferenceBundle 和算法版本执行指标重放对账，业务判定仍以 [Analytics / Skew Contract](../analytics/contracts/analytics-skew.md)为准。若没有已审核的生产参考包，将指标重放记为未执行，不得用 TEST DOUBLE 代替 live recovery evidence。
 5. 记录备份/恢复耗时、哈希、检查结果和输出路径。恢复原 Collector 后确认同日追加和新心跳，已提交记录未减少；演练日志与真实数据证据单独保存。
 
-备份还须包含 `collector-runtime.sqlite`：正常停止并关闭读连接后，按[运行库协议](contracts/raw-boundary.md#collector-运行诊断协议)只读检查 schema、完整性、runs 生命周期、当前两表身份及 runtime_snapshots 的归属与窗口约束，记录文件哈希并复制到同一隔离备份。异常退出遗留 journal 时先由正常 writer 恢复再停机，不直接复制主文件或删除 journal。恢复副本须核对可关联的 Runtime 与 Market run provenance；没有产出行情的 run 可以没有日库投影，Snapshot 缺失或终止字段为 NULL 不单独证明损坏。重建 Runtime 库前形成的旧 Market provenance 不得用来回填启动或历史观察。当前代码尚未实现四表协议的差距见 [Acceptance](acceptance.md#collector-第一阶段可靠性缺口)，不能将现有两表备份记为完整历史验证。必要 flow 数据在正常停机后另行保留，不与配置或凭据一起提交 Git。
+备份还须包含 `collector-runtime.sqlite`：正常停止并关闭读连接后，按[运行库协议](contracts/raw-boundary.md#collector-运行诊断协议)只读检查 schema、完整性、runs 生命周期、当前两表身份及 runtime_snapshots 的归属与窗口约束，记录文件哈希并复制到同一隔离备份。异常退出遗留 journal 时先由正常 writer 恢复再停机，不直接复制主文件或删除 journal。恢复副本须核对可关联的 Runtime 与 Market run provenance；没有产出行情的 run 可以没有日库投影，Snapshot 缺失或终止字段为 NULL 不单独证明损坏。重建 Runtime 库前形成的旧 Market provenance 不得用来回填启动或历史观察。旧两表库不是可恢复的当前 Runtime History，开发期显式重建边界见下一段。必要 flow 数据在正常停机后另行保留，不与配置或凭据一起提交 Git。
 
 开发期不兼容 Runtime 库仅按 [Deployment 的有限例外](contracts/deployment.md#数据与隔离)显式重建：停止 Collector、关闭读连接并确认 writer 锁释放，核对实际 DataDirectory 和不兼容 schema，仅删除旧 `collector-runtime.sqlite`，然后启动已实现当前协议的版本创建新库。存在异常退出 journal 时先完成正常恢复及停机，不直接清理 sidecar；不得删除 Market 日库或从其回填 Runtime History。该操作丢弃旧格式运行历史，不是备份恢复或自动升级步骤。
 

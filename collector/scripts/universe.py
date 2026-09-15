@@ -337,7 +337,9 @@ def publish(directory, manifest, restart=None, run=subprocess.run):
             with contextlib.closing(sqlite3.connect(diagnostic.absolute().as_uri() + '?mode=ro', uri=True, timeout=0.1)) as db:
                 db.execute('PRAGMA query_only=ON')
                 db.execute('BEGIN')
-                if (db.execute('PRAGMA user_version').fetchone()[0] != 1
+                tables = {row[0] for row in db.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")}
+                if (tables != {'runs', 'current_status', 'instrument_status', 'runtime_snapshots'}
                         or db.execute('PRAGMA journal_mode').fetchone()[0] != 'delete'):
                     raise ValueError('unsupported runtime schema')
                 status = db.execute('SELECT run_id,updated_us,target_count FROM current_status WHERE singleton=1').fetchone()

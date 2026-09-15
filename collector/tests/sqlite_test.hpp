@@ -18,6 +18,7 @@ struct TestDb {
     }
     ~TestDb() { sqlite3_close(db); }
     void Exec(const std::string& sql) { CHECK(sqlite3_exec(db, sql.c_str(), nullptr, nullptr, nullptr) == SQLITE_OK); }
+    void Rejects(const std::string& sql) { CHECK(sqlite3_exec(db, sql.c_str(), nullptr, nullptr, nullptr) != SQLITE_OK); }
     std::string Scalar(const std::string& sql) {
         sqlite3_stmt* stmt = nullptr;
         CHECK(sqlite3_prepare_v2(db, sql.c_str(), -1, &stmt, nullptr) == SQLITE_OK);

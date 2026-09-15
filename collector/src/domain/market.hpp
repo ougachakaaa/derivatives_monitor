@@ -78,6 +78,8 @@ struct AggregationStats {
     std::uint64_t late_callbacks = 0;
     std::uint64_t event_time_regressions = 0;
     std::int64_t last_received_us = 0;
+    // Runtime History uses receive time directly; these are not Market event-time buckets.
+    std::map<std::int64_t, std::uint64_t> runtime_ticks_by_interval;
     std::map<std::string, InstrumentAggregationStats> instruments;
 };
 
@@ -89,6 +91,7 @@ public:
     std::vector<MarketBar> CloseEligible(std::int64_t now_us = NowUs());
     std::optional<std::int64_t> ShutdownGraceDeadline(std::int64_t now_us = NowUs()) const;
     void MarkReconnect(std::int64_t now_us = NowUs());
+    void PruneRuntimeIntervalsBefore(std::int64_t interval_start_us);
     AggregationStats Stats() const;
 
 private:

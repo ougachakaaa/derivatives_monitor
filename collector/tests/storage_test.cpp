@@ -44,6 +44,10 @@ int main() {
         Throws([&] { DailyBarStore duplicate(temp.path, {"IF2609"}, "TEST DOUBLE - lock"); });
         CHECK(store.Write({second_day, first}) == 2);
         CHECK(store.BarsWritten() == 2 && store.PartialBars() == 1 && store.LastCommitUs() > 0);
+        const auto commit_interval = (store.LastCommitUs() / kBarIntervalUs) * kBarIntervalUs;
+        CHECK(store.RuntimeCommits().at(commit_interval).bars == 2);
+        CHECK(store.RuntimeCommits().at(commit_interval).partial_bars == 1);
+        CHECK(store.RuntimeCommits().at(commit_interval).last_commit_us == store.LastCommitUs());
 
         TestDb reader(path);
         CHECK(sqlite3_db_readonly(reader.db, "main") == 1);

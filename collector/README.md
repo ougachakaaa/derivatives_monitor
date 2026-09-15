@@ -90,6 +90,8 @@ sqlite3 -readonly collector/data/YYYYMMDD.sqlite \
 ```bash
 sqlite3 -readonly collector/data/collector-runtime.sqlite 'SELECT * FROM current_status;'
 sqlite3 -readonly collector/data/collector-runtime.sqlite 'SELECT * FROM instrument_status ORDER BY instrument_id;'
+sqlite3 -readonly collector/data/collector-runtime.sqlite 'SELECT * FROM runs ORDER BY started_us DESC LIMIT 10;'
+sqlite3 -readonly collector/data/collector-runtime.sqlite 'SELECT * FROM runtime_snapshots ORDER BY interval_start_us DESC LIMIT 10;'
 ```
 
-字段、NULL、交易日计数、发布失败及读取边界由 [运行诊断协议](../docs/contracts/raw-boundary.md#collector-运行诊断协议)定义。库中的 process_state 表达运行生命周期，Health 的解释规则见 [Collector Health](../docs/contracts/collector-health.md)。
+运行库严格使用四表当前协议，不迁移或兼容旧两表库。字段、NULL、Run 生命周期、自然窗口、发布失败及读取边界由 [运行诊断协议](../docs/contracts/raw-boundary.md#collector-运行诊断协议)定义。库中的 process_state 表达运行生命周期，Health 的解释规则见 [Collector Health](../docs/contracts/collector-health.md)。

@@ -290,6 +290,10 @@ std::uint64_t DailyBarStore::Write(const std::vector<MarketBar>& bars) {
         partial_bars_ += partial;
         total += inserted;
         last_commit_us_ = committed_us;
+        auto& runtime = runtime_commits_[(committed_us / kBarIntervalUs) * kBarIntervalUs];
+        runtime.bars += inserted;
+        runtime.partial_bars += partial;
+        runtime.last_commit_us = committed_us;
         for (const auto& item : per_instrument) {
             instrument_stats_[item.first].bars_written += item.second.bars_written;
             instrument_stats_[item.first].partial_bars += item.second.partial_bars;
