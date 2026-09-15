@@ -55,12 +55,15 @@
 - Connection/login/订阅事实的生命周期及常驻运行约束由 [Collector Health](../docs/contracts/collector-health.md#ctp-session-与订阅生命周期)统一定义；Collector 发布事实，不保存派生 Health 为权威事实。
 - SDK 断线后由应用在每次连接后登录并重新订阅。请求返回 0 只表示本地受理；订阅响应单独跟踪，区分 pending、成功、失败和已订阅但无行情。
 - 主线程负责有间隔的登录重试、订阅批次、请求超时检测、自然 bucket 封口和事务提交；首次连接/登录超时不退出，等待 SDK 重连并持续签到；callback 不阻塞在这些工作上。断线立即破坏 observation continuity，但不修改已提交 Bar。
-- Raw writer 锁、SQLite 持久性和逐日事务边界统一见 [Raw Boundary](../docs/contracts/raw-boundary.md#writer-协调与持久性)。写入失败必须明确日志并非零退出；成功 commit 后才累计 durable Bar 数。
+- Raw writer 锁、SQLite 持久性和逐日事务边界统一见 [Raw Boundary](../docs/contracts/raw-boundary.md#writer-协调与持久性)。Market 写入失败必须明确日志并非零退出；成功 commit 后才累计 durable Bar 数。Runtime Run 创建与运行期 publication 的不同失败义务见 [运行库与发布](../docs/contracts/raw-boundary.md#运行库与发布)。
 - SIGINT/SIGTERM 先停止并释放 SDK，SPI 在 callback 收尾期间保持有效。对于已经到达 bucket end、但仍处于 1 秒 grace 的 bucket，正常停止最多等待剩余 grace 后提交；不得等待当前未结束 bucket 到期，也不得把它作为半根 Bar 写入。强制终止可能丢失所有尚未 commit 的内存 Bar。
-- canonical identity 冲突、schema 不兼容或持久化失败均为 invariant/persistence failure；不得 upsert、忽略冲突、修正历史或继续报告健康。
+- Market canonical identity 冲突、Market schema 不兼容或 Market 持久化失败均为 invariant/persistence failure；不得 upsert、忽略冲突、修正历史或继续报告健康。
 
 ## 运行诊断与验收约束
 
+- Collector 必须在每次进程启动时持久记录新 run，独立于登录、首根 Bar 和正常 shutdown，且成功创建是正式采集的前置条件；生命周期 authority 归 Runtime DB，Market 日库只保留 provenance。精确职责见 [Runs](../docs/contracts/collector-health.md#runs)，存储及失败协议见 [Raw Boundary](../docs/contracts/raw-boundary.md#运行库与发布)，当前实现差距见 [Acceptance](../docs/acceptance.md#collector-第一阶段可靠性缺口)。
+- 主循环负责独立于行情活动的历史观察发布，遵守 [Runtime Snapshots](../docs/contracts/collector-health.md#runtime-snapshots)的自然窗口、时间域和计数语义。Tick 按合法接收计数，Market Bar 及 partial 仅在成功 commit 后计入对应 Runtime interval；不从 event-time bucket 或当前交易日累计数推算窗口活动。
+- 主循环停止推进属于 Runtime failure，外部 supervisor 按 [Deployment](../docs/contracts/deployment.md#runtime-自动恢复)恢复进程；CTP session failure 仍由本 Collector reconnect/login/resubscribe。Run 创建失败必须非零退出；运行期 publication 失败回滚并保留 pending 历史以重试，继续 Market collection，终止时尽力事务发布结束事实。历史能力与现有实现的差距由 [Acceptance](../docs/acceptance.md#collector-第一阶段可靠性缺口)记录，不以目标义务声明实现完成。
 - 日志和诊断使用 callback/bar 词汇，至少包含 run ID、连接/登录/断线/重连、逐合约订阅、`callbacks_accepted`、`bars_written`、`partial_bars`、`late_callbacks`、非法 day/event-time、最近接收/成功提交时间及持久化错误；不得输出凭据。
 - 独立运行库的共享字段和 freshness 见 [Raw Boundary](../docs/contracts/raw-boundary.md#collector-运行诊断协议)。连接、订阅、callback、Bar commit 和市场时段是不同证据。
 - 核心聚合、四个自然边界、ActionDay 午夜、TradingDay 切换、baseline、partial 恢复、event regression/late event、事务冲突、停止和 SDK 生命周期必须可用明确标记的 TEST DOUBLE 离线验证。

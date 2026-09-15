@@ -46,6 +46,17 @@ docker stop --time 60 "$(docker ps -q --filter label=com.docker.compose.project=
 
 日常分别检查主循环心跳、连接/登录、逐合约订阅、最后 callback 接收/Bar 提交、源 TradingDay 和清单/日历版本；查看 `bar_commit` 与两次只读 Bar 行数/最近 bucket 和 event time 确认推进。市场 CLOSED/BREAK、不活跃合约无推送、订阅失败与进程健康是不同状态，计数与证据口径见 [Raw Boundary](contracts/raw-boundary.md#collector-运行诊断协议)，不要在它们之间直接互推。
 
+## 长期运行环境检查
+
+按 [Deployment 前提](contracts/deployment.md#长期运行环境前提)在固定机器上记录以下检查结果，并使用[现场模板](live-acceptance-template.md#collector-第一阶段可靠性验收)归档。下面的本地只读命令按实际配置目录替换路径。
+
+- **时钟**：使用 `timedatectl status` 查看同步状态，并记录实际时间同步服务的状态与偏移证据；若宿主不支持该命令，使用所部署同步服务的只读诊断。时间异常时先排查宿主同步，不把时间倒退产生的空洞解释成正常采集。
+- **写入身份与空间**：核对服务 UID/GID、挂载读写属性，以 Collector 运行身份执行 `test -w collector/data`，用 `df -h collector/data` 和 `df -i collector/data` 查看容量与 inode；这些检查不替代真实 SQLite 成功提交证据。
+- **数据库增长**：用 `du -sh collector/data` 记录总量；分别记录各 Market 日库、`collector-runtime.sqlite` 及现存 sidecar 的字节数，多次比较增长与剩余容量。不删除库或 sidecar，也不以文件 mtime 替代 heartbeat。
+- **日志**：核对 Compose 的 logging 配置；原生部署可用 `journalctl --user --disk-usage` 查看实际占用，并记录承载日志的 journald 有效容量/保留配置。不能只凭当前日志较小判定已具有 bounded rotation。
+
+Runtime History 和 heartbeat stale 自动恢复尚缺的实现及参数见 [Acceptance](acceptance.md#collector-第一阶段可靠性缺口)。在这些能力完成前，现有 status/healthcheck 不能作为恢复闭环已成立的证明。
+
 ## 前台开发会话
 
 先按三个组件 README 完成 [Collector 构建与配置](../collector/README.md#构建与测试)、[Query 安装](../query/README.md#安装启动与测试)及 [Dashboard 依赖安装](../dashboard/README.md#本地开发)。Runner 只使用已有产物和配置；不会创建配置、刷新 Universe、安装、构建或调用持久部署管理器。
@@ -98,5 +109,9 @@ Collector 活跃但所查历史日已关闭且缺 sidecar 时，Query 按 [Read 
 3. 对已正常关闭、无非空 WAL 的日库逐个执行只读 `integrity_check` 和 `foreign_key_check`，记录 dataset 身份、行数、run 来源、最大 id、文件 SHA-256。复制日库及重放所需的不可变 Universe generation、Calendar、已审核 ReferenceBundle 和来源原件，记录对应算法版本。配置备份单独以受限权限保存，不进 Git。
 4. 把备份复制到全新的隔离恢复目录。比较 SHA-256 和只读完整性、dataset、行数/最大 id；不要覆盖实际 `collector/data/`。按[Query 手册](../query/README.md)使用 `--data-dir` 指向恢复目录，读取样本分钟并比较固定 revision 输出；通过现有离线参考包导入与 Skew API，对相同 Raw revision、ReferenceBundle 和算法版本执行指标重放对账，业务判定仍以 [Analytics / Skew Contract](../analytics/contracts/analytics-skew.md)为准。若没有已审核的生产参考包，将指标重放记为未执行，不得用 TEST DOUBLE 代替 live recovery evidence。
 5. 记录备份/恢复耗时、哈希、检查结果和输出路径。恢复原 Collector 后确认同日追加和新心跳，已提交记录未减少；演练日志与真实数据证据单独保存。
+
+备份还须包含 `collector-runtime.sqlite`：正常停止并关闭读连接后，按[运行库协议](contracts/raw-boundary.md#collector-运行诊断协议)只读检查 schema、完整性、runs 生命周期、当前两表身份及 runtime_snapshots 的归属与窗口约束，记录文件哈希并复制到同一隔离备份。异常退出遗留 journal 时先由正常 writer 恢复再停机，不直接复制主文件或删除 journal。恢复副本须核对可关联的 Runtime 与 Market run provenance；没有产出行情的 run 可以没有日库投影，Snapshot 缺失或终止字段为 NULL 不单独证明损坏。重建 Runtime 库前形成的旧 Market provenance 不得用来回填启动或历史观察。当前代码尚未实现四表协议的差距见 [Acceptance](acceptance.md#collector-第一阶段可靠性缺口)，不能将现有两表备份记为完整历史验证。必要 flow 数据在正常停机后另行保留，不与配置或凭据一起提交 Git。
+
+开发期不兼容 Runtime 库仅按 [Deployment 的有限例外](contracts/deployment.md#数据与隔离)显式重建：停止 Collector、关闭读连接并确认 writer 锁释放，核对实际 DataDirectory 和不兼容 schema，仅删除旧 `collector-runtime.sqlite`，然后启动已实现当前协议的版本创建新库。存在异常退出 journal 时先完成正常恢复及停机，不直接清理 sidecar；不得删除 Market 日库或从其回填 Runtime History。该操作丢弃旧格式运行历史，不是备份恢复或自动升级步骤。
 
 在线备份需 SQLite backup API 或其他已验证的一致性方案，不允许直接复制活跃主文件。当前没有自动在线备份工具；不要把上述人工规程记成已完成演练。运行时 SQLite 的只读锁规则仍适用。

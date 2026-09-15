@@ -2,7 +2,7 @@
 
 # Collector Health Semantic Authority
 
-本文是 Collector Runtime Facts 与派生 Health 的唯一业务语义来源，回答“Collector 当前是否处于能够可靠采集行情的状态”。Collector 发布事实；Query 组合只读事实与 Calendar，由 Health evaluator 解释并返回 `health + reasons[]`。这不增加独立进程，也不将 Calendar 引入 C++ runtime。
+本文是 Collector Runtime Facts、Runtime History 与派生 Health 的唯一业务语义来源，定义当前及历史运行事实能够证明什么。Collector 发布事实；Query 组合只读事实与 Calendar，由 Health evaluator 解释并返回 `health + reasons[]`。Health evaluator 不增加独立进程，也不将 Calendar 引入 C++ runtime；外部恢复职责见 [Deployment](deployment.md#runtime-自动恢复)。
 
 本文冻结语义，不声明实现已完成。传输格式由 [Raw Boundary](raw-boundary.md#collector-运行诊断协议)拥有，HTTP 由 [Read Path](read-path.md#健康证据)拥有，日历由 [Market Session](market-session.md)拥有；实现及未冻结项见 [Acceptance](../acceptance.md#collector-health-缺口)。
 
@@ -81,6 +81,56 @@ Feed freshness 与 persistence freshness 是不同参数。后者须与 [15 秒 
 
 ## Current Status 与 Runtime History
 
-`current_status` 回答现在的运行事实；后续 `runtime_snapshots` 回答过去每个 15 秒窗口的运行事实。两者共享事实语义但职责不同。
+Runtime DB 的逻辑组成如下；物理协议由 [Raw Boundary](raw-boundary.md#collector-运行诊断协议)拥有，本节不声明这些表已全部实现。
 
-当前 Health 基于 `current_status + market calendar`；历史采集完整性须另行定义 `runtime_snapshots + market calendar` 的解释规则。本契约不新增历史快照存储，不以当前 healthy 追认过去完整。
+| 记录 | Authority 与范围 |
+|---|---|
+| `runs` | Collector Run 生命周期；每次进程启动的持久身份与启动事实 |
+| `current_status` | 当前 Collector 整体运行事实，新 run 可替换旧状态 |
+| `instrument_status` | 当前目标合约的订阅及接收/提交事实，不保存逐合约历史 |
+| `runtime_snapshots` | 按 run 保存 Collector 整体的 append-only Runtime interval 观察 |
+
+### Runs
+
+每次 Collector Process 启动必须创建新的 `run_id` 并持久记录启动时间，即使未连接、未登录或没有产生 Market Bar，也须能够回答启动时间、历史启动次数和 Runtime History 所属实例。同一 run 可以跨交易日并经历多次 reconnect；进程 restart 必须产生新 run。
+
+Run 启动事实必须先成功持久化，才能进入正式行情采集；创建失败的退出义务由 [发布协议](raw-boundary.md#运行库与发布)定义。正常 stop 或可捕获 failure 记录确认结束时间与 stopped/failed；未可靠记录结束时，两者均为 NULL。NULL 仅表示不知道如何结束，不得自动推导 crash。
+
+启动事实不依赖正常 shutdown。Crash / SIGKILL 后没有结束记录不能使该 run 无效，也不能据此认定它仍在运行或推断精确退出时间。Market Bar 保留同一 `run_id` 作为 provenance，日库 `runs` 仅服务本库来源引用，不是完整 Collector 生命周期 authority。
+
+### Runtime Snapshots
+
+Runtime interval 使用本地 UTC epoch 微秒的 wall-clock / receive-time 时间域，为自然对齐的 `[interval_start_us, interval_end_us)`，宽度固定 `15_000_000µs`。它不按 TradingDay 分区，也不与 Market Bar 的 event-time bucket 建立一一对应关系。
+
+只要主循环正常推进，每个完整被观察的 Runtime interval 都须封存该 run 的一条整体观察并尝试持久化，独立于连接、Tick 与 Bar 活动；CTP disconnected、ticks=0、bars=0 均不能抑制发布。快照 append-only，不保存 Tick 明细，不复制 Market Bar，不把故障后补出的空窗口冒充正常观察。
+
+| 最低事实 | 语义 |
+|---|---|
+| `run_id` | 所属 Collector Run |
+| `observed_us`, `process_state` | 主循环封存时间与 starting/running 生命周期状态 |
+| interval 起止 | 本次运行观察所对应的自然 Runtime 窗口 |
+| `connected`, `logged_in` | 观察时的 CTP session 状态 |
+| target / subscribed / subscription_failed 数量 | 封存时的目标集合、当前 connection 确认成功数与失败数 |
+| interval Tick 数量 | 按 receive time 归窗的合法接收数，沿用 Current Status 的合法性口径，包含 late callback |
+| interval Market Bar 数量 | 按成功 Market commit 时间归窗的持久化行数，不按 Bar bucket 时间归窗 |
+| interval partial Bar 数量 | 上述成功持久化行中 partial 的数量 |
+| 最近 Tick receive 时间 | 本 run 最近合法接收时间；尚无接收时未知 |
+| 最近 Market commit 时间 | 本 run 最近成功 Market 提交时间；尚无提交时未知，Runtime 写入不推进它 |
+
+### 完整窗口、Restart 与时钟异常
+
+只保存完整被观察的自然 15 秒窗口，不设计 partial Runtime Snapshot。10:00:07 启动时，首条可记录窗口是 10:00:15–10:00:30；10:00:37 结束时，不记录 10:00:30–10:00:45，也不为历史等待窗口结束。首尾边界由 runs 的启动/结束事实与相邻 snapshots 共同表达。
+
+Snapshot 的 session、订阅及 process_state 只表示主循环封存时看到的状态，不证明整个窗口状态恒定。合法 Tick 按 received_us 归窗，成功持久化 Bar 按 committed_us 归窗；Runtime interval 与 Market event-time bucket 独立。完整窗口封存后的持久化重试不改变该观察，具体事务见 [发布协议](raw-boundary.md#运行库与发布)。
+
+Restart 产生新 run_id，不继承旧计数、不继续旧未完成窗口、不补旧 Snapshot，从自己的第一个完整自然窗口开始。同一 interval_start_us 可属于不同 run，不能作为跨 run 的唯一身份。
+
+Wall-clock 一次向前跨越多个 interval 时，不补中间窗口，丢弃当前无法证明完整观察的窗口，按新时间自然边界重新对齐，从下一个完整窗口恢复。Wall-clock 回退时，丢弃当前未完成窗口、重建自然边界，不修改已提交历史或产生本 run 已有 identity 的冲突。无法可靠证明完整观察的范围保持缺失，不补零、不复制上一状态。宿主时钟同步前提见 [Deployment](deployment.md#长期运行环境前提)。
+
+### 历史解释边界
+
+- Snapshot 存在且 ticks > 0：主循环留下观察，窗口内收到合法行情；存在且 ticks = 0：主循环留下观察，但窗口内没有合法行情接收。
+- Snapshot 缺失：没有可靠 Runtime observation，即 UNKNOWN；不能单独证明进程未运行，也不能补成零 Tick 窗口。须结合 runs、相邻观察及 Market commit 判断故障的大致时间和层次，证据不足时保留未知。
+- 基本运行事实须能由 Runtime DB 与 Market DB 区分：运行观察中断、restart、CTP disconnected、login 未完成、subscription 不完整、session 正常但无行情，以及 Tick 到达但 Market persistence 未推进。日志用于进一步定位，不成为这些基本事实的唯一来源。
+- 单次观察的 session 状态不证明整个窗口状态未变，也不承诺捕获窗口内所有短暂断线；首次/末次不完整观察窗口不能冒充全窗覆盖。无 Market commit 的单个窗口本身不证明持久化故障，还须考虑合法 Tick、Bar 封口及允许提交周期。
+- 当前 Health 仍基于 `current_status + market calendar`。运行历史不是市场历史完整性证明，不以当前 healthy 追认过去完整；完整 Calendar 历史解释和未冻结项见 [Acceptance](../acceptance.md#collector-health-缺口)。

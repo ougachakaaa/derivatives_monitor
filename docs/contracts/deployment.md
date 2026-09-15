@@ -7,6 +7,7 @@
 ## 数据与隔离
 
 - 宿主 `collector/data/`、`collector/flow/` 的生命周期独立于服务/镜像/构建。没有数据迁移，也不是容器临时层；不得用清理镜像或项目目录的动作删除历史数据。
+- 开发期旧 Runtime DB 的显式重建是上述保留规则的有限例外：仅为采用 [当前 Runtime schema](raw-boundary.md#运行库与发布)，可在停止 Collector、关闭读连接后，由部署/开发动作删除不符合该 schema 的 `collector-runtime.sqlite`，再启动已实现当前协议的 Collector 创建新库；不要求保留该旧格式运行历史。此例外不适用于 Market 日库、配置、flow 或符合当前 schema 的历史库，不授权服务更新自动清理数据。Collector 本身不得迁移、自动修复或删除不兼容库。
 - Docker Collector 可写 `/app/data`；Query 同 UID/GID 只读挂载该目录到 `/data` 并设置只读 rootfs，不挂载 Docker socket、Collector flow 或 CTP 凭据；Dashboard 无数据/flow/配置/Docker socket 挂载，也无 CTP 凭据。
 - Docker 配置只读挂载，以 0600 保存本地 INI；Docker 部署入口不覆盖已有配置。三个正式镜像保持 repository root build context，各自通过同目录 `Dockerfile.dockerignore` 采用 deny-by-default 白名单。Query 镜像的 build 输入明确包含同一环境中的 `data_provider/`、`analytics/`、`query/` 三个源码包及 owner tests，runtime stage 只携带生产源码与 Calendar；配置、凭据、Raw、日志、flow、参考咨询原件和本机工具不进入上下文。新增仓库文件默认不进入既有镜像，成为构建依赖时须显式更新所属镜像的白名单。
 - 正式 Collector 只链接仓库官方 SDK。TEST DOUBLE 动态库仅为隔离测试显式加载，不进入正式 runtime 镜像。
@@ -22,6 +23,23 @@ Skew 审核参考包可保存在数据目录的 `references/analytics/`，由独
 - Docker 日志每份 10MB、保留三份。`logs` 的退出不停止采集；更新前按需要导出旧容器日志。
 - 原生管理器使用三个用户 systemd 服务及 universe 定时器，并按 [Universe Tool Contract](../../collector/scripts/CONTRACT.md#保留发布与失败)的发布结果决定是否正常重启活跃 Collector；手工 `up` 则启用并重启三个服务。08:45/09:00/09:15 与 20:40/21:00/21:15 为更新/重试点。此 Python 管理工具不进入 C++ 采集运行时。
 - 原生服务异常退出 10 秒后重启；停止宽限 60 秒。WSL 停止或 Windows 睡眠时不能继续采集。用户管理器下次启动可能拉起已启用服务，长期禁用见操作手册。
+
+## Runtime 自动恢复
+
+以下是 [Collector 第一阶段](../mvp.md#collector-第一阶段完成条件)的部署完成要求；现有配置及待补闭环见 [Acceptance](../acceptance.md#collector-第一阶段可靠性缺口)。
+
+- 正式 supervisor 必须在非人工停止的 Collector 进程退出后重新启动它；主循环停止推进时，必须形成 `heartbeat stale → runtime failed → terminate/restart → new run_id → resume collection` 的闭环，不能永久停在 unhealthy 而不执行恢复。
+- Heartbeat 发布和存活窗口沿用 [Raw Boundary](raw-boundary.md#运行库与发布)及其[存活判定](raw-boundary.md#只读诊断与存活)，保持秒级 publication。Supervisor 使用主循环事实，不由独立线程持续签到掩盖主循环 stall，也不依赖 Query Health evaluator。
+- 每种正式部署方式必须声明 heartbeat stale 阈值、检查间隔/超时、启动宽限、终止宽限及强制终止、重启等待/退避和限制策略，并给出从主循环失去进展到新 Collector 进程启动的时间上界。该上界不等于外部 CTP 可用或首根行情到达的时间保证；实际恢复采集须另验。
+- CTP disconnect、login 未完成或订阅恢复中不等于 Runtime failure；只要主循环正常推进，就由 Collector reconnect/login/resubscribe，不因 session down 重启进程。人工 stop 的停止意图须保留。
+- Docker restart policy 与 healthcheck 各自存在不构成上述完整闭环；原生异常退出重启也不能单独证明能够处理主循环 stall。两种部署方式分别验收实际恢复动作。
+
+## 长期运行环境前提
+
+- 宿主系统时间必须可靠同步；heartbeat、received、committed、Runtime interval 和 Market close grace 均依赖 wall clock。明显时钟漂移不属于正常运行条件，须保留同步状态证据并处理异常。
+- Market DB、Runtime DB 及必要 CTP flow 数据都必须位于持久目录中，遵守[数据与隔离](#数据与隔离)；container、image、binary 或 deployment 更新不得删除历史数据。
+- Collector 运行身份必须能够写 data directory，磁盘须有足够空间，并能观察 Market / Runtime SQLite 及其 sidecar 的大小和增长。日志必须有 bounded rotation；Docker 参数沿用[生命周期](#生命周期)，原生部署须声明并核验实际日志容量/保留限制。
+- 磁盘耗尽不得通过自动删除已存在的 Raw Market Facts 恢复；处理步骤见 [Operations](../operations.md#长期运行环境检查)。宿主或 supervisor 不运行期间不承诺自动恢复时限。
 
 ## Developer runner
 

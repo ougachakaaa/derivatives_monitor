@@ -22,6 +22,37 @@
 
 结论：NOT_RUN。不可用合约与数据缺失的业务影响：待填。
 
+## Collector 第一阶段可靠性验收
+
+本节按 [Collector 第一阶段完成条件](mvp.md#collector-第一阶段完成条件)单独判定；可引用上节连续运行证据，不能代替后续整体 MVP 门槛。真实环境与 TEST DOUBLE 分开记录，能力未实现或未执行时保留 NOT_RUN。
+
+### 部署前提与连续运行证据
+
+- 固定机器、部署方式、版本及连续三个完整交易日起止；日盘、夜盘、跨午夜、TradingDay rollover 对应证据：待填
+- 系统时间同步服务、同步状态/偏移及检查时刻：待填
+- Market DB、Runtime DB、必要 flow 的持久目录/挂载；运行 UID/GID 与可写检查：待填
+- 起止及期间磁盘余量、inode、各日库/运行库及 sidecar 大小与增长：待填
+- Docker 或原生日志的有效轮转/容量/保留参数及实际占用：待填
+- Supervisor 的 stale 阈值、检查周期/超时、启动及终止宽限、强制终止、重启等待/退避/限制、故障至新进程启动总上界：待填
+
+### 故障与恢复
+
+| 场景 | 必须核对的事实 | 故障/检测/终止/新进程/恢复采集时刻及耗时 | Runtime/Market 原件路径与身份 | 结论 |
+|---|---|---|---|---|
+| 连续运行含静默窗口 | Runtime 观察连续；无 Tick 窗口有记录，接收/提交计数与数据库事实可对照 | 待填 | 待填 | NOT_RUN |
+| 真实或受控断网及网络恢复 | 断线期间主循环观察持续，连接/登录事实正确；同 run reconnect/login/resubscribe 后 Bar 继续产生 | 待填 | 待填 | NOT_RUN |
+| Collector 强制终止 | Supervisor 实际重启，持久新 run，重新连接并恢复采集 | 待填 | 待填 | NOT_RUN |
+| 主循环 stall | Heartbeat 停止，stale 后实际终止/重启，新 run 恢复采集；只有 unhealthy 不算通过 | 待填 | 待填 | NOT_RUN |
+| 异常退出后持久性安全 | 完整性检查；故障前已提交 Bar 集合逐行不变、canonical identity 不重复、同日可跨 run 追加、日身份不混写 | 待填 | 待填 | NOT_RUN |
+
+每次演练保存故障前后 run、Runtime interval 范围及最低事实（按 [History Contract](contracts/collector-health.md#runtime-snapshots)）、Market canonical identity/提交时间、重启次数和相关日志。明确注入方式与外部观察时间，比较约定恢复上界与实测；恢复采集须有新增成功 Market commit 证据。
+
+对已提交 Bar 使用故障前固定行集合或 revision 的只读导出及哈希对账，不能因恢复后新增行导致整库哈希变化就认定历史被修改。区分未提交内存损失、断网真实缺口与已提交事实损坏；按 [History 解释边界](contracts/collector-health.md#历史解释边界)保留未知，不用当前健康追认缺失窗口。另记 Runtime/Market 备份副本、schema、完整性结果和 run 关联检查。
+
+### 阶段结论
+
+环境、连续运行、CTP 恢复、进程恢复、heartbeat 恢复、持久性安全逐项：NOT_RUN。仅凭持久化事实和日志能否回答 [阶段问题](mvp.md#collector-第一阶段完成条件)：待填；未知及其证据限制：待填。Collector 第一阶段总判定：NOT_RUN；未完成项不能由整体其他模块或 TEST DOUBLE 的通过抵消。
+
 ## G3：指标对账
 
 按[冻结的 mo-skew-25d-v1](../analytics/contracts/analytics-skew.md)记录契约/算法版本、ReferenceBundle及输入身份。至少10个不同真实时点（≥6可计算、≥4异常；定点扰动需另标SYNTHETIC_MUTATION），按契约固定IV/delta/F/Skew容差及选点规则对账；不能用同一实现计算两次冒充独立验证，不得在看到误差后放宽阈值。

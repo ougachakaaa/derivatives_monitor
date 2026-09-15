@@ -27,7 +27,7 @@ flowchart LR
 | CTP Market Data SDK | 提供外部行情回调与连接生命周期 | 是 Collector 的上游外部依赖，不是下游应用接口 |
 | `collector/` 的 C++ runtime | 接收行情、按 CTP event time 聚合自然时间对齐的 15 秒 Market Bar，并管理连接、订阅和运行诊断 | Raw 的唯一 writer；不计算业务指标，不依赖 Query 或 Dashboard runtime |
 | Raw 日 SQLite | 保存不可变 15 秒聚合事实、bucket-close CTP 市场状态、运行来源与观察时间 | 由 Collector 拥有；所有下游只读，不为页面或算法建立第二套事实 |
-| Runtime SQLite | 原子保存当前进程与逐合约运行事实 | Collector 唯一写入；只读消费者解释，不保存派生 Health 或历史窗口 |
+| Runtime SQLite | 拥有 Collector Run 生命周期、当前进程/逐合约事实与整体 Runtime History | Collector 唯一写入；只读消费者解释，不保存派生 Health；存储协议及实现差距见 [Raw Boundary](docs/contracts/raw-boundary.md#collector-运行诊断协议)与 [Acceptance](docs/acceptance.md#collector-第一阶段可靠性缺口) |
 | `collector/scripts/universe.py` | 通过 Data Provider 的纯 Calendar 模块选择来源日，生成和发布版本化合约清单参考 | 是工具依赖，不进入 C++ runtime；不写行情，清单不替代 CTP 行情事实 |
 | `data_provider/market_calendar.py` | 提供版本化交易日历、产品时段和逻辑交易日解释 | 是 Query 进程内源码模块；不改写源 TradingDay，不控制采集启停 |
 | `data_provider/` | 只读访问 Raw，将显式 Universe/Calendar 组合为 Market Frame，并解释 data availability/coverage | Query 进程内源码模块；不写 Raw，不计算金融指标 |
@@ -49,6 +49,8 @@ Python 源码依赖固定为 `data_provider → analytics → query`：Data Prov
 这里的 runtime 依赖不等于目录内所有工具的依赖：Universe 工具的上述 Calendar 例外不推广到其他 Collector 脚本；`collector/scripts/native.py` 虽位于 Collector 目录，却作为 repository integration 工具管理三个服务。两者均不改变采集 runtime 的故障隔离或 Raw 写所有权。
 
 Collector Health 的解释边界位于 Query 进程内：Collector 发布 Runtime Facts，Data Provider 提供只读事实与 Calendar，Query 组合 Health evaluator 产生派生诊断。它不是新的服务或持久化事实库，不进入 Analytics 数值链路，也不反向控制 Collector；精确语义见 [Collector Health Contract](docs/contracts/collector-health.md)，接入程度见 [Acceptance](docs/acceptance.md#collector-health-缺口)。
+
+Collector Run 生命周期的 authority 位于 Runtime DB；Raw 日库的 runs 仅保留本库 Market Bar provenance。Runtime History 与 Market facts 分开保存，通过 run identity 关联，不复制行情。两库独立提交，Runtime publication 失败不撤销已提交 Market facts；事务与失败规则由 [Raw Boundary](docs/contracts/raw-boundary.md#运行库与发布)拥有。外部 supervisor 属于部署层，负责进程退出及主循环失去进展后的恢复；CTP session 重连仍归 Collector。该职责不赋予 Query 或 Health evaluator 进程管理权，精确恢复要求见 [Deployment Contract](docs/contracts/deployment.md#runtime-自动恢复)。
 
 ## 数据所有权
 

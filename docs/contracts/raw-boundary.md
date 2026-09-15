@@ -9,7 +9,7 @@
 - Collector 是 Raw 数据目录和日库的唯一 writer；Query、Dashboard、Analytics 及后续消费者不得写 Raw、修改 schema 或建立第二份行情事实。下游只能解释实际已提交的 Market Bar，不得把未保存的 callback、缺失 bucket 或推测值包装成 Raw。
 - Raw schema v2 按合法 `TradingDay` 发布为一日一个 `YYYYMMDD.sqlite`。其他 schema 版本不提供迁移、双写、双读或兼容别名；打开非空非 v2 日库必须明确失败，任何组件都不得自动删除或覆盖现存文件。
 - `dataset` 元数据唯一记录该日 `trading_day`、`schema_version=2`、`bar_interval_us=15000000` 和 `close_grace_us=1000000`；写入约束阻止混日、不同周期或不同 schema 混合。
-- `runs` 保存 `run_id`、开始/停止/最后提交时间、订阅代码和来源。`run_id` 只回答哪次运行产生事实，不参与 Market Bar identity；固定 Bar 周期不是 run 配置。
+- 日库 `runs` 保存 `run_id`、开始/停止/最后提交时间、订阅代码和来源，作为本库 Market Bar 的 provenance 投影。它不覆盖无行情启动，也不拥有完整 Collector Run 生命周期；该 authority 归 [Runtime DB 的 runs](collector-health.md#runs)。`run_id` 不参与 Market Bar identity；固定 Bar 周期不是 run 配置。
 
 ### `market_bars` 逻辑 schema
 
@@ -60,16 +60,57 @@
 
 ## Collector 运行诊断协议
 
-本节拥有运行诊断存储与读取协议；事实和 Health 解释语义见 [Collector Health](collector-health.md)。运行库与行情日库分别版本化，不改变 Raw Market Bar schema。
+本节拥有 Runtime DB 的唯一当前物理协议；事实和 Health 解释语义见 [Collector Health](collector-health.md)。本协议不改变 Raw Market Bar schema，不声明实现已完成；当前差距见 [Acceptance](../acceptance.md#collector-第一阶段可靠性缺口)。
 
 ### 运行库与发布
 
-- 固定路径为 `DataDirectory/collector-runtime.sqlite`，`PRAGMA user_version=1`。Collector 是唯一 writer，必须先持有同目录 `.collector.lock`；运行库生命周期在该锁以内。运行库不参与按交易日枚举。
-- 运行库使用 `journal_mode=DELETE`、`synchronous=FULL`、100ms busy timeout。只有下述两张表；producer 核对版本和建表定义，不自动修复坏库或迁移不兼容库。空库初始化及状态替换均为事务。
-- 主循环约每 1 秒发布一份完整快照，启动、正常停止、异常退出另行发布。总体与全部目标合约行在同一事务替换，读者只能看到完整前一份或后一份；新 run 覆盖当前状态，不累计历史快照。
-- `heartbeat_us` 是主循环本次签到时间，`updated_us` 与之相等；没有 Tick 也持续发布。不设置独立心跳线程，不以 SQLite 文件 mtime、Bar 时间或 CTP 回调心跳代替主循环签到。
-- 打开或写入失败记录 `status_write_failed`，事务回滚，继续采集并在下个周期重试；不得单独更新磁盘 heartbeat。行情写入失败仍按 Collector 的致命错误语义处理。终止时尽力发布 stopped/failed；写失败只能保留上次成功记录。
+- 固定路径为 `DataDirectory/collector-runtime.sqlite`。Collector 是唯一 writer，必须先持有同目录 `.collector.lock`；运行库生命周期在该锁以内，不参与按交易日枚举。
+- 运行库使用 `journal_mode=DELETE`、`synchronous=FULL`、100ms busy timeout。仅包含 `runs`、`current_status`、`instrument_status`、`runtime_snapshots` 四张事实表；不保存 Tick 明细、Market Bar 副本或派生 Health。
+- 当前 schema 是唯一有效 schema，不定义 Runtime 历史版本号、迁移、双读、双写或兼容层。producer 和只读消费者须校验当前表集合、字段及约束，不能仅凭旧 `user_version` 接受数据库。已有库不符合当前 schema 时明确失败，Collector 不自动迁移、修复或删除；空库初始化为事务。开发期旧库的显式重建边界见 [Deployment](deployment.md#数据与隔离)。
+- 新 Process Run 必须先成功 INSERT `runs`，再进入正式行情采集；创建失败记录错误并非零退出。任何正式 Market Bar 的 run_id 必须已存在于 Runtime runs 中。
+- 主循环约每 1 秒发布 Current Runtime Facts；同一 SQLite transaction 替换 `current_status` 和全部目标 `instrument_status`，并追加已经封存、尚未持久化的 `runtime_snapshots`。全部 commit 或全部 rollback，读者只能看到完整前一份或后一份。
+- `heartbeat_us` 是主循环本次签到时间，`updated_us` 与之相等；没有 Tick 也持续发布。不设置独立心跳线程，不以文件 mtime、Bar 时间或 CTP callback 代替主循环签到。
+- 运行期间 publication 打开或写入失败记录 `status_write_failed`，事务回滚，保留 immutable pending snapshots，继续 Market collection，在下一 publication 重试；不得单独推进磁盘 heartbeat。完整窗口在主循环封存后即成为不可变 pending fact，重试不得重算其状态、计数或 observed_us。进程在持久化前崩溃会使这些窗口永久缺失，restart 不补造。
+- 正常 stop 或可捕获 failure 最后尝试一次 Runtime transaction：追加完整 pending snapshots、替换当前两表为终止事实，并更新本 run 的 ended_us / terminal_state。current_status 为 stopped/failed，SDK 释放后的 session/订阅按下文清除。事务失败记录日志、保留最后成功事实，终止字段可保持 NULL；不等待当前未完成 Runtime 窗口结束。
+- Runtime 与 Market 日库独立提交，不建立跨文件事务或外键。Market commit 成功而对应 Runtime History 缺失是合法状态，不撤销、删除或修改 Market Bar，也不补造 Runtime Snapshot。日库 runs 继续仅为本库 provenance 投影。
 - 不再生成或消费 `.collector-status.json`、`.collector-coverage.json`；遗留现场文件不删除、不回退读取。
+
+### Runs schema
+
+| 字段 | 类型与约束 |
+|---|---|
+| `run_id` | TEXT PRIMARY KEY NOT NULL；32 位小写十六进制，与 Market Bar provenance 相同 |
+| `started_us` | INTEGER NOT NULL；Process Run 启动时间，UTC epoch 微秒 |
+| `ended_us` | INTEGER，可空；确认终止的 UTC epoch 微秒 |
+| `terminal_state` | TEXT，可空；仅 stopped / failed |
+| `instruments` | TEXT NOT NULL；本 Run 启动时精确 target instrument 集合，编码为去重的 JSON 字符串数组 |
+| `source` | TEXT NOT NULL；行情来源 |
+
+数据库约束执行 `(ended_us IS NULL) ⇔ (terminal_state IS NULL)`，非空 ended_us 必须不早于 started_us。每次启动追加新 run，已记录的启动事实不被新 run 覆盖；仅为确认终止写入结束字段，不事后猜测 crash 的时间或原因。NULL 的解释见 [Runs](collector-health.md#runs)。
+
+### Runtime Snapshots schema
+
+除明确可空字段外均 NOT NULL；identity 为复合主键 `(run_id, interval_start_us)`，run_id 外键指向本库 runs。
+
+| 字段 | 类型与约束 |
+|---|---|
+| `run_id` | TEXT；所属 Process Run |
+| `interval_start_us`, `interval_end_us` | INTEGER；UTC epoch 微秒，start 自然对齐 15_000_000，end = start + 15_000_000 |
+| `observed_us` | INTEGER；主循环封存窗口的 UTC epoch 微秒，重试时不改变 |
+| `process_state` | TEXT；starting / running，含义沿用 Current Status |
+| `connected`, `logged_in` | INTEGER；0/1，logged_in <= connected |
+| `target_count`, `subscribed_count`, `subscription_failed` | INTEGER；非负，后两者分别不超过 target_count |
+| `tick_count` | INTEGER；非负，receive time 落在窗口内的合法 Tick 数，包含 late callback |
+| `market_bar_count`, `partial_bar_count` | INTEGER；成功 Market commit time 落在窗口内的持久化行数及其中 partial 数，0 <= partial_bar_count <= market_bar_count |
+| `last_tick_received_us`, `last_market_commit_us` | INTEGER，可空；截至封存时本 run 最近合法接收／成功 Market commit 时间，尚无事实时为 NULL |
+
+上述主键、外键、枚举、布尔、计数及窗口宽度/对齐约束由数据库执行。Snapshot 仅普通 INSERT，禁止 UPDATE、upsert、correction 或 restart 回填；可为 interval_start_us 建立读取索引，不增加第二套历史表。时钟回退后的 identity 去重须同时覆盖已提交和 pending 事实，不靠覆写或冲突更新处理。
+
+计数直接按事实发生时间归窗，不从累计数或 Market event-time bucket 反推；Market transaction 失败不计数，成功后才按 committed rows 增加 Bar 与 partial 数。Runtime 写入不推进 last_market_commit_us。封存状态、完整窗口、时钟异常及缺失解释由 [Runtime Snapshots](collector-health.md#runtime-snapshots)定义。
+
+### Runtime 历史保留
+
+运行库不按 TradingDay 拆分；runs 持续追加启动记录，runtime_snapshots 持续追加历史观察，current_status / instrument_status 只保留当前事实。第一阶段不做自动删除、rolling retention、compaction、archive 或分片；后续容量治理必须先修改本 authority。
 
 ### Current Status schema
 
@@ -100,7 +141,7 @@
 ### 只读诊断与存活
 
 - 消费者用 `mode=ro` / SQLite READONLY 和短事务读取；不得创建或修改运行库、journal 或 sidecar，不使用 immutable，不根据旧 JSON 兜底。库缺失与损坏/不兼容/暂不可读分别交接；拒绝符号链接库及 sidecar。
-- Data Provider 同一事务读取两张表并校验 schema、字段、行数、run/发布时间和计数一致性。损坏或不一致不得作为新鲜状态。Universe 工具只读取它需要的目标集合和快照身份，不解释 Health。
+- Data Provider 校验完整运行库 schema，并在同一事务读取当前两张表，校验字段、行数、run/发布时间和计数一致性。损坏或不一致不得作为新鲜状态。Universe 工具只读取它需要的目标集合和快照身份，不解释 Health。
 - 存活窗口为 `0 <= now_us - heartbeat_us <= 10_000_000`，且 process_state 为 starting/running；缺失、损坏、不可读、未来时间或超时都不能证明存活。容器 healthcheck 读取同一主循环事实，不检查行情活动。
 - HTTP 的诊断形状与 unavailable 映射见 [Read Path](read-path.md#健康证据)。Health evaluator 尚未接入，进程状态不能充当 healthy/degraded/down。
 

@@ -15,6 +15,19 @@
 - 业务结果通过[当前系统架构](../ARCHITECTURE.md)定义的采集、只读解释、分析、JSON 和汇报页面闭环交付；当前实现及证据缺口只在[验收矩阵](acceptance.md)登记。
 - 长期取舍理由见[设计原则](../DESIGN.md)，精确数据、时间、质量、分析与部署行为由对应 [Contracts](contracts/) 定义。
 
+## Collector 第一阶段完成条件
+
+Collector 第一阶段以能够长期部署并完成真实连续采集验收为目标，独立于下述单月 Skew 产品收尾。已完成的 Market Bar 聚合、CTP reconnect、SQLite Raw persistence 和 TradingDay rollover 不在这里重复定义。
+
+1. **历史运行事实**：具备 [Runtime History](contracts/collector-health.md#current-status-与-runtime-history)，持久记录每次启动和主循环运行观察；仅凭 Runtime DB 与 Market DB 即可关联 restart、session/login/订阅、接收与提交事实，日志用于进一步排障。证据不足时明确未知。
+2. **自动恢复**：进程退出及 heartbeat stale 后，正式 supervisor 实际重启 Collector 并恢复采集；检测到新进程启动的时间有界，CTP 断线仍由 Collector 自恢复。要求由 [Deployment](contracts/deployment.md#runtime-自动恢复)定义。
+3. **可靠部署环境**：满足[系统时钟、持久存储、磁盘和日志前提](contracts/deployment.md#长期运行环境前提)，更新及故障恢复不删除已提交历史。
+4. **真实连续运行和恢复验收**：固定部署环境至少连续三个完整交易日，覆盖日盘、夜盘、跨午夜和 TradingDay rollover；验证断网恢复、强制终止后重启、主循环 stall 后实际重启，以及事务完整、canonical Bar 不重复不修改、同日多 run 继续追加且交易日不混写。断线允许真实行情缺口，不要求补采。按[现场模板](live-acceptance-template.md#collector-第一阶段可靠性验收)保留证据。
+
+该阶段完成后，无需 Dashboard，也应能由持久化事实和日志回答当前是否活着、过去是否留下运行观察、是否 restart、无行情发生在哪一层，以及故障后是否自动恢复并继续采集；历史事实的可判定范围遵守 [Health Contract](contracts/collector-health.md#历史解释边界)。
+
+Dashboard、完整 Query Health evaluator、`healthy / degraded / down` UI、Runtime History 可视化、告警推送、Analytics / IV / Skew / Basis、自动交易、per-instrument Runtime history、复杂 event sourcing、断线行情补采和 Runtime DB 按日拆分均不阻塞此阶段。此边界不改变整体 MVP 的指标、页面及 G1–G6/P1/P2 要求，也不改变禁止自动交易的产品边界。当前缺口见 [Acceptance](acceptance.md#collector-第一阶段可靠性缺口)。
+
 ## 业务指标边界
 
 MVP 使用 **`mo-skew-25d-v1`** 作为唯一 Skew 指标定义。模型、远期、参考输入、时间选择、报价质量、数值求解、失败语义和验证容差的唯一完整来源是 [Analytics / Skew Contract](../analytics/contracts/analytics-skew.md)及其[机器策略](../analytics/contracts/analytics-skew-v1.json)；本文件只规定该指标必须支撑上述单月观察闭环，不复制其算法。

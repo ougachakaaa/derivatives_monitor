@@ -40,6 +40,10 @@ Analytics 按 Query 请求计算可重建派生值，不另建第二份权威派
 
 Collector Health 同样遵循“先保存事实，再解释事实”：heartbeat 证明运行活动，市场时段决定是否期待行情，派生诊断不覆盖运行事实。这使休市静默与采集故障保持可区分，精确规则见 [Collector Health Contract](docs/contracts/collector-health.md)。
 
+当前状态会被覆盖，不能承担历史故障解释；持久化启动事实和独立于行情活动的 Runtime History，才能区分无行情与没有正常运行观察。Run 生命周期独立于 Market 日库，使未产出行情的启动也有来源证据；缺失观察保持未知，不用后补零值制造连续性。启动身份先持久化，使行情来源可追溯；运行期历史发布与 Market 独立提交，使诊断写入失败不撤销已成立的行情事实。精确职责见 [Runtime History](docs/contracts/collector-health.md#current-status-与-runtime-history)。
+
+CTP session failure 与 Collector Runtime failure 分属不同恢复层：应用能够自行重连外部 session，而已经停止推进的主循环需要外部 supervisor 恢复。将恢复控制留在部署层，避免行情静默触发无意义重启，也避免只报告 unhealthy 却无法继续采集；具体闭环见 [Deployment](docs/contracts/deployment.md#runtime-自动恢复)。
+
 错误分类、状态码和可计算条件属于 Contract；页面和运维视图只投影这些语义，不各自发明判断。
 
 ## 7. 以本地、可恢复的个人观察闭环控制范围
