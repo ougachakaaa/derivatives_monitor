@@ -33,6 +33,17 @@ SHFE_PRODUCTS = ('AU', 'AG')
 PRODUCTS = CFFEX_PRODUCTS + SHFE_PRODUCTS
 OPTIONS = ('IO', 'HO', 'MO')
 CONTRACT = re.compile(r'^(IF|IH|IC|IM|TS|TF|TL|T|IO|HO|MO|au|ag)(\d{2}(?:0[1-9]|1[0-2]))(?:-([CP])-(\d+(?:\.\d+)?))?$')
+# SHA-256 of the whitespace-free ordered (type, name, DDL) concatenation from Raw Boundary.
+RUNTIME_SCHEMA_FINGERPRINT = '8fb54c462453fc5b4319604b289472fa6e6265fcadc94778cb9d69292e1d53e5'
+
+
+def runtime_schema_fingerprint(db):
+    rows = db.execute(
+        "SELECT type,name,sql FROM sqlite_master "
+        "WHERE sql IS NOT NULL AND name NOT LIKE 'sqlite_%' ORDER BY type,name"
+    ).fetchall()
+    canonical = ''.join('\x1f'.join(row) for row in rows)
+    return hashlib.sha256(re.sub(r'\s+', '', canonical).encode()).hexdigest()
 
 
 def contract(code, expiry=None):
@@ -337,9 +348,7 @@ def publish(directory, manifest, restart=None, run=subprocess.run):
             with contextlib.closing(sqlite3.connect(diagnostic.absolute().as_uri() + '?mode=ro', uri=True, timeout=0.1)) as db:
                 db.execute('PRAGMA query_only=ON')
                 db.execute('BEGIN')
-                tables = {row[0] for row in db.execute(
-                    "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")}
-                if (tables != {'runs', 'current_status', 'instrument_status', 'runtime_snapshots'}
+                if (runtime_schema_fingerprint(db) != RUNTIME_SCHEMA_FINGERPRINT
                         or db.execute('PRAGMA journal_mode').fetchone()[0] != 'delete'):
                     raise ValueError('unsupported runtime schema')
                 status = db.execute('SELECT run_id,updated_us,target_count FROM current_status WHERE singleton=1').fetchone()

@@ -1,5 +1,6 @@
-"""Read-only adapter for Collector runtime schema v1; no Calendar/Health evaluation."""
+"""Read-only adapter for the current Collector runtime schema; no History/Health evaluation."""
 from datetime import datetime
+import hashlib
 import re
 import sqlite3
 import time
@@ -19,6 +20,18 @@ CURRENT_COLUMNS = {'singleton', 'run_id', 'heartbeat_us', 'updated_us', 'process
                    'last_market_commit_us', *CURRENT_COUNTERS}
 INSTRUMENT_COLUMNS = {'instrument_id', 'run_id', 'updated_us', 'subscription', 'error_id',
                       'last_tick_received_us', *INSTRUMENT_COUNTERS}
+# SHA-256 of the whitespace-free ordered (type, name, DDL) concatenation from Raw Boundary.
+RUNTIME_SCHEMA_FINGERPRINT = '8fb54c462453fc5b4319604b289472fa6e6265fcadc94778cb9d69292e1d53e5'
+
+
+def _schema_fingerprint(connection):
+    rows = connection.execute(
+        "SELECT type,name,sql FROM sqlite_master "
+        "WHERE sql IS NOT NULL AND name NOT LIKE 'sqlite_%' ORDER BY type,name"
+    ).fetchall()
+    canonical = ''.join('\x1f'.join(row) for row in rows)
+    canonical = re.sub(r'\s+', '', canonical).encode()
+    return hashlib.sha256(canonical).hexdigest()
 
 
 def _integer(value, minimum=0):
@@ -114,13 +127,10 @@ def read_runtime_status(directory):
         connection.row_factory = sqlite3.Row
         connection.execute('PRAGMA query_only=ON')
         connection.execute('BEGIN')
-        if connection.execute('PRAGMA user_version').fetchone()[0] != 1:
-            raise ValueError('unsupported runtime schema')
         if connection.execute('PRAGMA journal_mode').fetchone()[0] != 'delete':
             raise ValueError('unsupported runtime journal')
-        tables = {row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-        if tables != {'current_status', 'instrument_status'}:
-            raise ValueError('invalid runtime tables')
+        if _schema_fingerprint(connection) != RUNTIME_SCHEMA_FINGERPRINT:
+            raise ValueError('invalid runtime schema')
         rows = connection.execute('SELECT * FROM current_status LIMIT 2').fetchall()
         if len(rows) != 1:
             raise ValueError('invalid current status cardinality')

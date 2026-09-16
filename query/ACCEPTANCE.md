@@ -13,4 +13,4 @@ HTTP 行为见 [Contract](CONTRACT.md)和 [Read Path](../docs/contracts/read-pat
 
 工程回归只证明其 TEST DOUBLE 场景，不签收 G3/P1/P2。当前版本需要的回归按 [Repository Verification](../tests/README.md)执行，不从历史通过推断当前部署可用。
 
-Collector 运行诊断已接入独立运行库 schema v1；HTTP 只投影运行状态和事实，不再按连接/订阅输出 Collector healthy/degraded。完整 Health evaluator 仍见[根缺口](../docs/acceptance.md#collector-health-缺口)。
+Collector 运行诊断已通过 Data Provider 接入唯一当前四表运行库协议；HTTP 仍只投影当前运行状态和事实，不提供 Runtime History API，也不再按连接/订阅输出 Collector healthy/degraded。完整 Health evaluator 仍见[根缺口](../docs/acceptance.md#collector-health-缺口)。

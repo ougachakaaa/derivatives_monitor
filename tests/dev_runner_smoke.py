@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Actual ./dev native chain with a TEST DOUBLE CTP SDK and temporary state only."""
 
-from contextlib import closing
 import json
 import os
 from pathlib import Path
@@ -11,6 +10,7 @@ import signal
 import socket
 import sqlite3
 import subprocess
+import sys
 import tempfile
 import time
 from urllib.error import URLError
@@ -19,13 +19,13 @@ from urllib.request import build_opener, ProxyHandler
 
 ROOT = Path(__file__).resolve().parents[1]
 DAY = "20260907"
+sys.path.insert(0, str(ROOT))
+from data_provider.runtime_status import read_runtime_status
 
 
 def runtime_status(directory):
     # TEST DOUBLE process output; never opens a real data directory.
-    with closing(sqlite3.connect((directory / 'collector-runtime.sqlite').as_uri() + '?mode=ro', uri=True)) as db:
-        db.row_factory = sqlite3.Row
-        return dict(db.execute('SELECT * FROM current_status WHERE singleton=1').fetchone())
+    return read_runtime_status(directory)[0]
 
 
 def unused_port() -> int:
@@ -58,7 +58,7 @@ def json_get(base: str, path: str):
 def row_count(data: Path, day: str = DAY) -> int:
     database = data / f"{day}.sqlite"
     with sqlite3.connect(database.as_uri() + "?mode=ro", uri=True, timeout=2) as connection:
-        return connection.execute("SELECT COUNT(*) FROM snapshots").fetchone()[0]
+        return connection.execute("SELECT COUNT(*) FROM market_bars").fetchone()[0]
 
 
 def run_count(data: Path, day: str = DAY) -> int:
@@ -181,17 +181,19 @@ def main() -> None:
             "Instruments=IF2609\n"
             "DataDirectory=data\n"
             "FlowPath=flow\n"
-            "SnapshotIntervalMs=100\n"
             "StatusIntervalSeconds=1\n"
             "ConnectTimeoutSeconds=2\n"
             "RunSeconds=0\n"
         )
         environment = os.environ.copy()
-        for name in ("DATA_DIR", "QUERY_URL", "QUERY_PORT", "DASHBOARD_PORT", "LD_PRELOAD", "DM_TEST_SCENARIO"):
+        for name in ("DATA_DIR", "QUERY_URL", "QUERY_PORT", "DASHBOARD_PORT", "LD_PRELOAD",
+                     "DM_TEST_SCENARIO", "DM_TEST_DAY1", "DM_TEST_DAY2"):
             environment.pop(name, None)
         existing_library_path = environment.get("LD_LIBRARY_PATH")
         environment["LD_LIBRARY_PATH"] = str(sdk) + ((":" + existing_library_path) if existing_library_path else "")
         environment["PYTHONDONTWRITEBYTECODE"] = "1"
+        environment["DM_TEST_DAY1"] = DAY
+        environment["DM_TEST_DAY2"] = DAY
 
         check_credential_semantics(work, environment)
 
@@ -223,15 +225,17 @@ def main() -> None:
             query_base = f"http://127.0.0.1:{query_port}"
             dashboard_base = f"http://127.0.0.1:{dashboard_port}"
             wait(lambda: json_get(query_base, "/healthz")["status"] == "ok", "Query /healthz")
-            summary = wait(
-                lambda: (value if value["rows"] > 2 else None)
-                if (value := json_get(query_base, f"/api/summary?day={DAY}")) else None,
-                "Query reading Collector's temporary Raw directory",
+            first_health = wait(
+                lambda: value if (value := json_get(query_base, "/api/health"))["collector"]["process_alive"] else None,
+                "Query reading Collector's temporary Runtime DB",
             )
-            assert "TEST DOUBLE" in summary["runs"][0]["source"]
-            proxied = json_get(dashboard_base, f"/api/summary?day={DAY}")
-            assert proxied["day"] == DAY and proxied["rows"] > 0
-            assert json_get(dashboard_base, "/api/health")["data"]["readable"]
+            wait(lambda: row_count(data) > 0, "Collector writing its temporary Raw directory")
+            proxied = wait(
+                lambda: value if (value := json_get(dashboard_base, "/api/health"))["collector"]["process_alive"] else None,
+                "Dashboard proxying Collector Runtime facts",
+            )
+            assert proxied["collector"]["heartbeat"]["run_id"] == first_health["collector"]["heartbeat"]["run_id"]
+            assert proxied["data"]["readable"]
 
             port_conflict = subprocess.run(
                 [str(ROOT / "dev"), "up", "query", "--data-dir", str(data), "--query-port", str(query_port)],
@@ -271,7 +275,7 @@ def main() -> None:
                 "runner recording downstream exits",
             )
             assert process_exists(first_pids["collector"])
-            wait(lambda: row_count(data) > before_downstream_stop + 2, "Collector commits after downstream exit")
+            wait(lambda: row_count(data) > before_downstream_stop, "Collector commits after downstream exit")
             stop_runner(first, first_pids, expected=(1,))
             assert runtime_status(data)["process_state"] == "stopped"
 
@@ -283,12 +287,11 @@ def main() -> None:
             wait(lambda: json_get(query_base, "/healthz")["status"] == "ok", "restarted Query")
             wait(lambda: row_count(data) > rows_before_restart, "Collector appending after ./dev restart")
             wait(lambda: run_count(data) > runs_before_restart, "new Collector run retained beside prior run")
-            restarted_summary = wait(
-                lambda: (value if value["rows"] > rows_before_restart else None)
-                if (value := json_get(dashboard_base, f"/api/summary?day={DAY}")) else None,
-                "restarted Dashboard proxy reading preserved Raw data",
+            restarted_health = wait(
+                lambda: value if (value := json_get(dashboard_base, "/api/health"))["collector"]["process_alive"] else None,
+                "restarted Dashboard proxy reading current Runtime facts",
             )
-            assert "TEST DOUBLE" in restarted_summary["runs"][0]["source"]
+            assert restarted_health["collector"]["heartbeat"]["run_id"] != first_health["collector"]["heartbeat"]["run_id"]
             stop_runner(second, second_pids, expected=(128 + signal.SIGTERM,))
             assert "sending SIGKILL" not in second_log.read_text(errors="replace")
             assert runtime_status(data)["process_state"] == "stopped"
@@ -298,8 +301,8 @@ def main() -> None:
                 assert connection.execute("SELECT COUNT(*) FROM runs WHERE source LIKE '%TEST DOUBLE%'").fetchone()[0] >= 2
                 assert connection.execute("SELECT COUNT(*) FROM runs WHERE stopped_us IS NULL").fetchone()[0] == 0
 
-            print("PASS: actual ./dev credential semantics and Collector -> SQLite -> Uvicorn -> Vite chain")
-            print("PASS: shared Raw, Dashboard proxy, downstream independence, conflicts, clean stop and preserved restart")
+            print("PASS: actual ./dev credential semantics and Collector -> Runtime SQLite -> Uvicorn -> Vite chain")
+            print("PASS: preserved Raw, Dashboard proxy, downstream independence, conflicts, clean stop and restart")
             print("Scope: temporary paths/random ports only; no real config, CTP, deployment manager, Docker, or browser.")
         except BaseException:
             for log_path in work.glob("*.log"):

@@ -3,7 +3,6 @@
 
 Run with query/.venv/bin/python. No real credentials, data or services are used.
 """
-from contextlib import closing
 import json
 import os
 from pathlib import Path
@@ -15,15 +14,15 @@ import tempfile
 import time
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
 from fastapi.testclient import TestClient
+from data_provider.runtime_status import read_runtime_status
 from query.app import create_app
 
 
 def runtime_status(directory):
     # TEST DOUBLE process output; never opens a real data directory.
-    with closing(sqlite3.connect((directory / 'collector-runtime.sqlite').as_uri() + '?mode=ro', uri=True)) as db:
-        db.row_factory = sqlite3.Row
-        return dict(db.execute('SELECT * FROM current_status WHERE singleton=1').fetchone())
+    return read_runtime_status(directory)[0]
 
 
 def read(path, sql):
@@ -51,7 +50,7 @@ def main():
         data = directory / 'data'
         config = directory / 'config.ini'
         config.write_text('[config]\nFrontMdAddr=test-double\nInstruments=IF2609,au2610,ag2610\n'
-                          'DataDirectory=data\nFlowPath=flow\nSnapshotIntervalMs=100\n'
+                          'DataDirectory=data\nFlowPath=flow\n'
                           'ConnectTimeoutSeconds=2\nStatusIntervalSeconds=1\n')
         day1, day2 = data / '20260908.sqlite', data / '20260909.sqlite'
         previous_counts = None
@@ -107,7 +106,7 @@ def main():
         text = (directory / 'collector.log').read_text()
         assert 'TEST DOUBLE' in text and 'event=snapshot_commit' in text
         print('PASS: synthetic AU/AG night → midnight → day → next TradingDay; CFFEX coexistence, reconnect, Query, restart append, WAL, timestamps')
-        print('TEST DOUBLE only; real AU/AG night acceptance is separate. SnapshotIntervalMs=100 accelerates fixture; default 15000 is covered by CTest.')
+        print('TEST DOUBLE only; real AU/AG night acceptance is separate; fixed 15-second bars are covered by CTest.')
 
 
 if __name__ == '__main__':

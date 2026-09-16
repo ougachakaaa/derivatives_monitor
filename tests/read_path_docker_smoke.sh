@@ -43,7 +43,6 @@ FrontMdAddr=tcp://127.0.0.1:1
 Instruments=IF2609
 DataDirectory=data
 FlowPath=flow
-SnapshotIntervalMs=100
 StatusIntervalSeconds=1
 ConnectTimeoutSeconds=20
 RunSeconds=0

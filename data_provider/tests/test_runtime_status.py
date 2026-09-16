@@ -44,7 +44,7 @@ class RuntimeStatusTest(unittest.TestCase):
 
     def test_incompatible_or_inconsistent_rows_fail_closed(self):
         cases = [
-            'PRAGMA user_version=2',
+            'ALTER TABLE runtime_snapshots ADD COLUMN incompatible INTEGER',
             "UPDATE current_status SET trading_day='20260230'",
             'UPDATE current_status SET subscribed_count=2',
             "UPDATE instrument_status SET run_id='wrong'",
@@ -57,10 +57,16 @@ class RuntimeStatusTest(unittest.TestCase):
         ]
         for sql in cases:
             with self.subTest(sql=sql):
+                (self.directory / 'collector-runtime.sqlite').unlink(missing_ok=True)
                 write_runtime(self.directory)
                 update_runtime(self.directory, sql)
                 with self.assertRaises(DataUnavailableError):
                     read_runtime_status(self.directory)
+
+    def test_user_version_is_not_a_runtime_schema_version(self):
+        write_runtime(self.directory)
+        update_runtime(self.directory, 'PRAGMA user_version=99')
+        self.assertEqual(read_runtime_status(self.directory)[0]['run_id'], 'a' * 32)
 
     def test_writer_transaction_is_invisible_until_committed_and_lock_is_bounded(self):
         path = write_runtime(self.directory)

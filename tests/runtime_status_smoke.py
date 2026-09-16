@@ -50,9 +50,9 @@ def main():
         def sql(path, query):
             with closing(sqlite3.connect(path.as_uri() + '?mode=ro', uri=True)) as db:
                 return db.execute(query).fetchone()[0]
-        def version(number):
+        def schema(sql):
             with closing(sqlite3.connect(runtime)) as db:
-                db.execute('PRAGMA user_version=' + str(number))
+                db.execute(sql)
         def check_cli(expected):
             result = subprocess.run(['sh', str(healthcheck), str(runtime)], capture_output=True, text=True)
             assert (result.returncode == 0) == expected, result.stderr
@@ -73,8 +73,13 @@ def main():
                 assert response['heartbeat']['accepted'] == response['heartbeat']['ticks_received']
                 assert client.get('/api/coverage').json()['collector_current']
                 check_cli(True)
+                # user_version is not a Runtime protocol version; the complete DDL is authoritative.
+                before_version_change = current()['heartbeat_us']
+                schema('PRAGMA user_version=99')
+                wait(lambda: current()['heartbeat_us'] > before_version_change)
+                check_cli(True)
                 # An incompatible diagnostic DB cannot stop Market persistence or advance heartbeat.
-                version(99)
+                schema('CREATE TABLE incompatible_runtime_schema(value INTEGER)')
                 frozen = sql(runtime, 'SELECT heartbeat_us FROM current_status')
                 before = sql(data / '20260908.sqlite', 'SELECT count(*) FROM market_bars')
                 wait(lambda: sql(data / '20260908.sqlite', 'SELECT count(*) FROM market_bars') > before)
@@ -83,7 +88,7 @@ def main():
                 assert client.get('/api/health').json()['collector']['status'] == 'unknown'
                 assert client.get('/api/coverage').status_code == 503
                 check_cli(False)
-                version(1)
+                schema('DROP TABLE incompatible_runtime_schema')
                 wait(lambda: current()['heartbeat_us'] > frozen)
                 assert current()['run_id'] == run_id
                 assert current()['bars_written'] > published['bars_written']
@@ -101,7 +106,8 @@ def main():
                 # TEST DOUBLE clock mutations after the process stopped: mtime cannot prove liveness.
                 for stamp in (time.time_ns() // 1000 - 11_000_000, time.time_ns() // 1000 + 20_000_000):
                     with closing(sqlite3.connect(runtime)) as db, db:
-                        db.execute("UPDATE current_status SET process_state='starting',heartbeat_us=?", (stamp,))
+                        db.execute("UPDATE current_status SET process_state='starting',heartbeat_us=?,updated_us=?",
+                                   (stamp, stamp))
                     os.utime(runtime, None)
                     check_cli(False)
             finally:

@@ -19,8 +19,8 @@
 
 | 能力 | 当前实现事实 | 剩余缺口 |
 |---|---|---|
-| Runtime History | Collector 已实现严格四表 Runtime schema、逐次 Run 生命周期和 append-only 自然 15 秒 runtime_snapshots；receive/commit time 直接归窗，restart 不继承窗口或计数 | Data Provider 只读适配仍使用旧两表校验；完成消费者适配及真实长期运行证据，不能把日 Market DB 的 runs 当完整启动历史 |
-| History 发布协议 | Collector 已实现 Run 创建失败退出、pending Snapshot 与当前两表原子发布/回滚重试、终止事务、跨库独立提交，以及 restart、前后时钟跳变、缺失窗口和旧库拒绝的 owner 回归；Universe 与 healthcheck 已识别四表集合 | 补齐 Data Provider 的四表 schema/约束校验与跨进程集成回归，并在固定环境验证 publication failure、异常终止和恢复；不建立迁移或兼容层 |
+| Runtime History | Collector 已实现严格四表 Runtime schema、逐次 Run 生命周期和 append-only 自然 15 秒 runtime_snapshots；receive/commit time 直接归窗，restart 不继承窗口或计数；Data Provider、Universe、healthcheck 与相关 smoke 均校验完整当前 schema，当前状态链路仍只消费当前两表 | 补充真实长期运行证据；不能把日 Market DB 的 runs 当完整启动历史，且尚不提供 Runtime History HTTP/API/UI |
+| History 发布协议 | Collector 已实现 Run 创建失败退出、pending Snapshot 与当前两表原子发布/回滚重试、终止事务、跨库独立提交，以及 restart、前后时钟跳变、缺失窗口和不兼容库拒绝；只读消费者及跨进程 TEST DOUBLE 已对齐唯一当前四表协议，不读取旧格式或建立兼容层 | 在固定环境验证 publication failure、异常终止和恢复；不建立迁移或兼容层 |
 | Heartbeat 自动恢复 | 主循环约每秒发布、存活窗口 10 秒；Compose 有 healthcheck 和 unless-stopped；native 有异常退出重启，未提供主循环 watchdog 闭环 | 按 [Deployment](contracts/deployment.md#runtime-自动恢复)补齐 stale 后实际终止/重启，分别冻结两种部署的检测、终止、重启参数与总上界，证明 session down 不触发进程重启 |
 | 部署环境 | 已有 data/flow 持久目录约束与 Docker 日志轮转配置 | 固定环境的时钟同步、运行身份可写、剩余空间、Market/Runtime DB 增长观察及原生日志容量/保留限制仍需证据 |
 | 真实连续运行 | 尚缺该阶段完整现场证据 | 按 [现场模板](live-acceptance-template.md#collector-第一阶段可靠性验收)完成连续运行、断网、强杀、heartbeat stall 和持久性安全验收，关联故障前后 Runtime/Market 事实，证明实际恢复采集 |
@@ -33,7 +33,7 @@
 
 - 完整 Calendar Health evaluator 尚未实现，当前 HTTP 仅投影进程状态与运行事实。
 - 尚需冻结多市场活动 scope 的归并、UNKNOWN Calendar、缺失/损坏事实对应的 Health 输出及原因、feed/persistence 阈值和开盘/启动宽限；不得把未知当休市或据此报告 healthy。
-- 仓库整体 offline 回归仍有 developer-runner 工作目录断言不一致，以及 smoke fixture 使用已退役 `SnapshotIntervalMs` 的缺口；运行事实独立闭环不替代完整开发会话验收。
+- 仓库整体 offline 回归仍有 developer-runner 工作目录断言不一致；运行事实独立闭环不替代完整开发会话验收。
 - Runtime History 的 Collector 存储实现已完成；消费者接入和真实证据见[第一阶段可靠性缺口](#collector-第一阶段可靠性缺口)。结合 Calendar 的完整历史采集完整性解释尚未冻结，不由当前 Health 推导。
 
 模块状态：[Data Provider](../data_provider/ACCEPTANCE.md) · [Analytics](../analytics/ACCEPTANCE.md) · [Query](../query/ACCEPTANCE.md) · [Dashboard](../dashboard/ACCEPTANCE.md)。

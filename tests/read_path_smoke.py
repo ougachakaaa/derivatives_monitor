@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Native-process acceptance, NOT Docker or live CTP acceptance. Temporary test data only."""
 import argparse
-from contextlib import closing
 import json
 import os
 from pathlib import Path
@@ -9,18 +8,19 @@ import sqlite3
 import signal
 import socket
 import subprocess
+import sys
 import tempfile
 import time
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+from data_provider.runtime_status import read_runtime_status
 
 
 def runtime_status(directory):
     # TEST DOUBLE process output; never opens a real data directory.
-    with closing(sqlite3.connect((directory / 'collector-runtime.sqlite').as_uri() + '?mode=ro', uri=True)) as db:
-        db.row_factory = sqlite3.Row
-        return dict(db.execute('SELECT * FROM current_status WHERE singleton=1').fetchone())
+    return read_runtime_status(directory)[0]
 
 
 def port():
@@ -55,7 +55,7 @@ def main():
     processes = []
     with tempfile.TemporaryDirectory(prefix="dm-read-path-") as folder:
         work = Path(folder)
-        (work / "config.ini").write_text("[config]\nFrontMdAddr=tcp://127.0.0.1:1\nInstruments=IF2609\nDataDirectory=data\nFlowPath=flow\nSnapshotIntervalMs=100\nStatusIntervalSeconds=1\nConnectTimeoutSeconds=20\nRunSeconds=0\n")
+        (work / "config.ini").write_text("[config]\nFrontMdAddr=tcp://127.0.0.1:1\nInstruments=IF2609\nDataDirectory=data\nFlowPath=flow\nStatusIntervalSeconds=1\nConnectTimeoutSeconds=20\nRunSeconds=0\n")
         query_port = port()
         base = f"http://127.0.0.1:{query_port}"
 

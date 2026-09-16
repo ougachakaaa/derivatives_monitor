@@ -8,6 +8,7 @@ from contextlib import closing
 import tempfile
 import unittest
 from unittest.mock import Mock, patch
+from data_provider.tests.runtime_fixture import create_runtime_schema
 
 spec = importlib.util.spec_from_file_location('universe', Path(__file__).resolve().parents[1] / 'scripts/universe.py')
 u = importlib.util.module_from_spec(spec)
@@ -89,17 +90,23 @@ class UniverseTest(unittest.TestCase):
             # TEST DOUBLE runtime snapshot: unchanged targets require no restart and reads are non-mutating.
             diagnostic = directory / 'collector-runtime.sqlite'
             with closing(sqlite3.connect(diagnostic)) as db, db:
-                db.executescript("CREATE TABLE runs(run_id); CREATE TABLE runtime_snapshots(run_id,interval_start_us);"
-                                 "CREATE TABLE current_status(singleton,run_id,updated_us,target_count);"
-                                 "CREATE TABLE instrument_status(instrument_id,run_id,updated_us);"
-                                 "INSERT INTO runs VALUES('test-double');"
-                                 "INSERT INTO current_status VALUES(1,'test-double',100,1);"
-                                 "INSERT INTO instrument_status VALUES('IF2609','test-double',100);")
+                create_runtime_schema(db)
+                run_id = 'a' * 32
+                db.execute("INSERT INTO runs VALUES(?,100,NULL,NULL,'[\"IF2609\"]','TEST DOUBLE')", (run_id,))
+                db.execute("INSERT INTO current_status VALUES(1,?,100,100,'running',1,1,1,1,0,NULL,0,0,NULL,NULL,1,0,0,0,0,0,0,0,0,0)", (run_id,))
+                db.execute("INSERT INTO instrument_status VALUES('IF2609',?,100,'subscribed',0,0,NULL,0,0,0,0,0)", (run_id,))
             before_runtime = diagnostic.read_bytes()
             run.reset_mock()
             u.publish(directory, manifest, 'collector.service', run)
             run.assert_not_called()
             self.assertEqual(diagnostic.read_bytes(), before_runtime)
+            with closing(sqlite3.connect(diagnostic)) as db, db:
+                db.execute('CREATE TABLE incompatible_runtime_schema(value INTEGER)')
+            u.publish(directory, manifest, 'collector.service', run)
+            self.assertEqual(run.call_count, 2)
+            with closing(sqlite3.connect(diagnostic)) as db, db:
+                db.execute('DROP TABLE incompatible_runtime_schema')
+            run.reset_mock()
             with closing(sqlite3.connect(diagnostic)) as db, db:
                 db.execute("UPDATE instrument_status SET instrument_id='IC2609'")
             u.publish(directory, manifest, 'collector.service', run)
