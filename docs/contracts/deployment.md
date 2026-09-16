@@ -22,7 +22,7 @@ Skew 审核参考包可保存在数据目录的 `references/analytics/`，由独
 - Docker 使用 `unless-stopped`，Collector 直接接收 SIGTERM，停止宽限 60 秒。`stop` 保留数据；故障可能反复重启，必须通过日志/退出码/重启计数判断，不把 running 当成功行情。
 - Docker 日志每份 10MB、保留三份。`logs` 的退出不停止采集；更新前按需要导出旧容器日志。
 - 原生管理器使用三个用户 systemd 服务及 universe 定时器，并按 [Universe Tool Contract](../../collector/scripts/CONTRACT.md#保留发布与失败)的发布结果决定是否正常重启活跃 Collector；手工 `up` 则启用并重启三个服务。08:45/09:00/09:15 与 20:40/21:00/21:15 为更新/重试点。此 Python 管理工具不进入 C++ 采集运行时。
-- 原生服务异常退出 10 秒后重启；停止宽限 60 秒。WSL 停止或 Windows 睡眠时不能继续采集。用户管理器下次启动可能拉起已启用服务，长期禁用见操作手册。
+- 原生 Collector 非人工退出后由 systemd 等待 10 秒重启，Query/Dashboard 保持异常退出重启；停止宽限 60 秒。Collector 的主循环自动恢复参数见[下文](#native-heartbeat-recovery)。WSL 停止或 Windows 睡眠时不能继续采集。用户管理器下次启动可能拉起已启用服务，长期禁用见操作手册。
 
 ## Runtime 自动恢复
 
@@ -33,6 +33,31 @@ Skew 审核参考包可保存在数据目录的 `references/analytics/`，由独
 - 每种正式部署方式必须声明 heartbeat stale 阈值、检查间隔/超时、启动宽限、终止宽限及强制终止、重启等待/退避和限制策略，并给出从主循环失去进展到新 Collector 进程启动的时间上界。该上界不等于外部 CTP 可用或首根行情到达的时间保证；实际恢复采集须另验。
 - CTP disconnect、login 未完成或订阅恢复中不等于 Runtime failure；只要主循环正常推进，就由 Collector reconnect/login/resubscribe，不因 session down 重启进程。人工 stop 的停止意图须保留。
 - Docker restart policy 与 healthcheck 各自存在不构成上述完整闭环；原生异常退出重启也不能单独证明能够处理主循环 stall。两种部署方式分别验收实际恢复动作。
+
+<a id="native-heartbeat-recovery"></a>
+
+### Native heartbeat 自动恢复
+
+原生 Collector unit 的 MainPID 为部署侧 `native_watchdog.py` 包装器；每次包装器只启动一个 Collector 子进程，不自行重启、不调用 Query、不写 Runtime DB。systemd 是唯一自动重启 authority。包装器复用 `healthcheck.sh` 的完整 Runtime schema、只读和存活校验；从启动前记录的 UTC 时间核对 `runs.started_us`，拒绝上一个 Process 遗留的新鲜 heartbeat，首次接受后绑定该 run_id。包装器不会独立更新 heartbeat，也不以 callback 活动替代主循环事实。
+
+| 参数 | 固定 native 策略 |
+|---|---|
+| 存活窗口 | `0 <= now_us - heartbeat_us <= 10_000_000`，process_state 为 starting/running |
+| 检查间隔 / 超时 | 每次检查结束后最多等待 1 秒；整个探测进程组总超时 2 秒，超时强制清理 |
+| 启动宽限 | 从 Collector spawn 前起计 15 秒；首次有效发布立即结束宽限，缺失/旧 Run 等不能延长宽限 |
+| 失效处理 | 宽限结束后，stale、未来 heartbeat、缺失/不兼容/不可读库、Run 身份变化或探测超时均记为 runtime_failed，开始终止 |
+| 终止 | 向自有 Collector 进程组发送 SIGTERM，最多等待 60 秒；仍未退出则 SIGKILL 并回收 |
+| systemd 重启 | `Restart=always`、`RestartSec=10`；非人工零退出、非零退出、信号终止均重启 |
+| 限制 / 退避 | `StartLimitIntervalSec=0`；固定等待，无指数退避和次数上限 |
+| unit 清理 | `KillMode=control-group`、`KillSignal=SIGTERM`、`TimeoutStopSec=60`、`SendSIGKILL=yes`、`FinalKillSignal=SIGKILL`；包装器异常退出也不得留下旧 writer |
+
+稳态从主循环失去进展到新 Collector 启动的配置上界为 **83 秒**（10 秒存活窗口 + 1 秒检查间隔 + 2 秒探测超时 + 60 秒终止宽限 + 10 秒重启等待）；首次有效发布之前阻塞的保守上界为 **88 秒**（15 + 1 + 2 + 60 + 10）。这些是宿主、user systemd、时钟同步、进程调度与 SIGKILL 正常工作的配置时间界限，不是内核不可中断 I/O、宿主暂停或系统资源耗尽时的实时保证，也不是新 Run 成功持久化、CTP 可用或首根 Bar 的时间保证。
+
+自动重启路径没有网络 Universe `ExecStartPre`；`up` 预刷新和既有定时器负责清单更新，重启复用已发布清单。包装器记录 `collector_spawn`、`collector_run_bound`、`runtime_failed`、`collector_terminate`、`collector_force_kill` 等事件及 Collector PID / 已知 run_id。运行库仍由 Collector 独占写入；强杀的旧 Run 可保持结束字段 NULL，不能由 supervisor 补写或推断终止事实。
+
+只要主循环持续发布，CTP disconnect、login 等待、subscription recovery 及无 Tick 均不触发 Process restart。`systemctl stop` 和 native `stop` 不触发 `Restart=always`；停止期间包装器只清理子进程。Universe 仅使用 manager 的 `try-restart` 重启仍活跃的 unit，不通过“先查 active、再 restart”重新拉起已停止的服务。用户管理器以后重新启动时，enabled 服务的启动语义仍沿用[生命周期](#生命周期)。
+
+工程验收使用独立的 `native-recovery` profile，保留真实 user systemd 状态、Process/Run 身份变化、恢复时间及新 Run Market commit，具体命令见 [Repository Verification](../../tests/README.md)。TEST DOUBLE 只证明自动恢复机制；Docker 闭环与真实 CTP 恢复分别见 [Acceptance](../acceptance.md#collector-第一阶段可靠性缺口)。
 
 ## 长期运行环境前提
 

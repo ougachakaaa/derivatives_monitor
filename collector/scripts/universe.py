@@ -359,9 +359,8 @@ def publish(directory, manifest, restart=None, run=subprocess.run):
         except (OSError, sqlite3.Error, ValueError, KeyError, TypeError):
             needs_restart = True
     if needs_restart and restart:
-        active = run(['systemctl', '--user', 'is-active', '--quiet', restart], check=False)
-        if active.returncode == 0:
-            run(['systemctl', '--user', 'restart', '--no-block', restart], check=True)
+        # Let the manager decide atomically; a preceding is-active check races stop.
+        run(['systemctl', '--user', 'try-restart', '--no-block', restart], check=True)
     return changed, len(instruments)
 
 

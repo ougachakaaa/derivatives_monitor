@@ -30,6 +30,10 @@
 systemctl --user disable derivatives-monitor-{collector,query,dashboard}.service derivatives-monitor-universe.timer
 ```
 
+Collector 由部署侧 heartbeat 包装器启动，systemd 的 MainPID 是包装器；实际 Collector PID 和 run_id 见 `collector_spawn` / `collector_run_bound` 日志。`runtime_failed` 后可按 `collector_terminate`、`collector_force_kill`、新 spawn/bind 和新 Run 的 Market commit 核对恢复链路。参数、恢复上界和人工 stop 语义统一见 [Native heartbeat 自动恢复](contracts/deployment.md#native-heartbeat-recovery)。不要把 systemd active 或仅新 PID 当成恢复采集的证据。
+
+native `up` 还会预检 sqlite3 CLI 和 healthcheck 使用的 shell/coreutils，并把部署时 PATH 写入 Collector unit。自动重启复用已有 Universe，不再执行启动前网络刷新；升级已有 native 部署需重新执行 `up` 安装 unit。安全工程验证使用 `python3 tests/run.py native-recovery`，只创建独立 TEST DOUBLE unit，不能用正式服务做 stall 注入。
+
 <a id="docker-compose-部署"></a>
 
 ## Docker Compose 部署
@@ -55,7 +59,7 @@ docker stop --time 60 "$(docker ps -q --filter label=com.docker.compose.project=
 - **数据库增长**：用 `du -sh collector/data` 记录总量；分别记录各 Market 日库、`collector-runtime.sqlite` 及现存 sidecar 的字节数，多次比较增长与剩余容量。不删除库或 sidecar，也不以文件 mtime 替代 heartbeat。
 - **日志**：核对 Compose 的 logging 配置；原生部署可用 `journalctl --user --disk-usage` 查看实际占用，并记录承载日志的 journald 有效容量/保留配置。不能只凭当前日志较小判定已具有 bounded rotation。
 
-Runtime History 和 heartbeat stale 自动恢复尚缺的实现及参数见 [Acceptance](acceptance.md#collector-第一阶段可靠性缺口)。在这些能力完成前，现有 status/healthcheck 不能作为恢复闭环已成立的证明。
+Runtime History、native 自动恢复的工程事实及 Docker/现场待验项见 [Acceptance](acceptance.md#collector-第一阶段可靠性缺口)。单独 status/healthcheck 不能作为恢复闭环已成立的证明。
 
 ## 前台开发会话
 

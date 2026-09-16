@@ -33,6 +33,18 @@ def executable(name, candidates):
     raise RuntimeError('Missing ' + name + '; see collector/README.md native setup')
 
 
+def collector_unit(binary, python, config, data, root=ROOT):
+    """Also used by isolated systemd acceptance; no production service is needed."""
+    return ('[Unit]\nStartLimitIntervalSec=0\n\n[Service]\nType=simple\n'
+        'Restart=always\nRestartSec=10\nTimeoutStopSec=60\nKillSignal=SIGTERM\n'
+        'KillMode=control-group\nSendSIGKILL=yes\nFinalKillSignal=SIGKILL\n'
+        f'WorkingDirectory={str(root).replace("%", "%%")}\n'
+        f'Environment={quote("PATH=" + os.environ["PATH"])}\n'
+        f'ExecStart={quote(python)} {quote(COLLECTOR / "scripts/native_watchdog.py")} '
+        f'--database {quote(Path(data) / "collector-runtime.sqlite")} '
+        f'-- {quote(binary)} --config {quote(config)}\n')
+
+
 def install():
     binary = executable('Collector', [COLLECTOR / 'build/Release/bin/data_collector'])
     python = executable('Python 3.12 venv', [ROOT / 'query/.venv/bin/python'])
@@ -44,6 +56,8 @@ def install():
     subprocess.run([node, '-e', 'const [a,b]=process.versions.node.split(".").map(Number); if(a<22||(a===22&&b<12))process.exit(1)'], check=True)
     if not (ROOT / 'dashboard/node_modules/vite/bin/vite.js').is_file():
         raise RuntimeError('Run npm ci in dashboard first')
+    for program in ('sqlite3', 'sha256sum', 'date', 'sh', 'sed', 'tr', 'tail'):
+        executable(program, [shutil.which(program)])
     config = COLLECTOR / 'config.ini'
     if not config.is_file():
         raise RuntimeError('collector/config.ini is required')
@@ -57,13 +71,13 @@ def install():
     updater = f'{quote(python)} {quote(COLLECTOR / "scripts/universe.py")} --data-dir {quote(COLLECTOR / "data")}'
     common = '[Unit]\nStartLimitIntervalSec=0\n\n[Service]\nType=simple\nRestart=on-failure\nRestartSec=10\nTimeoutStopSec=60\nKillSignal=SIGTERM\n'
     definitions = {
-        SERVICES[0]: common + f'WorkingDirectory={str(ROOT).replace("%", "%%")}\nExecStartPre=-{updater} --if-needed\nTimeoutStartSec=600\nExecStart={quote(binary)} --config {quote(config)}\n',
+        SERVICES[0]: collector_unit(binary, python, config, COLLECTOR / 'data'),
         SERVICES[1]: common + f'WorkingDirectory={str(ROOT).replace("%", "%%")}\nEnvironment={quote("DATA_DIR=" + str(COLLECTOR / "data"))}\nExecStart={quote(python)} -m uvicorn query.app:app --host 127.0.0.1 --port 8000 --no-proxy-headers\n',
         SERVICES[2]: common + f'WorkingDirectory={str(ROOT / "dashboard").replace("%", "%%")}\nExecStart={quote(node)} node_modules/vite/bin/vite.js --host 127.0.0.1 --port 8101 --strictPort\n',
     }
     proxies = ''.join('Environment=' + quote(k + '=' + os.environ[k]) + '\n'
         for k in ('HTTP_PROXY', 'HTTPS_PROXY', 'http_proxy', 'https_proxy', 'NO_PROXY', 'no_proxy') if k in os.environ)
-    # Startup discovery also needs the same public-network settings.
+    # Preserve the Collector's existing public-network environment.
     definitions[SERVICES[0]] += proxies
     definitions[PREFIX + 'universe.service'] = ('[Unit]\nDescription=Refresh CFFEX and SHFE AU/AG public contract universe\n'
         '[Service]\nType=oneshot\nTimeoutStartSec=600\nSuccessExitStatus=2\n' + proxies

@@ -69,6 +69,8 @@ Collector Run 生命周期的 authority 位于 Runtime DB；Raw 日库的 runs �
 
 正式 runtime 由独立的 C++ Collector、Python Query/FastAPI 和 React Dashboard 组成。原生 systemd 通过 Vite 服务页面，Docker Compose 通过 Nginx 服务构建产物。两套部署入口共享上述组件边界，但具体进程、挂载、端口、构建输入和生命周期规则由 [Deployment Contract](docs/contracts/deployment.md)定义，实际命令见 [Operations](docs/operations.md)及模块 README。
 
+native Collector unit 由部署侧 Python 标准库包装器启动 C++ 子进程，包装器只读主循环 Runtime heartbeat 并终止失效进程，由 systemd 创建下一 Process。该监控属于部署层，不向 C++ 采集链路引入 Python 或 Query 依赖；身份、信号和恢复参数由 [Native 自动恢复契约](docs/contracts/deployment.md#native-heartbeat-recovery)拥有。
+
 本地 developer runner 的职责属于开发工具层，只组合现有组件进程，不进入业务数据流，也不成为持久部署管理器。其会话所有权由 [Developer Runner Contract](docs/contracts/developer-runner.md#repository-developer-runner-contract)规定；实现状态见 [Acceptance](docs/acceptance.md)。这一边界不新增业务组件或改变上文数据所有权。
 
 `experiments/` 是探索空间，不是正式 runtime、Architecture 或 Contract 的替代来源。实验成果只有在明确纳入相应正式模块并同步 Architecture/Contract 后，才成为系统结构的一部分。

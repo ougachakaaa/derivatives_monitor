@@ -79,7 +79,7 @@ class UniverseTest(unittest.TestCase):
             run = Mock(return_value=subprocess.CompletedProcess([], 0))
             manifest = u.merge({}, found(['IF2609']), {}, '20260907')
             self.assertEqual(u.publish(directory, manifest, 'collector.service', run), (True, 1))
-            self.assertEqual(run.call_args_list[-1].args[0], ['systemctl', '--user', 'restart', '--no-block', 'collector.service'])
+            run.assert_called_once_with(['systemctl', '--user', 'try-restart', '--no-block', 'collector.service'], check=True)
             run.reset_mock()
             self.assertEqual(u.publish(directory, manifest, 'collector.service', run), (False, 1))
             run.assert_not_called()
@@ -103,19 +103,19 @@ class UniverseTest(unittest.TestCase):
             with closing(sqlite3.connect(diagnostic)) as db, db:
                 db.execute('CREATE TABLE incompatible_runtime_schema(value INTEGER)')
             u.publish(directory, manifest, 'collector.service', run)
-            self.assertEqual(run.call_count, 2)
+            self.assertEqual(run.call_count, 1)
             with closing(sqlite3.connect(diagnostic)) as db, db:
                 db.execute('DROP TABLE incompatible_runtime_schema')
             run.reset_mock()
             with closing(sqlite3.connect(diagnostic)) as db, db:
                 db.execute("UPDATE instrument_status SET instrument_id='IC2609'")
             u.publish(directory, manifest, 'collector.service', run)
-            self.assertEqual(run.call_count, 2)
+            self.assertEqual(run.call_count, 1)
             # A failed restart after publication must be retried even with unchanged text.
             (directory / 'collector-runtime.sqlite').write_text('TEST DOUBLE - unreadable runtime')
             run.reset_mock()
             u.publish(directory, manifest, 'collector.service', run)
-            self.assertEqual(run.call_count, 2)
+            self.assertEqual(run.call_count, 1)
             oversized = u.merge({}, found(['IF2609']), {}, '20260907')
             oversized['products']['IF']['instruments'] = [dict(id='X' + str(i)) for i in range(10001)]
             with self.assertRaises(ValueError): u.publish(directory, oversized)

@@ -2,9 +2,20 @@
 #include <atomic>
 #include <cstdlib>
 #include <ctime>
+#include <fstream>
 #include <thread>
 
 namespace {
+// TEST DOUBLE only: isolated native recovery tests drive SDK behavior by a file.
+std::string Control() {
+    const char* path = std::getenv("DM_TEST_CONTROL");
+    if (!path) return {};
+    std::ifstream input(path);
+    std::string value;
+    std::getline(input, value);
+    return value.empty() ? "normal" : value;
+}
+
 void UseCurrentEventTime(CThostFtdcDepthMarketDataField& tick, const char* trading_day, int step) {
     const auto now = std::time(nullptr) + 8 * 60 * 60;
     std::tm local{};
@@ -32,8 +43,20 @@ public:
                 {
                     std::lock_guard<std::mutex> lock(mutex_);
                     if (spi && !no_front_) {
-                        if (step == 0 || step == 12) spi->OnFrontConnected();
-                        if (step == 10) { subscribed = false; spi->OnFrontDisconnected(0x1001); }
+                        const auto control = Control();
+                        if (control == "exit-zero") std::_Exit(0);
+                        if (control == "exit-failure") std::_Exit(23);
+                        if (!control.empty()) {
+                            if (control != previous_control_) {
+                                if (!previous_control_.empty()) spi->OnFrontDisconnected(0x1001);
+                                subscribed = false;
+                                if (control != "disconnect") spi->OnFrontConnected();
+                                previous_control_ = control;
+                            }
+                        } else {
+                            if (step == 0 || step == 12) spi->OnFrontConnected();
+                            if (step == 10) { subscribed = false; spi->OnFrontDisconnected(0x1001); }
+                        }
                         if (subscribed) {
                             if (night_) {
                                 for (const auto& id : targets_) {
@@ -56,6 +79,8 @@ public:
                                 tick.Volume = step;
                                 tick.Turnover = step * 100.0;
                                 spi->OnRtnDepthMarketData(&tick);
+                                if (control == "stall" && step % 20 == 0)
+                                    ctp::Log("event=test_double_callback_during_stall");
                             }
                         }
                     }
@@ -66,17 +91,30 @@ public:
     }
     int ReqUserLogin(CThostFtdcReqUserLoginField*, int id) override {
         std::lock_guard<std::mutex> lock(mutex_);
-        last_login_id = id; Login(); return 0;
+        last_login_id = id;
+        if (Control() != "login-pending") Login();
+        return 0;
     }
     int SubscribeMarketData(char* ids[], int count) override {
-        std::lock_guard<std::mutex> lock(mutex_);
-        for (int i = 0; i < count; ++i) { targets_.insert(ids[i]); SubscriptionReply(ids[i]); }
-        subscribed = true; return 0;
+        const auto control = Control();
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            if (control == "subscription-failed") return 7;
+            for (int i = 0; i < count; ++i) { targets_.insert(ids[i]); SubscriptionReply(ids[i]); }
+            subscribed = true;
+        }
+        if (control == "stall") {
+            ctp::Log("event=test_double_main_stall");
+            // Main-loop SDK call stalls, while the callback worker keeps delivering ticks.
+            for (;;) std::this_thread::sleep_for(std::chrono::seconds(1));
+        }
+        return 0;
     }
 private:
     const bool no_front_ = std::getenv("DM_TEST_SCENARIO") && std::string(std::getenv("DM_TEST_SCENARIO")) == "no-front";
     const bool night_ = std::getenv("DM_TEST_SCENARIO") && std::string(std::getenv("DM_TEST_SCENARIO")) == "shfe-night";
     std::set<std::string> targets_;
+    std::string previous_control_;
     std::mutex mutex_;
     std::atomic<bool> running_{false};
     std::thread worker_;

@@ -76,8 +76,8 @@ class EvidenceTest(unittest.TestCase):
     def test_synthetic_environment_is_not_inherited(self):
         import os
         from unittest.mock import patch
-        with patch.dict(os.environ, {'DM_TEST_SCENARIO': 'shfe-night', 'KEEP_RUNNING': '1'}):
-            self.assertEqual(self.execute("import os; assert 'DM_TEST_SCENARIO' not in os.environ; assert os.environ['KEEP_RUNNING']=='0'")['status'], 'PASS')
+        with patch.dict(os.environ, {'DM_TEST_SCENARIO': 'shfe-night', 'DM_TEST_CONTROL': '/TEST-DOUBLE', 'KEEP_RUNNING': '1'}):
+            self.assertEqual(self.execute("import os; assert 'DM_TEST_SCENARIO' not in os.environ; assert 'DM_TEST_CONTROL' not in os.environ; assert os.environ['KEEP_RUNNING']=='0'")['status'], 'PASS')
 
 if __name__ == '__main__':
     unittest.main()

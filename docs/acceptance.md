@@ -8,7 +8,7 @@
 | G2 可信数据 | Collector 已实现并离线验证 Raw v2 `market_bars`、event-time bucket、partial/continuity、累计 baseline、唯一写入与 WAL；read path 尚未适配 | Data Provider/Query 仍读取旧 schema；完成下游 v2 只读适配及真实 MO 月链验证 |
 | G3 正确指标 | Skew 数值核心已实现于旧 observation 输入；新 Bar provenance/时钟尚未实现 | 先完成 Market Frame/Analytics 的 bucket/event-time 接入，再审核官方日参考包并完成至少十个真实时点独立对账 |
 | G4 可用页面 | 汇报首页已实现；人工使用待验 | 真实输入上三次日常使用，验证三十秒理解且无需 SQL/日志 |
-| G5 恢复可靠 | 已有部分恢复机制工程回归；heartbeat stale 自动重启闭环尚缺，现场待验 | 完成下述 Collector 可靠性缺口、最终部署版本回归及真实数据隔离备份恢复验证 |
+| G5 恢复可靠 | native heartbeat stale 自动终止/重启已有真实 systemd + TEST DOUBLE 工程闭环；Docker 闭环及现场待验 | 完成下述 Collector 可靠性缺口、最终部署版本回归及真实数据隔离备份恢复验证 |
 | G6 可以交付 | 开发、原生与 Docker 入口已提供；最终交付待验 | 固定版本可复现部署，审核限制和阻断项 |
 | P1 查询性能 | 未验 | 真实一天完整目标链，至少一百次核心查询，P95 ≤ 2 秒并记录错误 |
 | P2 显示延迟 | 未验 | 配对同一 Bar 的 bucket、最后 event、接收、提交和显示时间，实测 ≤ 30 秒目标 |
@@ -21,7 +21,8 @@
 |---|---|---|
 | Runtime History | Collector 已实现严格四表 Runtime schema、逐次 Run 生命周期和 append-only 自然 15 秒 runtime_snapshots；receive/commit time 直接归窗，restart 不继承窗口或计数；Data Provider、Universe、healthcheck 与相关 smoke 均校验完整当前 schema，当前状态链路仍只消费当前两表 | 补充真实长期运行证据；不能把日 Market DB 的 runs 当完整启动历史，且尚不提供 Runtime History HTTP/API/UI |
 | History 发布协议 | Collector 已实现 Run 创建失败退出、pending Snapshot 与当前两表原子发布/回滚重试、终止事务、跨库独立提交，以及 restart、前后时钟跳变、缺失窗口和不兼容库拒绝；只读消费者及跨进程 TEST DOUBLE 已对齐唯一当前四表协议，不读取旧格式或建立兼容层 | 在固定环境验证 publication failure、异常终止和恢复；不建立迁移或兼容层 |
-| Heartbeat 自动恢复 | 主循环约每秒发布、存活窗口 10 秒；Compose 有 healthcheck 和 unless-stopped；native 有异常退出重启，未提供主循环 watchdog 闭环 | 按 [Deployment](contracts/deployment.md#runtime-自动恢复)补齐 stale 后实际终止/重启，分别冻结两种部署的检测、终止、重启参数与总上界，证明 session down 不触发进程重启 |
+| Native heartbeat 自动恢复 | 部署侧只读包装器检测本次 Run heartbeat，失效后 TERM/KILL，systemd 创建新 Process；参数及恢复上界由 [Deployment](contracts/deployment.md#native-heartbeat-recovery)冻结。真实 user systemd + TEST DOUBLE SDK 已覆盖主循环阻塞且 callback 活动、SIGSTOP、异常退出、新 PID / run_id / Market commit，以及 session recovery 不重启和人工 stop 保持 | 固定部署版本的真实 CTP heartbeat stall / 恢复采集仍需现场证据；工程测试不证明前置可用或真实首根行情时限 |
+| Docker heartbeat 自动恢复 | Compose 有 healthcheck 和 unless-stopped，尚未形成 stale 后实际终止/重启闭环 | 按 [Deployment](contracts/deployment.md#runtime-自动恢复)补齐动作、冻结 Docker 检测/终止/重启参数与总上界并独立验收；native 证据不能替代 |
 | 部署环境 | 已有 data/flow 持久目录约束与 Docker 日志轮转配置 | 固定环境的时钟同步、运行身份可写、剩余空间、Market/Runtime DB 增长观察及原生日志容量/保留限制仍需证据 |
 | 真实连续运行 | 尚缺该阶段完整现场证据 | 按 [现场模板](live-acceptance-template.md#collector-第一阶段可靠性验收)完成连续运行、断网、强杀、heartbeat stall 和持久性安全验收，关联故障前后 Runtime/Market 事实，证明实际恢复采集 |
 

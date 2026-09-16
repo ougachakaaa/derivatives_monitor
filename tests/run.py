@@ -59,6 +59,13 @@ def profiles(profile):
                          step('docker-read-path', ['bash', 'tests/read_path_docker_smoke.sh'], requires=['docker'], timeout=1800),
                          step('docker-collector', ['bash', 'collector/tests/docker_smoke.sh'], requires=['docker'], timeout=1800)]
     checks += build_steps()
+    if profile == 'native-recovery':
+        return checks + [step('ctest', ['ctest', '--test-dir', BUILD, '--output-on-failure']),
+                         step('native-watchdog', [sys.executable, '-m', 'unittest',
+                              'collector.tests.test_native_watchdog', 'collector.tests.test_universe', '-v'], requires=['sqlite3']),
+                         step('runtime-status', [PYTHON, 'tests/runtime_status_smoke.py'], requires=['sqlite3'], timeout=90),
+                         step('native-systemd-recovery', [sys.executable, 'collector/tests/native_recovery_smoke.py'],
+                              requires=['sqlite3', 'systemctl', 'systemd-analyze', BUILD / 'libfake_md.so'], timeout=600)]
     if profile == 'offline':
         checks += [step('ctest', ['ctest', '--test-dir', BUILD, '--output-on-failure']),
                    step('runtime-status', [PYTHON, 'tests/runtime_status_smoke.py'], requires=['sqlite3'], timeout=90),
@@ -109,6 +116,7 @@ def run_step(spec, folder):
     # Never inherit a caller's synthetic SDK into unrelated commands.
     env.pop('LD_PRELOAD', None)
     env.pop('DM_TEST_SCENARIO', None)
+    env.pop('DM_TEST_CONTROL', None)
     process = None
     try:
         with log_path.open('wb') as log:
@@ -154,7 +162,7 @@ def git(*args):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('profile', choices=('docs', 'analytics-contract', 'analytics', 'offline',
-                                            'native', 'browser', 'packaging', 'docker'))
+                                            'native', 'native-recovery', 'browser', 'packaging', 'docker'))
     args = parser.parse_args()
     timestamp = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')
     folder = ROOT / 'artifacts/verification' / (timestamp + '-' + args.profile + '-' + uuid.uuid4().hex[:8])
